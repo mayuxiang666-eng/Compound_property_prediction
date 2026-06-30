@@ -1,0 +1,44 @@
+# === Data Files (too large for GitHub) ===
+*.csv
+!Mooney_Prediction_Pipeline/models/results_model_comparison/latest_validation_report.md
+
+# === Model Weights ===
+*.joblib
+*.pkl
+*.h5
+*.keras
+*.pt
+*.pth
+
+# === Python Cache ===
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# === IDE & OS ===
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+.DS_Store
+
+# === Catboost temp ===
+catboost_info/
+
+# === Scratch / temp ===
+scratch/
+
+# === Large enriched datasets ===
+stage_statistics_enriched*.csv
+
+# === Credentials (NEVER commit) ===
+credentials.json
+*.env
+
+# === Generated plots (keep reports, skip PNGs in models/) ===
+Mooney_Prediction_Pipeline/models/*/*.png
+
+# === Keep markdown reports in models ===
+!Mooney_Prediction_Pipeline/models/*/*.md
