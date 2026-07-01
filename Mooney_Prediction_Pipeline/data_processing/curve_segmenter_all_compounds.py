@@ -20,6 +20,8 @@ import os
 import sys
 import json
 import pyodbc
+from sklearn.ensemble import IsolationForest
+from sklearn.impute import SimpleImputer
 
 
 # Configure stdout to use utf-8
@@ -33,6 +35,112 @@ OUTPUT_CSV = "stage_statistics_enriched_all_features_weather_v4.csv"
 HEX_STEP = 4
 MAX_VALID_VALUE = 10000
 PROCESS_LABELED_ONLY = True  # Set to True to only decode and segment batches with MNY test labels (faster)
+
+def is_curve_physically_valid(temp, power, torque, speed, ram, stages):
+    """Check physical properties of the mixing curves to detect anomalies"""
+    # 1. Stage duration checks
+    for s, e, stage_name in stages:
+        duration = e - s
+        if duration < 3:
+            return False, f"Stage {stage_name} duration too short: {duration}s"
+        if duration > 300:
+            return False, f"Stage {stage_name} duration too long: {duration}s"
+
+    # 2. Temperature sanity checks (must be in range [15°C, 250°C])
+    if np.any(temp < 15.0) or np.any(temp > 250.0):
+        return False, f"Temperature out of range: min={np.min(temp):.1f}°C, max={np.max(temp):.1f}°C"
+        
+    # Temperature should rise from loading to PID
+    stage_temps = {}
+    for s, e, stage_name in stages:
+        stage_temps[stage_name] = np.mean(temp[s:e])
+    if 'Stage5_PID' in stage_temps and 'Stage1_Loading' in stage_temps:
+        if stage_temps['Stage5_PID'] <= stage_temps['Stage1_Loading'] + 10.0:
+            return False, f"Temperature does not rise properly: Loading mean={stage_temps['Stage1_Loading']:.1f}, PID mean={stage_temps['Stage5_PID']:.1f}"
+
+    # 3. Rotor Speed checks in active mixing stages (should be > 10 RPM)
+    for s, e, stage_name in stages:
+        if stage_name in ["Stage2_DryMixing", "Stage3_OilLoading", "Stage4_WetMixing", "Stage5_PID"]:
+            sub_speed = speed[s:e]
+            if np.mean(sub_speed) < 10.0:
+                return False, f"Rotor speed in {stage_name} is too low (mean={np.mean(sub_speed):.1f} RPM)"
+
+    # 4. Power and Torque checks in active mixing stages
+    for s, e, stage_name in stages:
+        if stage_name in ["Stage2_DryMixing", "Stage4_WetMixing", "Stage5_PID"]:
+            sub_power = power[s:e]
+            sub_torque = torque[s:e]
+            if np.mean(sub_power) < 10.0 or np.mean(sub_torque) < 10.0:
+                return False, f"Power or torque in {stage_name} too low (mean power={np.mean(sub_power):.1f}kW, mean torque={np.mean(sub_torque):.1f})"
+
+    # 5. WayofRam checks in stages 1 to 5 (should not be stuck at flat zero)
+    for s, e, stage_name in stages:
+        if stage_name in ["Stage1_Loading", "Stage2_DryMixing", "Stage3_OilLoading", "Stage4_WetMixing", "Stage5_PID"]:
+            sub_ram = ram[s:e]
+            if np.max(sub_ram) < 10.0:
+                return False, f"WayofRam sensor in {stage_name} stuck at zero (max={np.max(sub_ram):.1f}mm)"
+            if np.std(sub_ram) < 0.01 and np.mean(sub_ram) < 20.0:
+                return False, f"WayofRam sensor in {stage_name} flatlined (std={np.std(sub_ram):.3f})"
+
+    return True, "Valid"
+
+
+def remove_mny_anomalies(df):
+    """
+    Remove MNY target outliers:
+    1. Within-Order Variance check: If an OrderID has multiple batches, and the MNY range (max - min) 
+       within the same order is > 10.0 MNY, we drop ALL batches in that order.
+    2. Compound Family Global Outlier check: For each compound family, we compute the median MNY 
+       and Median Absolute Deviation (MAD). We define a robust standard deviation = 1.4826 * MAD (capped at min 1.5).
+       We drop any batch whose MNY deviates from the family median by more than:
+       threshold = max(5.0, min(2.5 * robust_std, 10.0))
+    """
+    initial_count = len(df)
+    
+    def get_compound_family(name):
+        if not isinstance(name, str):
+            return 'Unknown'
+        prefix = name.split()[0] if name.split() else name
+        return prefix.rstrip('-')
+        
+    df = df.copy().reset_index(drop=True)
+    df['compound_family'] = df['CompoundName'].apply(get_compound_family)
+    
+    # 1. Within-Order Variance Check - Drop entire orders with range > 10.0 MNY
+    order_ranges = df.groupby('OrderID')['MNY'].agg(lambda x: x.max() - x.min())
+    anomalous_orders = order_ranges[order_ranges > 10.0].index.tolist()
+    
+    drop_indices_order = df[df['OrderID'].isin(anomalous_orders)].index.tolist()
+    for idx in drop_indices_order:
+        row = df.loc[idx]
+        print(f"OrderID {row['OrderID']} has huge MNY fluctuation (>10 MNY). Dropping batch (BatchNumber={row['BatchNumber']}, MNY={row['MNY']:.2f})")
+        
+    df_step1 = df.drop(index=drop_indices_order).copy()
+    
+    # 2. Compound Family Robust Global Outlier Check
+    drop_indices_family = []
+    family_groups = df_step1.groupby('compound_family')
+    for family, group in family_groups:
+        if len(group) == 0:
+            continue
+        median_val = group['MNY'].median()
+        mad = np.median(np.abs(group['MNY'] - median_val))
+        robust_std = 1.4826 * mad
+        robust_std = max(robust_std, 1.5)
+        
+        threshold = max(5.0, min(2.5 * robust_std, 10.0))
+        
+        for idx, row in group.iterrows():
+            if abs(row['MNY'] - median_val) > threshold:
+                drop_indices_family.append(idx)
+                print(f"Compound Family {family} Global Outlier (threshold={threshold:.2f}, robust_std={robust_std:.2f}). Dropping batch (OrderID={row['OrderID']}, BatchNumber={row['BatchNumber']}, MNY={row['MNY']:.2f}, Family Median={median_val:.2f})")
+                
+    all_drop_indices = drop_indices_order + drop_indices_family
+    df_clean = df.drop(index=all_drop_indices).reset_index(drop=True)
+    
+    print(f"\n[MNY Label Cleaning Summary] Cleaned {len(all_drop_indices)} anomalous MNY rows. Labeled rows reduced from {initial_count} to {len(df_clean)}.\n")
+    return df_clean
+
 
 # ================== Tool Functions ==================
 
@@ -66,8 +174,8 @@ def find_ram_first_drop(ram):
 
 
 def find_temp_pid_start(temp, target_temp, oil_end):
-    """Find the index after oil_end where Temperature reaches target_temp - 3 and remains stable"""
-    target = target_temp - 3
+    """Find the index after oil_end where Temperature reaches target_temp - 20.0 (start of PID hold/temperature plateau) and remains stable"""
+    target = target_temp - 20.0
     for i in range(int(oil_end), len(temp)):
         if not np.isnan(temp[i]) and temp[i] >= target:
             if i + 5 < len(temp):
@@ -80,30 +188,30 @@ def find_temp_pid_start(temp, target_temp, oil_end):
 
 
 def find_temp_discharge_start(temp, pid_start):
-    """
-    Find the index of the TOP-MIXING DISCHARGE after pid_start.
-    This is the point where the temperature drops sharply and DEEPLY (>= 15°C drop in a few seconds),
-    marking the end of top mixing and rubber falling out.
-    We look for the LARGEST single-step drop >= 15°C after pid_start to avoid false positives
-    from small oscillations during mixing.
-    """
-    if pid_start >= len(temp) - 2:
-        return len(temp) - 1
+    """Find the index of the TOP-MIXING DISCHARGE after pid_start using robust multi-second window drop check"""
+    total_len = len(temp)
+    if pid_start >= total_len - 5:
+        return total_len - 1
+    
+    # 1. Search for a rolling window of 5 seconds where the temp drops by >= 10 degrees,
+    # and verify it's a sustained drop (temp at i+15 is at least 15 degrees lower than at i).
+    for i in range(pid_start, total_len - 15):
+        if temp[i] - temp[i+5] >= 10.0:
+            if temp[i] - temp[i+15] >= 15.0:
+                return i + 2  # return index slightly into the drop
+    
+    # 2. Fallback: search for single-step drop >= 10 degrees
     diff = np.diff(temp)
-    # Find the biggest drop after pid_start — that's the real discharge
-    best_i = -1
-    best_drop = -15  # must drop at least 15°C in one step to count
     for i in range(pid_start + 1, len(diff)):
-        if not np.isnan(diff[i]) and diff[i] < best_drop:
-            best_drop = diff[i]
-            best_i = i
-    if best_i >= 0:
-        return best_i
-    # Fallback: first drop >= 5°C
+        if not np.isnan(diff[i]) and diff[i] < -10:
+            return i
+            
+    # 3. Second fallback: first drop of 5 degrees
     for i in range(pid_start + 1, len(diff)):
         if not np.isnan(diff[i]) and diff[i] < -5:
             return i
-    return max(pid_start + 1, len(temp) - 5)
+            
+    return max(pid_start + 1, total_len - 5)
 
 
 def find_bottom_mixer_start(temp, t5):
@@ -293,8 +401,9 @@ def run_segmentation():
     print(f"Keeping all compounds for modeling: {len(df_all)} rows.")
 
     if PROCESS_LABELED_ONLY:
-        df_all = df_all.dropna(subset=['MNY'])
-        print(f"Filtered to labeled rows only for modeling: {len(df_all)} rows.")
+        df_all = df_all.dropna(subset=['MNY']).copy()
+        df_all = remove_mny_anomalies(df_all)
+        print(f"Filtered to labeled rows only for modeling after MNY outlier removal: {len(df_all)} rows.")
     
     # Do not drop rows where oil loading times are missing since we support non-oil recipes now
     print(f"Prepared {len(df_all)} rows for segmenting.")
@@ -405,11 +514,76 @@ def run_segmentation():
     for col in ['temp', 'power', 'Torque', 'RotorSpeed', 'WayofRam']:
         fill_anomalies_by_compound(decoded, col)
         
+    # Pass 1: Detect sticky door batches in decoded list
+    print("Detecting sticky doors (pass 1)...")
+    sticky_pairs = set()
+    for d in decoded:
+        temp = d['temp']
+        total_len = len(temp)
+        if total_len < 35:
+            continue
+            
+        t0 = temp[0]
+        # Clean/filter out data dropouts in the first 35 seconds
+        valid_temps = [t for t in temp[:35] if t > 50.0]
+        if not valid_temps:
+            continue
+        t_min = min(valid_temps)
+        drop = t0 - t_min
+        
+        # Pattern 1: Starting temp check (Disabled to avoid false positives on normal material loading cooling)
+        is_sensor_residue = False
+        
+        # We also compute the discharge point t5 to check Pattern 2
+        target_temp = d['Target_Temperature']
+        ram = d['WayofRam']
+        t1_val = find_ram_first_drop(ram)
+        if t1_val < 25: t1_val = 30
+        
+        w_oil = float(d['row_data'].get('weight_pct_oil', 0.0)) if pd.notna(d['row_data'].get('weight_pct_oil')) else 0.0
+        has_oil_val = pd.notna(d['PrevStepValue']) and pd.notna(d['CurrentValue']) and w_oil > 0.0
+        
+        if has_oil_val:
+            oil_start_val = d['row_data'].get('PrevStepValue')
+            if pd.isna(oil_start_val) or oil_start_val < t1_val + 10 or oil_start_val >= total_len - 40:
+                oil_start_val = t1_val + 45
+            else:
+                oil_start_val = int(round(oil_start_val))
+            t4_val = find_temp_pid_start(temp, target_temp, oil_start_val + 40)
+        else:
+            t_pid_val = find_temp_pid_start(temp, target_temp, t1_val)
+            t4_val = t_pid_val
+            
+        t5_val = find_temp_discharge_start(temp, t4_val)
+        
+        # Pattern 2: Discharge temperature drop failure (sticky door itself)
+        # If the batch is long, but t5 is detected at the very end, it means there was no temperature drop
+        is_discharge_failure = (total_len > 250 and t5_val >= total_len - 10)
+        
+        if is_sensor_residue or is_discharge_failure:
+            sticky_pairs.add((d['OrderID'], d['BatchNumber']))
+            
+    # Build full exclusion set (exclude N-1, N, N+1 for each sticky batch)
+    exclude_pairs = set()
+    for oid, bn in sticky_pairs:
+        exclude_pairs.add((oid, bn))
+        exclude_pairs.add((oid, bn - 1))
+        exclude_pairs.add((oid, bn + 1))
+        
+    print(f"Detected {len(sticky_pairs)} sticky door batches. Excluding {len(exclude_pairs)} total batches (N-1, N, N+1).")
+    
     # 3. Stage boundary calculation and physical feature extraction
     print("Segmenting curves and extracting physical features...")
     feature_rows = []
+    anomaly_counts = {}
     
     for idx, d in enumerate(decoded):
+        oid = d['OrderID']
+        bn = d['BatchNumber']
+        if (oid, bn) in exclude_pairs:
+            # Skip this batch from the training set
+            continue
+            
         temp = d['temp']
         power = d['power']
         torque = d['Torque']
@@ -426,13 +600,26 @@ def run_segmentation():
         has_oil = pd.notna(d['PrevStepValue']) and pd.notna(d['CurrentValue']) and w_oil > 0.0
         
         t1 = find_ram_first_drop(ram)
-        
+        if t1 < 25:
+            t1 = 30  # fallback to typical loading time of 30 seconds
+            
         if has_oil:
             is_oil_loading_present = 1.0
-            oil_start = int(round(d['PrevStepValue']))
-            oil_end = int(round(d['CurrentValue']))
+            oil_start = d['row_data'].get('PrevStepValue')
+            oil_end = d['row_data'].get('CurrentValue')
             
-            # Cap database values if they exceed total curve length
+            # If database step times are missing, 0, or unreasonable, estimate them
+            if pd.isna(oil_start) or oil_start < t1 + 10 or oil_start >= total_len - 40:
+                oil_start = t1 + 45  # typical dry mixing duration is ~45s
+            else:
+                oil_start = int(round(oil_start))
+                
+            if pd.isna(oil_end) or oil_end <= oil_start or oil_end >= total_len - 20:
+                oil_end = oil_start + 40  # typical oil loading duration is ~40s
+            else:
+                oil_end = int(round(oil_end))
+            
+            # Cap values if they exceed total curve length
             if oil_start >= total_len - 15: oil_start = total_len - 15
             if oil_end >= total_len - 10: oil_end = total_len - 10
             
@@ -767,16 +954,121 @@ def run_segmentation():
         
         # ======================================================================================
         
+        # Physical Sanity Check
+        validation_stages = []
+        for name, (s, e) in stages.items():
+            if name in ["Stage3_OilLoading", "Stage4_WetMixing"] and is_oil_loading_present == 0.0:
+                continue
+            validation_stages.append((s, e, name))
+            
+        is_valid, reason = is_curve_physically_valid(temp, power, torque, speed, ram, validation_stages)
+        if not is_valid:
+            key = reason.split(":")[0]
+            anomaly_counts[key] = anomaly_counts.get(key, 0) + 1
+            continue
+            
         feature_rows.append(features)
         
         if (idx + 1) % 500 == 0:
             print(f"Segmented {idx + 1}/{len(decoded)} batches...")
             
-    # Save to wide CSV
+    # Output physical validation report
+    print(f"\n==================== PHYSICAL SANITY DATA CLEANING REPORT ====================")
+    print(f"Total labeled input rows: {len(decoded)}")
+    print(f"Discarded by physical rules: {len(decoded) - len(exclude_pairs) - len(feature_rows)} batches")
+    print("Physical drop reasons breakdown:")
+    for reason, count_val in anomaly_counts.items():
+        print(f"  - {reason:45s}: {count_val} batches")
+    print(f"Batches remaining after physical validation: {len(feature_rows)}")
+    print("==============================================================================\n")
+    
+    # Run Isolation Forest on With-Oil and Without-Oil tracks separately
+    print("Running Isolation Forest multi-dimensional outlier detection...")
     out_df = pd.DataFrame(feature_rows)
-    out_df.to_csv(OUTPUT_CSV, index=False, encoding="utf-8-sig")
-    print(f"Successfully saved feature wide table of {len(out_df)} rows to: {OUTPUT_CSV}")
-    print("Final columns:", list(out_df.columns)[:20], "...")
+    
+    # Identify GBDT numeric features
+    feature_cols = [c for c in out_df.columns if c.startswith('Stage') or c.startswith('phys_') or c in ['Top_Fill_Factor', 'Bot_Fill_Factor']]
+    feature_cols = [c for c in feature_cols if pd.api.types.is_numeric_dtype(out_df[c])]
+    
+    df_with_oil = out_df[out_df['is_oil_loading_present'] == 1.0].copy()
+    df_without_oil = out_df[out_df['is_oil_loading_present'] == 0.0].copy()
+    
+    clean_dfs = []
+    dropped_if_with = 0
+    dropped_if_without = 0
+    
+    if len(df_with_oil) > 10:
+        X_with = df_with_oil[feature_cols].copy()
+        imputer_with = SimpleImputer(strategy='median')
+        X_with_imputed = imputer_with.fit_transform(X_with)
+        clf_with = IsolationForest(contamination=0.03, random_state=42, n_jobs=-1)
+        preds_with = clf_with.fit_predict(X_with_imputed)
+        
+        clean_dfs.append(df_with_oil[preds_with == 1])
+        dropped_if_with = np.sum(preds_with == -1)
+    else:
+        clean_dfs.append(df_with_oil)
+        
+    if len(df_without_oil) > 10:
+        # For without-oil track, some features like Stage3_OilLoading_Duration are constant 0, so drop zero-variance columns first
+        X_without = df_without_oil[feature_cols].copy()
+        X_without = X_without.loc[:, (X_without != X_without.iloc[0]).any()]
+        imputer_without = SimpleImputer(strategy='median')
+        X_without_imputed = imputer_without.fit_transform(X_without)
+        clf_without = IsolationForest(contamination=0.03, random_state=42, n_jobs=-1)
+        preds_without = clf_without.fit_predict(X_without_imputed)
+        
+        clean_dfs.append(df_without_oil[preds_without == 1])
+        dropped_if_without = np.sum(preds_without == -1)
+    else:
+        clean_dfs.append(df_without_oil)
+        
+    out_df_clean = pd.concat(clean_dfs, ignore_index=True)
+    print(f"Isolation Forest completed: discarded {dropped_if_with} With-Oil and {dropped_if_without} Without-Oil batches.")
+    print(f"Final training dataset size: {len(out_df_clean)} batches (Original labeled input: {len(decoded)})")
+    
+    # ------------------------------------------------------------------------------
+    # Duration Sanity Verification Table
+    # ------------------------------------------------------------------------------
+    print(f"\n==================== TRAINING SET STAGE DURATIONS AUDIT ====================")
+    print(f"{'Stage Name':30s} | {'Min (s)':7s} | {'Max (s)':7s} | {'Mean (s)':8s} | {'Std (s)':7s}")
+    print("-" * 72)
+    duration_cols = [
+        'Stage1_Loading_Duration', 'Stage2_DryMixing_Duration', 'Stage3_OilLoading_Duration',
+        'Stage4_WetMixing_Duration', 'Stage5_PID_Duration', 'Stage6_BottomMixing_Duration'
+    ]
+    for col in duration_cols:
+        if col in out_df_clean.columns:
+            vals = out_df_clean[col].dropna()
+            # For non-oil, oil loading/wet mixing durations are 0, which is normal.
+            # To be clear, we show stats for positive values only if it is a conditional stage
+            if col in ['Stage3_OilLoading_Duration', 'Stage4_WetMixing_Duration']:
+                vals_active = vals[vals > 0]
+                if len(vals_active) > 0:
+                    print(f"{col:30s} | {vals_active.min():7.1f} | {vals_active.max():7.1f} | {vals_active.mean():8.1f} | {vals_active.std():7.1f} (active only)")
+                else:
+                    print(f"{col:30s} | {'0.0':7s} | {'0.0':7s} | {'0.0':8s} | {'0.0':7s}")
+            else:
+                print(f"{col:30s} | {vals.min():7.1f} | {vals.max():7.1f} | {vals.mean():8.1f} | {vals.std():7.1f}")
+    print("============================================================================")
+    
+    # Check for any remaining extremely absurd durations (e.g. durations > 300s or < 3s in active stages)
+    absurd_count = 0
+    for col in ['Stage1_Loading_Duration', 'Stage2_DryMixing_Duration', 'Stage5_PID_Duration', 'Stage6_BottomMixing_Duration']:
+        if col in out_df_clean.columns:
+            absurd_rows = out_df_clean[(out_df_clean[col] < 3) | (out_df_clean[col] > 300)]
+            if len(absurd_rows) > 0:
+                print(f"[Warning] Found {len(absurd_rows)} rows with absurd duration in {col}!")
+                absurd_count += len(absurd_rows)
+    if absurd_count == 0:
+        print("Success: Checked all active stage durations. No absurd durations (<3s or >300s) found!")
+    else:
+        print(f"Warning: Found {absurd_count} absurd durations that were not dropped.")
+    print("----------------------------------------------------------------------------\n")
+    
+    # Save to wide CSV
+    out_df_clean.to_csv(OUTPUT_CSV, index=False, encoding="utf-8-sig")
+    print(f"Successfully saved feature wide table of {len(out_df_clean)} rows to: {OUTPUT_CSV}")
 
 if __name__ == '__main__':
     run_segmentation()

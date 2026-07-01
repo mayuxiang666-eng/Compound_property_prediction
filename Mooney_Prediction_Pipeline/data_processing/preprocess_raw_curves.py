@@ -62,8 +62,8 @@ def find_ram_first_drop(ram):
     return 0
 
 def find_temp_pid_start(temp, target_temp, oil_end):
-    """Find the index after oil_end where Temperature reaches target_temp - 3 and remains stable"""
-    target = target_temp - 3
+    """Find the index after oil_end where Temperature reaches target_temp - 20.0 (start of PID hold/temperature plateau) and remains stable"""
+    target = target_temp - 20.0
     for i in range(int(oil_end), len(temp)):
         if not np.isnan(temp[i]) and temp[i] >= target:
             if i + 5 < len(temp):
@@ -75,22 +75,30 @@ def find_temp_pid_start(temp, target_temp, oil_end):
     return min(oil_end + 10, len(temp) - 1)
 
 def find_temp_discharge_start(temp, pid_start):
-    """Find the index of the TOP-MIXING DISCHARGE after pid_start"""
-    if pid_start >= len(temp) - 2:
-        return len(temp) - 1
+    """Find the index of the TOP-MIXING DISCHARGE after pid_start using robust multi-second window drop check"""
+    total_len = len(temp)
+    if pid_start >= total_len - 5:
+        return total_len - 1
+    
+    # 1. Search for a rolling window of 5 seconds where the temp drops by >= 10 degrees,
+    # and verify it's a sustained drop (temp at i+15 is at least 15 degrees lower than at i).
+    for i in range(pid_start, total_len - 15):
+        if temp[i] - temp[i+5] >= 10.0:
+            if temp[i] - temp[i+15] >= 15.0:
+                return i + 2  # return index slightly into the drop
+    
+    # 2. Fallback: search for single-step drop >= 10 degrees
     diff = np.diff(temp)
-    best_i = -1
-    best_drop = -15  # must drop at least 15°C in one step to count
     for i in range(pid_start + 1, len(diff)):
-        if not np.isnan(diff[i]) and diff[i] < best_drop:
-            best_drop = diff[i]
-            best_i = i
-    if best_i >= 0:
-        return best_i
+        if not np.isnan(diff[i]) and diff[i] < -10:
+            return i
+            
+    # 3. Second fallback: first drop of 5 degrees
     for i in range(pid_start + 1, len(diff)):
         if not np.isnan(diff[i]) and diff[i] < -5:
             return i
-    return max(pid_start + 1, len(temp) - 5)
+            
+    return max(pid_start + 1, total_len - 5)
 
 def find_bottom_mixer_start(temp, t5):
     """Find the index where BOTTOM MIXING starts"""
@@ -316,6 +324,59 @@ def main():
     # USER INSTRUCTION: Remove MNY target outliers (Intra-Order & Family-level Global Outliers)
     df_labeled = remove_mny_anomalies(df_labeled)
 
+    # Pass 1: Detect sticky door batches
+    print("Detecting sticky doors (pass 1)...")
+    sticky_pairs = set()
+    for idx, row in df_labeled.iterrows():
+        temp = hex_to_series(row['temp'])
+        total_len = len(temp)
+        if total_len < 35:
+            continue
+            
+        t0 = temp[0]
+        valid_temps = [t for t in temp[:35] if t > 50.0]
+        if not valid_temps:
+            continue
+        t_min = min(valid_temps)
+        drop = t0 - t_min
+        
+        # Pattern 1: Starting temp check (Disabled to avoid false positives on normal material loading cooling)
+        is_sensor_residue = False
+        
+        # Pattern 2: Discharge temperature drop failure (sticky door itself)
+        ram = hex_to_series(row['WayofRam'])
+        t1_val = find_ram_first_drop(ram)
+        if t1_val < 25: t1_val = 30
+        
+        target_temp = float(row['Target_Temperature']) if pd.notna(row['Target_Temperature']) else 140.0
+        w_oil = float(row['weight_pct_oil']) if pd.notna(row['weight_pct_oil']) else 0.0
+        has_oil_val = pd.notna(row['PrevStepValue']) and pd.notna(row['CurrentValue']) and w_oil > 0.0
+        
+        if has_oil_val:
+            oil_start_val = row['PrevStepValue']
+            if pd.isna(oil_start_val) or oil_start_val < t1_val + 10 or oil_start_val >= total_len - 40:
+                oil_start_val = t1_val + 45
+            else:
+                oil_start_val = int(round(oil_start_val))
+            t4_val = find_temp_pid_start(temp, target_temp, oil_start_val + 40)
+        else:
+            t_pid_val = find_temp_pid_start(temp, target_temp, t1_val)
+            t4_val = t_pid_val
+            
+        t5_val = find_temp_discharge_start(temp, t4_val)
+        is_discharge_failure = (total_len > 250 and t5_val >= total_len - 10)
+        
+        if is_sensor_residue or is_discharge_failure:
+            sticky_pairs.add((row['OrderID'], row['BatchNumber']))
+            
+    exclude_pairs = set()
+    for oid, bn in sticky_pairs:
+        exclude_pairs.add((oid, bn))
+        exclude_pairs.add((oid, bn - 1))
+        exclude_pairs.add((oid, bn + 1))
+        
+    print(f"Detected {len(sticky_pairs)} sticky door batches. Excluding {len(exclude_pairs)} total batches (N-1, N, N+1).")
+
     # 1. Physical Sanity Data Cleaning
     valid_batches = []
     anomaly_counts = {}
@@ -324,6 +385,11 @@ def main():
     total_labeled = len(df_labeled)
     
     for idx, row in df_labeled.iterrows():
+        oid = row['OrderID']
+        bn = row['BatchNumber']
+        if (oid, bn) in exclude_pairs:
+            continue
+            
         count += 1
         if count % 2000 == 0 or count == total_labeled:
             print(f"Physically validating batch {count}/{total_labeled}...")
@@ -378,11 +444,25 @@ def main():
         is_oil_loading_present = 1.0 if has_oil else 0.0
         
         t1 = find_ram_first_drop(ram)
-        
-        if has_oil:
-            oil_start = int(round(row['PrevStepValue']))
-            oil_end = int(round(row['CurrentValue']))
+        if t1 < 25:
+            t1 = 30  # fallback to typical loading time of 30 seconds
             
+        if has_oil:
+            oil_start = row['PrevStepValue']
+            oil_end = row['CurrentValue']
+            
+            # If database step times are missing, 0, or unreasonable, estimate them
+            if pd.isna(oil_start) or oil_start < t1 + 10 or oil_start >= tp_len - 40:
+                oil_start = t1 + 45  # typical dry mixing duration is ~45s
+            else:
+                oil_start = int(round(oil_start))
+                
+            if pd.isna(oil_end) or oil_end <= oil_start or oil_end >= tp_len - 20:
+                oil_end = oil_start + 40  # typical oil loading duration is ~40s
+            else:
+                oil_end = int(round(oil_end))
+            
+            # Cap values if they exceed total curve length
             if oil_start >= tp_len - 15: oil_start = tp_len - 15
             if oil_end >= tp_len - 10: oil_end = tp_len - 10
             

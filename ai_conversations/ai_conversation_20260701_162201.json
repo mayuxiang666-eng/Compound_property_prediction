@@ -1,0 +1,26 @@
+{
+  "conversation_id": "ai_conversation_20260701_162201",
+  "timestamp": "2026-07-01T16:22:01.196004",
+  "summary": "已提供最佳实践深度物理响应改善指导与完成全部重训验证",
+  "feedback_count": 1,
+  "feedback": [
+    {
+      "user_input": "请按照最佳实践继续",
+      "selected_options": [],
+      "images": [],
+      "metadata": {
+        "timestamp": "2026-07-01T08:22:00.164Z",
+        "request_id": "req_2f3bc0ebeb22",
+        "source": "popup_continue"
+      }
+    }
+  ],
+  "system_info": {
+    "platform": "Windows",
+    "version": "10.0.26100",
+    "architecture": "64bit",
+    "processor": "Intel64 Family 6 Model 154 Stepping 4, GenuineIntel",
+    "python_version": "3.8.6",
+    "username": "uif35346"
+  }
+}
