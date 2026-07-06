@@ -502,52 +502,98 @@ def MMS_data(
     return pd.concat(mms_data, ignore_index=True)
 
 def get_silanization_dry_mixing(step, plant, compound, start_date='2023-01-01', end_date='2025-11-01'):
-    """get silanization, time to plateau and dry mixing durations and energies on M1"""
+    """get silanization, time to plateau and dry mixing durations and energies on M1.
+    Note: For Hefei, 'plant' should be passed as 'he' (lowercase) because Redshift 
+    replicated schemas use 'he' suffix instead of 'hf'."""
 
     conn = connect_datamart(datamart="primusmaster")
 
     sql = f"""
-            select
-        b.batch_information_pk as batch_information_fk,
-        d.dry_mixing_nr_rotations,
-        d.dry_mixing_duration,
-        d.dry_mixing_energy_MJ
-    from primusmaster."13_production_mixing_bots"."13_02_02_mixing_batch_info_""" + plant + """" b
-    join primusmaster."13_production_mixing_bots"."13_02_01_mixing_order_info_""" + plant + """" o
-        on b.order_id = o.order_id
-    left join (
-        select
-            k.batch_information_fk,
-            avg(k.rotation_count) as dry_mixing_nr_rotations,
-            avg(k.duration)       as dry_mixing_duration,
-            avg(k.start_time)     as dry_mixing_start_time,
-            avg(k.end_time)       as dry_mixing_end_time,
-            sum(pc."power")/1000  as dry_mixing_energy_MJ
-        from primusmaster."13_production_mixing_bots"."v_mixing_kpi_dry_mixing_main_""" + plant + """" k
-        join primusmaster."13_production_mixing_bots"."13_02_04_mixing_process_curves_""" + plant + """" pc
-            on  k.batch_information_fk = pc.batch_information_fk
-            and pc."time" > k.start_time
-            and pc."time" < k.end_time
-        group by k.batch_information_fk
-    ) d
-        on d.batch_information_fk = b.batch_information_pk
-    where (o.compound_name_long like '""" + step + """-""" + compound + """%')
-    and o.order_start_time_utc >= '2023-03-01 00:00:00';
+        select p.batch_information_fk, p.time_to_sil_plateau_duration,  p.top_mixer_last_step_time, p.bottom_end_time, 
+		(top_mixer_last_step_time-top_mixer_start_sil_time) as top_sil_duration, (bottom_end_time-top_mixer_last_step_time) as bottom_sil_duration, 
+		p.silanization_energy_MJ, p.top_avg_sil_temperature, bottom_avg_sil_temperature, 
+		dry_mixing_nr_rotations, dry_mixing_duration, dry_mixing_energy_MJ
+        from
+        (select tbl1.batch_information_fk, time_to_sil_plateau_duration,
+                top_mixer_start_sil_time, top_mixer_last_step_time,  bottom_end_time, silanization_energy_MJ,
+                avg(tbl2.temperature) as top_avg_sil_temperature
+        from
+        (select distinct batch.batch_information_pk as batch_information_fk,
+        avg(plateau.duration) as time_to_sil_plateau_duration, 
+        avg(sil.sil_start_plateau_time) as top_mixer_start_sil_time, avg(last_top_time) as top_mixer_last_step_time,   
+        avg(start_time_at_bottom_silanization) as start_time_at_bottom_silanization
+        from primusmaster."13_production_mixing_bots"."13_02_02_mixing_batch_info_""" +plant+ """" as batch
+        join primusmaster."13_production_mixing_bots"."13_02_01_mixing_order_info_""" +plant+ """" as orders on batch.order_id = orders.order_id
+        left join primusmaster."13_production_mixing_bots"."13_03_02_mixing_kpi_timetoplateau_""" +plant+ """" as plateau on plateau.batch_information_fk=batch.batch_information_pk 
+        left join primusmaster."05_stg"."05_02_mixing_silanization_""" +plant+ """" as sil on batch.batch_information_pk=sil.batch_information_fk     
+        where (orders.compound_name_long like '"""+step+"""-"""+compound+"""%')
+        and orders.order_start_time_utc >= '2023-03-01 00:00:00'
+        and (plateau.step_no=4 or plateau.step_no is null) --assuming step_no is 4 or null
+        group by batch.batch_information_pk
+        ) as tbl1
+        join
+        (select distinct batch_information_fk, temperature, "time" as time1
+        from primusmaster."13_production_mixing_bots"."13_02_04_mixing_process_curves_""" +plant+ """"
+        ) as tbl2 on (tbl1.batch_information_fk=tbl2.batch_information_fk and tbl2.time1 > tbl1.top_mixer_start_sil_time and tbl2.time1 < tbl1.top_mixer_last_step_time)
+        join
+        (select distinct batch_information_fk, max("time") as bottom_end_time
+        from primusmaster."05_stg"."05_02_mixing_silanization_""" +plant+ """"
+        where "power" > 50 
+        group by batch_information_fk
+        ) as tbl4 on (tbl1.batch_information_fk=tbl4.batch_information_fk) 
+        join
+        (select distinct batch_information_fk, sum("power")/1000 as silanization_energy_MJ
+        from primusmaster."05_stg"."05_02_mixing_silanization_""" +plant+ """"
+        where "time" < (select max("time")
+        from primusmaster."05_stg"."05_02_mixing_silanization_""" +plant+ """"
+        where "power" > 50) 
+        group by batch_information_fk
+        ) as tbl5 on (tbl1.batch_information_fk=tbl5.batch_information_fk)     
+        group by tbl1.batch_information_fk, time_to_sil_plateau_duration,
+                top_mixer_start_sil_time, top_mixer_last_step_time,  bottom_end_time, silanization_energy_MJ
+        ) as p 
+        join
+        (select tbl2.batch_information_fk, avg(tbl2.temperature) as bottom_avg_sil_temperature
+        from
+        (select distinct batch_information_fk, temperature, "time" as time1
+        from primusmaster."13_production_mixing_bots"."13_02_04_mixing_process_curves_""" +plant+ """"
+        where "time" < (select  max("time")
+        from primusmaster."05_stg"."05_02_mixing_silanization_""" +plant+ """"
+        where "power" > 50)
+        and "time" > (select avg(last_top_time)
+        from primusmaster."05_stg"."05_02_mixing_silanization_""" +plant+ """") 
+        ) as tbl2   
+        group by tbl2.batch_information_fk
+        ) as q on q.batch_information_fk=p.batch_information_fk
+		join (
+ 		select tbl1.batch_information_fk, dry_mixing_nr_rotations, dry_mixing_duration, 
+                dry_mixing_start_time,dry_mixing_end_time,
+                sum(tbl3."power")/1000 as dry_mixing_energy_MJ
+        from
+        (select distinct batch.batch_information_pk as batch_information_fk,
+        avg(dry.rotation_count) as dry_mixing_nr_rotations, avg(dry.duration) as dry_mixing_duration, 
+        avg(dry.start_time) as dry_mixing_start_time, avg(dry.end_time) as dry_mixing_end_time
+        from primusmaster."13_production_mixing_bots"."13_02_02_mixing_batch_info_""" +plant+ """" as batch
+        join primusmaster."13_production_mixing_bots"."13_02_01_mixing_order_info_""" +plant+ """" as orders on batch.order_id = orders.order_id       
+        left join primusmaster."13_production_mixing_bots"."v_mixing_kpi_dry_mixing_main_""" +plant+ """" as dry on dry.batch_information_fk=batch.batch_information_pk
+        where (orders.compound_name_long like '"""+step+"""-"""+compound+"""%')
+        and orders.order_start_time_utc >= '2023-03-01 00:00:00'
+        group by batch.batch_information_pk
+        ) as tbl1
+        join
+        (select distinct batch_information_fk, "power", "time"
+        from primusmaster."13_production_mixing_bots"."13_02_04_mixing_process_curves_""" +plant+ """"
+        ) as tbl3 on (tbl1.batch_information_fk=tbl3.batch_information_fk and tbl3."time" > tbl1.dry_mixing_start_time and tbl3."time" < tbl1.dry_mixing_end_time)     
+        group by tbl1.batch_information_fk, dry_mixing_nr_rotations, dry_mixing_duration,  dry_mixing_start_time, dry_mixing_end_time
+        ) as t on t.batch_information_fk=p.batch_information_fk
             """
-    
     
     cur = conn.cursor()
     cur.execute(sql)
-    # Query returns: batch_information_pk, dry_mixing_nr_rotations, dry_mixing_duration, dry_mixing_energy_MJ
     data = pd.DataFrame(
-        cur.fetchall(),
-        columns=[
-            'batch_information_fk',
-            'dry_mixing_nr_rotations',
-            'dry_mixing_duration',
-            'dry_mixing_energy_MJ',
-        ],
-    )
+        cur.fetchall(), columns=['batch_information_fk', 'time_to_sil_plateau_duration',  'top_mixer_last_step_time', 'bottom_end_time', 
+		'top_sil_duration', 'bottom_sil_duration', 'silanization_energy_MJ', 'top_avg_sil_temperature', 'bottom_avg_sil_temperature', 
+		'dry_mixing_nr_rotations', 'dry_mixing_duration', 'dry_mixing_energy_MJ'])
     cur.close()
     conn.close()
     return data
