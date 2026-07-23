@@ -42,3 +42,11 @@ Mooney_Prediction_Pipeline/models/*/*.png
 
 # === Keep markdown reports in models ===
 !Mooney_Prediction_Pipeline/models/*/*.md
+
+# === Databases & Binary Exports ===
+*.parquet
+*.xlsx
+mlflow.db
+mlruns/
+data_store/parquet/
+

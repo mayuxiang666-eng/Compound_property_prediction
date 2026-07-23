@@ -538,3 +538,22 @@ def run_pipeline():
     
 if __name__ == '__main__':
     run_pipeline()
+
+def run_fluctuation_investigation():
+    """Executes the fluctuation investigation pipeline.
+    1. Extract high‑fluctuation orders.
+    2. Analyse process features.
+    3. Generate markdown report.
+    """
+    import subprocess, sys, os
+    cwd = os.path.dirname(__file__)
+    # Step 1: extract orders
+    subprocess.check_call([sys.executable, os.path.join(cwd, 'investigate_fluctuation_orders.py')])
+    # Step 2: analyze orders
+    subprocess.check_call([sys.executable, os.path.join(cwd, 'analyze_fluctuation_orders.py')])
+    print("Fluctuation investigation completed.")
+
+if __name__ == '__main__':
+    run_pipeline()
+    # Uncomment to run investigation after pipeline
+    # run_fluctuation_investigation()
