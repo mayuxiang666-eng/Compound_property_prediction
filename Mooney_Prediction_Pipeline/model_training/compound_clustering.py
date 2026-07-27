@@ -169,6 +169,9 @@ class CompoundClusterer:
         # Build fingerprints
         compound_names, recipe_matrix, curve_matrix, sample_counts, \
             recipe_cols_used, curve_cols_used = self._build_compound_fingerprints(df)
+            
+        self.recipe_cols_used = recipe_cols_used
+        self.curve_cols_used = curve_cols_used
         
         self.compound_sample_counts = sample_counts
         n_compounds = len(compound_names)
@@ -289,12 +292,24 @@ class CompoundClusterer:
             return self.compound_to_cluster[compound_name], False
         
         # Cold start: compute fingerprint and find nearest cluster centroid
-        if row_features is not None and len(self.cluster_centroids) > 0:
-            available_recipe_cols = [c for c in RECIPE_FINGERPRINT_COLS if c in row_features.columns]
-            available_curve_cols = [c for c in CURVE_SHAPE_FINGERPRINT_COLS if c in row_features.columns]
+        if row_features is not None and len(self.cluster_centroids) > 0 and hasattr(self, 'recipe_cols_used'):
+            # Convert row_features to DataFrame if dict
+            if isinstance(row_features, dict):
+                row_features = pd.DataFrame([row_features])
+            elif isinstance(row_features, pd.Series):
+                row_features = pd.DataFrame([row_features.to_dict()])
+                
+            # Align recipe columns
+            recipe_row = []
+            for col in self.recipe_cols_used:
+                recipe_row.append(row_features[col].iloc[0] if col in row_features.columns else np.nan)
+            recipe_vec = np.array(recipe_row).reshape(1, -1)
             
-            recipe_vec = row_features[available_recipe_cols].values.reshape(1, -1)
-            curve_vec = row_features[available_curve_cols].values.reshape(1, -1)
+            # Align curve columns
+            curve_row = []
+            for col in self.curve_cols_used:
+                curve_row.append(row_features[col].iloc[0] if col in row_features.columns else np.nan)
+            curve_vec = np.array(curve_row).reshape(1, -1)
             
             recipe_imp = self.recipe_imputer.transform(recipe_vec)
             curve_imp = self.curve_imputer.transform(curve_vec)
@@ -315,6 +330,9 @@ class CompoundClusterer:
             
             return best_cluster, True
         
+        # Default to -1
+        if len(self.cluster_centroids) > 0:
+            return list(self.cluster_centroids.keys())[0], True
         return -1, True
     
     def should_use_independent_bias(self, compound_name):
