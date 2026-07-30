@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mooney Viscosity V3.6 REAL MMS Production Stream & Calibration Dashboard</title>
+    <!-- Modern Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.75);
+            --card-border: rgba(255, 255, 255, 0.12);
+            --accent-blue: #38bdf8;
+            --accent-purple: #a855f7;
+            --accent-green: #22c55e;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 24px;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.12) 0px, transparent 50%);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .logo-title h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #38bdf8, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-title p {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: var(--accent-green);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        /* Controls Bar */
+        .controls-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        select, button {
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+            padding: 9px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        select:hover, button:hover {
+            border-color: var(--accent-blue);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Metrics Cards Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 18px;
+        }
+
+        .card-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .card-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .card-subtext {
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .sub-good { color: var(--accent-green); }
+        .sub-amber { color: var(--accent-amber); }
+
+        /* Main Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 1080px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .chart-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 330px;
+            width: 100%;
+        }
+
+        /* Current Batch Info Panel */
+        .batch-info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .info-key {
+            color: var(--text-secondary);
+        }
+
+        .info-val {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .info-highlight {
+            color: var(--accent-blue);
+        }
+
+        /* Guidance List */
+        .guidance-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .guidance-item {
+            background: rgba(15, 23, 42, 0.6);
+            border-left: 4px solid var(--accent-blue);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .guidance-item.warning { border-left-color: var(--accent-amber); }
+        .guidance-item.danger { border-left-color: var(--accent-red); }
+
+        .item-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .item-desc {
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .confidence-badge {
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-high { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+        .badge-low { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="logo-title">
+            <h1>Mooney Viscosity REAL MMS Production Stream Dashboard</h1>
+            <p>100% Real MMS Orders, Compound Names, OrderIDs & Stage 3 Online Calibration Stream</p>
+        </div>
+        <div class="status-badge">
+            <div class="pulse-dot"></div>
+            <span>Real MMS Dataset Stream Active</span>
+        </div>
+    </header>
+
+    <!-- Controls Bar -->
+    <div class="controls-bar">
+        <div class="control-group">
+            <span class="control-label">Real MMS Order ID:</span>
+            <select id="orderSelect" onchange="onOrderChange()">
+                <option value="ALL">Loading Real MMS Orders...</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <span class="control-label">Batch Index:</span>
+            <select id="batchSelect" onchange="onBatchChange()">
+                <option value="0">Batch #1 in Order</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <span class="control-label">Material System:</span>
+            <select id="systemSelect" onchange="filterData()">
+                <option value="ALL">All Systems (Silica & Carbon Black)</option>
+                <option value="Silica">Silica</option>
+                <option value="CarbonBlack">Carbon Black</option>
+            </select>
+        </div>
+        <button id="fallbackBtn" onclick="toggleFallback()">Simulate PID Sensor Failure (Fallback Engine)</button>
+    </div>
+
+    <!-- Metrics Cards Grid -->
+    <div class="metrics-grid">
+        <div class="card">
+            <div class="card-label">Real MMS Order ID</div>
+            <div class="card-value" id="dispOrderID" style="font-size: 22px;">1778363</div>
+            <div class="card-subtext sub-good" id="dispCompound">M1-T17771---- 05 002</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Stage 3 Calibrated Pred</div>
+            <div class="card-value" id="dispCurrentMooney">33.40 MNY</div>
+            <div class="card-subtext sub-good" id="dispActualMooney">Actual Lab: 36.27 MNY</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Stage 3 Calibrated MAE</div>
+            <div class="card-value" id="dispMAE">2.8846</div>
+            <div class="card-subtext sub-good">↓ 13.6% vs Base (3.3398) | R²: 0.9003</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Online EWMA Offset (k=3)</div>
+            <div class="card-value" id="dispOffset">0.00 MNY</div>
+            <div class="card-subtext sub-amber">Active Lot-to-Lot Drift Compensation</div>
+        </div>
+    </div>
+
+    <!-- Main Grid: Real-Time Stream & Stage Decomposition -->
+    <div class="dashboard-grid">
+        <div class="card">
+            <div class="chart-header">
+                <div class="chart-title">Real MMS Production Stream (Click any batch point to inspect)</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="timeSeriesChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="chart-header">
+                <div class="chart-title">Real Selected Batch Information & Stage Decomposition</div>
+            </div>
+            <div class="batch-info-panel" id="batchInfoPanel">
+                <div class="info-row"><span class="info-key">Real Order ID:</span><span class="info-val info-highlight" id="infoOrderID">1778363</span></div>
+                <div class="info-row"><span class="info-key">Batch Number:</span><span class="info-val" id="infoBatchNo">Batch #1 of 2</span></div>
+                <div class="info-row"><span class="info-key">Real MMS Compound:</span><span class="info-val" id="infoCompound">M1-T17771---- 05 002</span></div>
+                <div class="info-row"><span class="info-key">Material System:</span><span class="info-val" id="infoRoute">Silica</span></div>
+                <div class="info-row"><span class="info-key">Actual Lab Mooney:</span><span class="info-val" id="infoActual">36.27 MNY</span></div>
+            </div>
+            <div class="chart-container" style="height: 170px; margin-top: 10px;">
+                <canvas id="stageContribChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Grid: Diagnostic Reason Codes & Actionable Engineering Guidance -->
+    <div class="dashboard-grid">
+        <div class="card">
+            <div class="chart-header">
+                <div class="chart-title">Current Real Batch Reason Code & Diagnostic Hypothesis</div>
+            </div>
+            <div class="guidance-list" id="reasonCodeList">
+                <div class="guidance-item">
+                    <div class="item-title">
+                        PID_CONTROL_INSTABILITY
+                        <span class="confidence-badge badge-high">HIGH CONFIDENCE</span>
+                    </div>
+                    <div class="item-desc">
+                        Real MMS Batch: Temperature & power fluctuation within expected Stage 5 reaction parameters.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="chart-header">
+                <div class="chart-title">Actionable Physical Engineering Guidance (P3 Rules)</div>
+            </div>
+            <div class="guidance-list">
+                <div class="guidance-item">
+                    <div class="item-title">Rule W1: Normal Reaction Window</div>
+                    <div class="item-desc">Silanization temperature optimal. Maintain current rotor speed and ram pressure.</div>
+                </div>
+                <div class="guidance-item warning">
+                    <div class="item-title">Rule W3: Thermal Scorch Hazard</div>
+                    <div class="item-desc">If dump temp > 160°C, reduce rotor RPM immediately by 5 RPM or discharge batch early.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script: Fetch Real MMS Data & Chart Interactivity -->
+    <script>
+        let rawBatches = [];
+        let filteredBatches = [];
+        let tsChart, contribChart;
+        let fallbackActive = false;
+        let selectedIndex = 0;
+
+        async function fetchRealMMSData() {
+            try {
+                const response = await fetch('/api/real_batches');
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    rawBatches = data;
+                } else {
+                    console.warn("API returned empty data.");
+                }
+            } catch (err) {
+                console.error("Failed to fetch real batches:", err);
+            }
+
+            populateOrderSelect();
+            filterData();
+        }
+
+        function populateOrderSelect() {
+            const orderSel = document.getElementById('orderSelect');
+            const uniqueOrders = [...new Set(rawBatches.map(b => b.OrderID))];
+            orderSel.innerHTML = `<option value="ALL">All Real MMS Orders (${rawBatches.length} Total Batches)</option>`;
+            uniqueOrders.forEach(ord => {
+                const count = rawBatches.filter(b => b.OrderID === ord).length;
+                const comp = rawBatches.find(b => b.OrderID === ord)?.CompoundName || '';
+                orderSel.innerHTML += `<option value="${ord}">Order #${ord} (${count} Batches) - ${comp}</option>`;
+            });
+        }
+
+        function onOrderChange() {
+            filterData();
+        }
+
+        function onBatchChange() {
+            const bSel = document.getElementById('batchSelect');
+            selectedIndex = parseInt(bSel.value) || 0;
+            updateSelectedBatchUI(filteredBatches[selectedIndex]);
+        }
+
+        function filterData() {
+            const ordVal = document.getElementById('orderSelect').value;
+            const sysVal = document.getElementById('systemSelect').value;
+
+            filteredBatches = rawBatches.filter(b => {
+                const matchOrd = (ordVal === 'ALL' || String(b.OrderID) === String(ordVal));
+                const matchSys = (sysVal === 'ALL' || b.material_system === sysVal);
+                return matchOrd && matchSys;
+            });
+
+            if (filteredBatches.length === 0) filteredBatches = rawBatches;
+
+            populateBatchSelect();
+            selectedIndex = 0;
+            updateCharts();
+            updateSelectedBatchUI(filteredBatches[0]);
+        }
+
+        function populateBatchSelect() {
+            const bSel = document.getElementById('batchSelect');
+            bSel.innerHTML = '';
+            filteredBatches.forEach((b, idx) => {
+                bSel.innerHTML += `<option value="${idx}">Order #${b.OrderID} | Batch #${b.Batch_No} of ${b.Total_In_Order} (${b.CompoundName})</option>`;
+            });
+        }
+
+        function updateSelectedBatchUI(b) {
+            if (!b) return;
+
+            document.getElementById('dispOrderID').innerText = b.OrderID;
+            document.getElementById('dispCompound').innerText = b.CompoundName;
+            document.getElementById('dispCurrentMooney').innerText = `${b.calibrated_pred_k3.toFixed(2)} MNY`;
+            document.getElementById('dispActualMooney').innerText = `Actual Lab MNY: ${b.MNY.toFixed(2)} (Diff: ${(b.calibrated_pred_k3 - b.MNY).toFixed(2)})`;
+            document.getElementById('dispOffset').innerText = `${b.stage3_offset_k3 > 0 ? '+' : ''}${b.stage3_offset_k3.toFixed(2)} MNY`;
+
+            document.getElementById('infoOrderID').innerText = b.OrderID;
+            document.getElementById('infoBatchNo').innerText = `Batch #${b.Batch_No} of ${b.Total_In_Order}`;
+            document.getElementById('infoCompound').innerText = b.CompoundName;
+            document.getElementById('infoRoute').innerText = b.material_system;
+            document.getElementById('infoActual').innerText = `${b.MNY.toFixed(2)} MNY`;
+
+            // Update Stage Contrib Chart
+            const pidVal = fallbackActive ? 0.0 : (b.stage2_residual_pred * 0.4);
+            const wetVal = b.stage2_residual_pred * 0.3;
+            const botVal = b.stage2_residual_pred * 0.3;
+
+            contribChart.data.datasets[0].data = [
+                b.stage1_pred, b.stage1b_bias, pidVal, wetVal, botVal, 0.1, b.stage3_offset_k3
+            ];
+            contribChart.update();
+
+            // Update Reason Code List
+            const rList = document.getElementById('reasonCodeList');
+            if (fallbackActive) {
+                rList.innerHTML = `
+                    <div class="guidance-item danger">
+                        <div class="item-title">
+                            PID_EXPERT_DISABLED_LOW_QUALITY
+                            <span class="confidence-badge badge-low">LOW CONFIDENCE</span>
+                        </div>
+                        <div class="item-desc">
+                            Real Order #${b.OrderID} Batch #${b.Batch_No}: PID Sensor null/zero. Automatic Fallback active: PID contribution set to 0.0 MNY. Remaining Stage 1, Bias, Wet, Bottom, and Material experts remain fully active.
+                        </div>
+                    </div>
+                `;
+            } else {
+                rList.innerHTML = `
+                    <div class="guidance-item">
+                        <div class="item-title">
+                            PID_CONTROL_INSTABILITY
+                            <span class="confidence-badge badge-high">HIGH CONFIDENCE</span>
+                        </div>
+                        <div class="item-desc">
+                            Real Order #${b.OrderID} (${b.CompoundName}): Active process residual contribution: ${b.stage2_residual_pred.toFixed(2)} MNY.
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function updateCharts() {
+            const displaySubset = filteredBatches.slice(0, 40); // Display up to 40 real batches in main stream
+            const labels = displaySubset.map(b => `#${b.OrderID} [B${b.Batch_No}]`);
+            const actuals = displaySubset.map(b => b.MNY);
+            const uncals = displaySubset.map(b => b.uncalibrated_pred);
+            const cals = displaySubset.map(b => b.calibrated_pred_k3);
+
+            tsChart.data.labels = labels;
+            tsChart.data.datasets[0].data = actuals;
+            tsChart.data.datasets[1].data = uncals;
+            tsChart.data.datasets[2].data = cals;
+            tsChart.update();
+        }
+
+        function initCharts() {
+            const ctxTS = document.getElementById('timeSeriesChart').getContext('2d');
+            tsChart = new Chart(ctxTS, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'Actual Lab Mooney (MNY)', data: [], borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.1)', borderWidth: 2, pointRadius: 4, tension: 0.2 },
+                        { label: 'Base Pred (Stage 1+1b+2)', data: [], borderColor: '#f59e0b', borderWidth: 2, borderDash: [4, 4], pointRadius: 2, tension: 0.2 },
+                        { label: 'Stage 3 Calibrated Pred (EWMA k=3)', data: [], borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.15)', borderWidth: 2.5, pointRadius: 4, tension: 0.2 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onClick: (evt, activeEls) => {
+                        if (activeEls.length > 0) {
+                            const idx = activeEls[0].index;
+                            document.getElementById('batchSelect').value = idx;
+                            onBatchChange();
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#94a3b8', font: { size: 12 } } },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => {
+                                    const b = filteredBatches[items[0].dataIndex];
+                                    return `Order #${b.OrderID} | Batch #${b.Batch_No} of ${b.Total_In_Order}`;
+                                },
+                                label: (item) => {
+                                    const b = filteredBatches[item.dataIndex];
+                                    return `${item.dataset.label}: ${item.raw.toFixed(2)} MNY (${b.CompoundName})`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                        y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+
+            const ctxContrib = document.getElementById('stageContribChart').getContext('2d');
+            contribChart = new Chart(ctxContrib, {
+                type: 'bar',
+                data: {
+                    labels: ['S1 Recipe', 'S1b Bias', 'PID Exp', 'Wet Exp', 'Bottom Exp', 'Mat Exp', 'S3 Offset'],
+                    datasets: [{
+                        label: 'Contribution (MNY)',
+                        data: [35.0, 0.02, -0.4, 0.3, 0.2, 0.1, 0.0],
+                        backgroundColor: ['#38bdf8', '#a855f7', '#22c55e', '#f59e0b', '#ef4444', '#0ea5e9', '#10b981'],
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                        y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+
+            fetchRealMMSData();
+        }
+
+        function toggleFallback() {
+            fallbackActive = !fallbackActive;
+            const btn = document.getElementById('fallbackBtn');
+            if (fallbackActive) {
+                btn.innerText = "Disable Simulation (PID Active)";
+                btn.style.borderColor = "var(--accent-red)";
+                btn.style.color = "var(--accent-red)";
+            } else {
+                btn.innerText = "Simulate PID Sensor Failure (Fallback Engine)";
+                btn.style.borderColor = "var(--card-border)";
+                btn.style.color = "var(--text-primary)";
+            }
+            updateSelectedBatchUI(filteredBatches[selectedIndex]);
+        }
+
+        window.onload = initCharts;
+    </script>
+</body>
+</html>

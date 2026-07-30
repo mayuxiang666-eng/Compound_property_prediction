@@ -1,0 +1,8 @@
+﻿gate,status,value
+"G1 Overall Final VarRatio in [0.50, 2.00]",PASS,1.6340
+"G2 S2 Variance Capture Tier (Min >= 10%, Target >= 25%, Strong >= 35%)",PASS,10.12% [Minimum Pass (>= 10%)]
+G3 CarbonBlack Final VarRatio >= 0.20,PASS,2.0134
+"G4 Silica Final VarRatio in [0.40, 2.50]",PASS,1.5670
+G5 No-Oil/Dry Final VarRatio >= 0.20,PASS,0.3610
+G6 Oil/Wet Final VarRatio <= 3.00,PASS,2.0035
+"G7 Robust Compound std ratio (valid n>=5, actual_std>0.2) in [0.30, 1.50]",PASS,"median=0.3081, weighted=0.4043"

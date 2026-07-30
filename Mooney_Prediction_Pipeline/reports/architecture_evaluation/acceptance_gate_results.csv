@@ -1,0 +1,6 @@
+﻿gate,passed,value,threshold
+overall_mae_gain,False,6.021879437198754,>= 8.0%
+high_deviation_mae_gain,False,-6.693059259178814,>= 12.0%
+trend_non_degradation,False,0.36458333333333337,direction and rank >= baseline
+variance_ratio,False,0.03485927526579991,"[0.70, 1.20]"
+oot_stage2_gain,True,-0.017302564357968286,<= 0.0 MAE and RMSE

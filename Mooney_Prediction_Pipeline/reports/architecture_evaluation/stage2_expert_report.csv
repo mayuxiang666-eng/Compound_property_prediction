@@ -1,0 +1,3 @@
+﻿phase_route,n_rows,n_label_groups,model_type
+no_oil_dry,1708,552,lightgbm
+oil_wet,13209,3903,lightgbm

@@ -1,0 +1,3 @@
+﻿model_version,cb_subset_MAE,cb_subset_RMSE,cb_subset_R2,cb_subset_Spearman,cb_subset_Direction_Accuracy_pct,overall_MAE,overall_Direction_Accuracy_pct
+V3.5_Baseline_No_CB_Subsystem,2.51434682844193,3.5263294543881574,0.9021958881002193,1.0,100.0,3.356338597395405,63.541666666666664
+V3.6_CarbonBlackExpertV1,2.446090155855101,3.456294344852302,0.9060422115355179,0.5,66.66666666666666,3.3401998179768273,59.375

@@ -1,0 +1,38 @@
+{
+  "model_version": "V3.5_SilicaPIDExpertV1_candidate",
+  "shrinkage_k": 5.0,
+  "use_cluster_experts": true,
+  "use_material_route_matrix": true,
+  "no_oil_expert_type": "lightgbm",
+  "use_silica_subsystem": true,
+  "stage1_params": {
+    "n_estimators": 300,
+    "learning_rate": 0.03,
+    "num_leaves": 31,
+    "max_depth": 6,
+    "min_child_samples": 15,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "reg_alpha": 0.1,
+    "reg_lambda": 1.0,
+    "random_state": 42,
+    "verbose": -1
+  },
+  "stage2_params": {
+    "n_estimators": 180,
+    "learning_rate": 0.025,
+    "num_leaves": 20,
+    "max_depth": 5,
+    "min_child_samples": 20,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "reg_alpha": 0.2,
+    "reg_lambda": 3.0,
+    "random_state": 42,
+    "verbose": -1
+  },
+  "n_train_samples": 14917,
+  "n_test_samples": 1367,
+  "n_stage1_features": 21,
+  "n_stage2_features": 116
+}

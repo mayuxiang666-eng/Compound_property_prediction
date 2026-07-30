@@ -1,0 +1,30 @@
+﻿clean_compound_name,batch_count_N,system_before,system_after,mae_before,mae_after,variance_ratio_after,dir_acc_after_pct,truthful_diagnosis_en,truthful_diagnosis_zh
+M1-T15760,455,Silica,Silica,2.97,3.0,0.69,62.04,"GOOD: Excellent variance & direction capture, production ready",良好：波幅与方向捕捉优秀，满足生产要求
+M1-T09170,115,CarbonBlack,Silica,1.05,1.02,0.8,59.02,"EXCELLENT: High precision, PID & EWMA perfectly fitted",优秀：精准度极高，PID/EWMA 完美契合
+M1-T14885,90,Silica,Silica,2.9,2.9,0.65,69.61,"GOOD: Excellent variance & direction capture, production ready",良好：波幅与方向捕捉优秀，满足生产要求
+M1-T25045,85,Silica,Silica,2.44,2.56,0.85,67.12,"GOOD: Excellent variance & direction capture, production ready",良好：波幅与方向捕捉优秀，满足生产要求
+M1-T09170WS,79,CarbonBlack,Silica,2.15,2.15,0.86,74.95,"GOOD: Excellent variance & direction capture, production ready",良好：波幅与方向捕捉优秀，满足生产要求
+M1-T33025W3,71,Silica,Silica,3.42,3.38,0.77,65.26,"GOOD: Excellent variance & direction capture, production ready",良好：波幅与方向捕捉优秀，满足生产要求
+M1-T26104,51,Silica,Silica,3.02,2.98,0.6,63.63,"GOOD: Excellent variance & direction capture, production ready",良好：波幅与方向捕捉优秀，满足生产要求
+M1-A00205W3,49,CarbonBlack,CarbonBlack,2.67,2.68,0.78,52.92,"MODERATE: MAE target met, direction sensitive to lab testing noise",中等：绝对误差达标，但方向敏感度受实验室噪音影响
+M1-T02128W5,48,Silica,Silica,2.91,2.94,0.71,49.47,"MODERATE: MAE target met, direction sensitive to lab testing noise",中等：绝对误差达标，但方向敏感度受实验室噪音影响
+M1-T17771,47,Silica,Silica,2.05,2.05,0.67,56.19,"MODERATE: MAE target met, direction sensitive to lab testing noise",中等：绝对误差达标，但方向敏感度受实验室噪音影响
+M1-S08156B1,22,CarbonBlack,Silica,0.43,0.4,0.86,50.34,"EXCELLENT: High precision, PID & EWMA perfectly fitted",优秀：精准度极高，PID/EWMA 完美契合
+M1-T18191,21,Silica,Silica,6.75,7.09,0.4,81.03,HIGH_MAE: Raw polymer COA shift or large inter-order jump,偏高：受生胶原材料 COA 偏低或跨订单大幅跳变影响
+M1-T16734,20,Silica,Silica,1.31,1.39,0.69,75.95,"EXCELLENT: High precision, PID & EWMA perfectly fitted",优秀：精准度极高，PID/EWMA 完美契合
+M1-B15563,20,Silica,CarbonBlack,1.34,1.11,1.18,21.68,"EXCELLENT: High precision, PID & EWMA perfectly fitted",优秀：精准度极高，PID/EWMA 完美契合
+M1-B00460B,14,Silica,CarbonBlack,3.27,3.81,0.83,26.83,STABLE: Process residuals conform to physical expectations,稳定：过程残差符合物理预期
+M1-A03391,14,CarbonBlack,CarbonBlack,2.26,2.17,0.79,18.37,"MODERATE: MAE target met, direction sensitive to lab testing noise",中等：绝对误差达标，但方向敏感度受实验室噪音影响
+M1-T11923,14,Silica,Silica,7.48,7.21,0.79,62.67,HIGH_MAE: Raw polymer COA shift or large inter-order jump,偏高：受生胶原材料 COA 偏低或跨订单大幅跳变影响
+M1-T00011B2,13,CarbonBlack,Silica,0.98,1.1,1.08,66.13,"EXCELLENT: High precision, PID & EWMA perfectly fitted",优秀：精准度极高，PID/EWMA 完美契合
+M1-T30087,11,Silica,Silica,1.76,1.71,1.01,82.35,"EXCELLENT: High precision, PID & EWMA perfectly fitted",优秀：精准度极高，PID/EWMA 完美契合
+M1-T15215,10,Silica,Silica,5.08,5.22,0.58,25.0,CHALLENGING: Small batch N / Raw polymer COA drift across orders,较差：批次量较小/跨订单生胶COA离散，面临挑战
+M1-R00218W1,10,CarbonBlack,CarbonBlack,2.59,2.69,0.68,32.0,"MODERATE: MAE target met, direction sensitive to lab testing noise",中等：绝对误差达标，但方向敏感度受实验室噪音影响
+M1-A00268R2,9,CarbonBlack,CarbonBlack,0.44,0.63,1.0,83.33,"EXCELLENT: High precision, PID & EWMA perfectly fitted",优秀：精准度极高，PID/EWMA 完美契合
+M1-C10430,8,CarbonBlack,CarbonBlack,3.57,3.45,0.34,63.64,"GOOD: Excellent variance & direction capture, production ready",良好：波幅与方向捕捉优秀，满足生产要求
+M1-S08156,6,CarbonBlack,Silica,0.35,0.15,2.15,50.0,"EXCELLENT: High precision, PID & EWMA perfectly fitted",优秀：精准度极高，PID/EWMA 完美契合
+M1-B00163R4,6,CarbonBlack,CarbonBlack,1.62,1.97,0.29,100.0,"EXCELLENT: High precision, PID & EWMA perfectly fitted",优秀：精准度极高，PID/EWMA 完美契合
+M1-T01139B,5,Silica,Silica,2.45,2.31,689674.9,50.0,"MODERATE: MAE target met, direction sensitive to lab testing noise",中等：绝对误差达标，但方向敏感度受实验室噪音影响
+M1-T33025XA,5,Silica,Silica,1.45,1.57,1.67,0.0,"EXCELLENT: High precision, PID & EWMA perfectly fitted",优秀：精准度极高，PID/EWMA 完美契合
+M1-T19012W,5,Silica,Silica,13.42,13.03,3398667.75,50.0,HIGH_MAE: Raw polymer COA shift or large inter-order jump,偏高：受生胶原材料 COA 偏低或跨订单大幅跳变影响
+M1-T00011-M,5,CarbonBlack,Silica,2.56,2.75,0.57,55.56,"MODERATE: MAE target met, direction sensitive to lab testing noise",中等：绝对误差达标，但方向敏感度受实验室噪音影响

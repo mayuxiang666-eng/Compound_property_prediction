@@ -1,0 +1,5 @@
+﻿window_id,temperature_range_c,exposure_range,control_stability,actionable_rule,target_mooney_effect
+W1_Normal_Silanization,135°C - 155°C,10 - 25,temp_std < 1.5°C,Reaction window optimal. Maintain current mixing speed and ram pressure.,Nominal baseline (0.0 ± 0.5 MNY)
+W2_Low_Exposure_Reaction_Deficit,< 135°C,< 10,temp_std < 2.0°C,Under-reaction risk! Increase mixing duration by +15s or raise dump temp setpoint.,Elevated Mooney (+1.5 ~ +3.0 MNY due to incomplete coupling)
+W3_Thermal_Scorch_Risk,> 160°C,> 25,temp_std > 2.5°C,Thermal overshoot hazard! Reduce rotor RPM immediately or discharge batch early.,Scorched Mooney shift (+2.0 ~ +4.5 MNY due to premature crosslinking)
+W4_Control_Instability_Fluctuation,Any,Any,temp_std > 2.5°C,PID control instability. Inspect TCU water valve response and oil injection rate.,Increased intra-order variance (std > 2.5 MNY)
