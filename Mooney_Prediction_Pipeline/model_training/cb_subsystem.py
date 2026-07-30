@@ -1,10 +1,11 @@
 # ============================================================================
-# Carbon Black Subsystem Residual Predictor V1
+# Carbon Black Subsystem Residual Predictor V1.1 (Strict Feature Decoupling)
 # ============================================================================
-# Implements specialized 3-expert architecture for Carbon Black compounds:
-#   1. CB Raw Material Preparation Expert (Upstream dry mix, CB PHR, structure proxy)
-#   2. CB Bottom Mixer Response Expert (Bottom mixing completion, energy/torque response)
-#   3. CB Material Expert (Polymer viscosity, oil ratio, physical COA features)
+# Implements specialized 3-expert architecture for Carbon Black compounds with
+# STRICT, MUTUALLY-EXCLUSIVE PHYSICAL FEATURE PARTITIONING:
+#   1. CB Prep Expert (Stage 1 Loading, Stage 2 Dry Mix, Stage 3 Oil, Stage 2 Power Decay)
+#   2. CB Bottom Mixer Response Expert (Stage 4 Wet, Stage 6 Bottom Mix, Discharge Temp/Torque)
+#   3. CB Material Expert (Formulation ratios, COA features, Ambient)
 #
 # Combined via a 2nd-level OOF Non-Negative Ridge Combiner.
 # ============================================================================
@@ -17,7 +18,7 @@ from sklearn.model_selection import KFold
 
 
 class CarbonBlackSubsystemPredictor:
-    """Specialized 3-expert residual subsystem for Carbon Black rubber compounds."""
+    """Specialized 3-expert residual subsystem for Carbon Black rubber compounds with decoupled feature spaces."""
 
     def __init__(self, n_splits: int = 5, shrinkage_alpha: float = 1.0):
         self.n_splits = n_splits
@@ -33,38 +34,40 @@ class CarbonBlackSubsystemPredictor:
         self.feature_names_material_ = []
 
     def _select_sub_features(self, X_delta: pd.DataFrame):
-        """Categorize features into the 3 CB sub-expert feature spaces."""
+        """Strictly categorizes features into 3 non-overlapping physical CB expert feature spaces."""
         all_cols = list(X_delta.columns)
 
-        # 1. CB Prep Expert Features (Upstream dry mix, CB PHR)
+        # 1. CB Prep Expert Features (Upstream Dry Mix, Loading & Oil Loading ONLY)
         prep_cols = [
             c for c in all_cols
-            if 'stage1' in c.lower() or 'stage2' in c.lower() or 'stage3' in c.lower()
-            or 'cb' in c.lower() or 'carbon' in c.lower() or 'dry' in c.lower()
+            if ('stage1' in c.lower() or 'stage2' in c.lower() or 'stage3' in c.lower() or 'dry' in c.lower() or 'loading' in c.lower())
+            and not ('stage4' in c.lower() or 'stage6' in c.lower() or 'bottom' in c.lower() or 'discharge' in c.lower())
         ]
 
-        # 2. CB Bottom Response Expert Features (Bottom mixing completion, energy/torque)
+        # 2. CB Bottom Response Expert Features (Bottom Mixing & Discharge Metrics ONLY)
         bottom_cols = [
             c for c in all_cols
-            if 'stage6' in c.lower() or 'bottom' in c.lower() or 'torque' in c.lower() or 'energy' in c.lower()
+            if ('stage4' in c.lower() or 'stage6' in c.lower() or 'bottom' in c.lower() or 'discharge' in c.lower() or 't_max_temp' in c.lower())
+            and not ('stage1' in c.lower() or 'stage2' in c.lower() or 'stage3' in c.lower())
         ]
 
-        # 3. CB Material Expert Features (Polymer viscosity, oil ratio, COA)
+        # 3. CB Material Expert Features (COA, Ratios & Ambient ONLY)
         mat_cols = [
             c for c in all_cols
-            if 'phr' in c.lower() or 'coa' in c.lower() or 'polymer' in c.lower() or 'phys_' in c.lower() or 'oil' in c.lower()
+            if ('phr' in c.lower() or 'coa' in c.lower() or 'supplier' in c.lower() or 'lot_' in c.lower() or 'ratio_' in c.lower() or 'weight_pct' in c.lower() or 'env_' in c.lower() or 'init_temp' in c.lower())
+            and not ('stage1_' in c.lower() or 'stage2_' in c.lower() or 'stage3_' in c.lower() or 'stage4_' in c.lower() or 'stage6_' in c.lower())
         ]
 
         if not prep_cols:
-            prep_cols = all_cols[:5]
+            prep_cols = [c for c in all_cols if 'stage2' in c.lower()] or all_cols[:5]
         if not bottom_cols:
-            bottom_cols = all_cols[:5]
+            bottom_cols = [c for c in all_cols if 'stage6' in c.lower()] or all_cols[:5]
         if not mat_cols:
-            mat_cols = all_cols[:5]
+            mat_cols = [c for c in all_cols if 'supplier' in c.lower() or 'ratio' in c.lower()] or all_cols[:5]
 
-        self.feature_names_prep_ = prep_cols
-        self.feature_names_bottom_ = bottom_cols
-        self.feature_names_material_ = mat_cols
+        self.feature_names_prep_ = list(set(prep_cols))
+        self.feature_names_bottom_ = list(set(bottom_cols))
+        self.feature_names_material_ = list(set(mat_cols))
 
     def fit(self, X_delta: pd.DataFrame, y_residual: np.ndarray, sample_weights: np.ndarray = None):
         """Fits the 3 sub-experts and learns an OOF combiner for Carbon Black routes."""

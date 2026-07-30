@@ -1,16 +1,15 @@
 # ============================================================================
-# Silica Subsystem Residual Predictor V1 (With Data Quality Hardening & Fallback)
+# Silica Subsystem Residual Predictor V1.1 (Strict Physical Feature Partitioning)
 # ============================================================================
-# Implements the specialized 4-expert architecture for Silica compounds:
+# Implements specialized 4-expert architecture for Silica compounds with
+# STRICT, MUTUALLY-EXCLUSIVE PHYSICAL FEATURE PARTITIONING:
 #   1. PID Reaction Expert (Silanization window, exposure proxy, risk, stability)
 #   2. Wet Preparation Expert (Upstream dry mix, oil loading, wet mix dynamics)
 #   3. Bottom Post-Reaction Expert (Bottom mixing completion, energy/torque response)
-#   4. Material Expert (Raw material properties, COA, PHR formulation ratios)
+#   4. Material & Environment Expert (Raw material properties, COA, PHR ratios, ambient)
 #
 # Out-Of-Fold (OOF) predictions from each sub-expert are combined by a 2nd-level
-# OOF combiner to prevent in-sample overfitting and fit-order bias.
-# Generates auditable diagnostic hypotheses (Reason Codes) and automatic PID data
-# quality fallback handling.
+# OOF Non-Negative Ridge combiner to prevent in-sample overfitting.
 # ============================================================================
 
 import numpy as np
@@ -21,7 +20,7 @@ from sklearn.model_selection import KFold
 
 
 class SilicaSubsystemPredictor:
-    """Specialized 4-expert residual subsystem for Silica rubber compounds."""
+    """Specialized 4-expert residual subsystem for Silica rubber compounds with decoupled feature spaces."""
 
     def __init__(self, n_splits: int = 5, shrinkage_alpha: float = 1.0, positive_constraint: bool = True):
         self.n_splits = n_splits
@@ -40,49 +39,51 @@ class SilicaSubsystemPredictor:
         self.feature_names_material_ = []
 
     def _select_sub_features(self, X_delta: pd.DataFrame, df_meta: pd.DataFrame = None):
-        """Categorize features into the 4 sub-expert feature spaces."""
+        """Strictly categorizes features into 4 non-overlapping physical expert feature spaces."""
         all_cols = list(X_delta.columns)
-        
-        # 1. PID Reaction Expert Features
+
+        # 1. PID Reaction Expert Features (Stage 5 PID & Kinetics ONLY)
         pid_cols = [
             c for c in all_cols
-            if 'pid' in c.lower() or 'stage5' in c.lower() or 'silanization' in c.lower()
+            if ('stage5' in c.lower() or 'pid' in c.lower() or 'silanization' in c.lower() or 'integral_above_100' in c.lower())
+            and not ('stage6' in c.lower() or 'bottom' in c.lower() or 'discharge' in c.lower())
         ]
-        
-        # 2. Wet Preparation Expert Features
+
+        # 2. Wet Preparation Expert Features (Upstream Dry, Oil & Wet Mixing ONLY)
         wet_cols = [
             c for c in all_cols
-            if 'stage2' in c.lower() or 'stage3' in c.lower() or 'stage4' in c.lower()
-            or 'dry' in c.lower() or 'wet' in c.lower() or 'oil' in c.lower()
+            if ('stage2' in c.lower() or 'stage3' in c.lower() or 'stage4' in c.lower() or 'dry' in c.lower() or 'wet' in c.lower())
+            and not ('stage5' in c.lower() or 'pid' in c.lower() or 'stage6' in c.lower() or 'bottom' in c.lower())
         ]
-        
-        # 3. Bottom Post-Reaction Expert Features
+
+        # 3. Bottom Post-Reaction Expert Features (Stage 6 Bottom & Discharge Metrics ONLY)
         bottom_cols = [
             c for c in all_cols
-            if 'stage6' in c.lower() or 'bottom' in c.lower()
+            if ('stage6' in c.lower() or 'bottom' in c.lower() or 'discharge' in c.lower() or 't_max_temp' in c.lower() or 'reach_discharge' in c.lower())
+            and not ('stage5' in c.lower() or 'pid' in c.lower())
         ]
-        
-        # 4. Material Expert Features
+
+        # 4. Material & Environment Expert Features (COA, Formulation Ratios, Ambient ONLY)
         mat_cols = [
             c for c in all_cols
-            if 'phr' in c.lower() or 'coa' in c.lower() or 'silica' in c.lower()
-            or 'phys_' in c.lower() or 'env_' in c.lower()
+            if ('phr' in c.lower() or 'coa' in c.lower() or 'supplier' in c.lower() or 'lot_' in c.lower() or 'ratio_' in c.lower() or 'weight_pct' in c.lower() or 'env_' in c.lower() or 'init_temp' in c.lower())
+            and not ('stage1_' in c.lower() or 'stage2_' in c.lower() or 'stage3_' in c.lower() or 'stage4_' in c.lower() or 'stage5_' in c.lower() or 'stage6_' in c.lower())
         ]
-        
-        # Fallback if any is empty
-        if not pid_cols:
-            pid_cols = all_cols[:5]
-        if not wet_cols:
-            wet_cols = all_cols[:5]
-        if not bottom_cols:
-            bottom_cols = all_cols[:5]
-        if not mat_cols:
-            mat_cols = all_cols[:5]
 
-        self.feature_names_pid_ = pid_cols
-        self.feature_names_wet_ = wet_cols
-        self.feature_names_bottom_ = bottom_cols
-        self.feature_names_material_ = mat_cols
+        # Fallbacks to guarantee non-empty sets if columns missing
+        if not pid_cols:
+            pid_cols = [c for c in all_cols if 'stage5' in c.lower()] or all_cols[:5]
+        if not wet_cols:
+            wet_cols = [c for c in all_cols if 'stage2' in c.lower() or 'stage4' in c.lower()] or all_cols[:5]
+        if not bottom_cols:
+            bottom_cols = [c for c in all_cols if 'stage6' in c.lower()] or all_cols[:5]
+        if not mat_cols:
+            mat_cols = [c for c in all_cols if 'supplier' in c.lower() or 'ratio' in c.lower()] or all_cols[:5]
+
+        self.feature_names_pid_ = list(set(pid_cols))
+        self.feature_names_wet_ = list(set(wet_cols))
+        self.feature_names_bottom_ = list(set(bottom_cols))
+        self.feature_names_material_ = list(set(mat_cols))
 
     def check_pid_data_quality(self, df_row_or_batch: pd.DataFrame) -> np.ndarray:
         """Checks if PID data quality is acceptable (non-null, non-zero, within physical limits)."""
@@ -105,7 +106,6 @@ class SilicaSubsystemPredictor:
 
         self._select_sub_features(X_delta, df_meta)
 
-        # Step 1: Out-Of-Fold (OOF) predictions
         oof_pid = np.zeros(n_samples)
         oof_wet = np.zeros(n_samples)
         oof_bottom = np.zeros(n_samples)
@@ -133,7 +133,7 @@ class SilicaSubsystemPredictor:
             m_mat.fit(X_tr[self.feature_names_material_], y_tr, sample_weight=w_tr)
             oof_mat[val_idx] = m_mat.predict(X_val[self.feature_names_material_])
 
-        # Step 2: Fit 2nd-level Combiner
+        # Step 2: Fit 2nd-level OOF Combiner
         X_oof = np.column_stack([oof_pid, oof_wet, oof_bottom, oof_mat])
         if self.positive_constraint:
             self.combiner_ = Ridge(alpha=self.shrinkage_alpha, fit_intercept=False, positive=True)
@@ -175,47 +175,7 @@ class SilicaSubsystemPredictor:
 
         if df_meta is not None:
             pid_ok = self.check_pid_data_quality(df_meta)
-            # Apply fallback: if PID data is invalid, set PID prediction to 0
             preds['pid'] = np.where(pid_ok, preds['pid'], 0.0)
 
         X_test_oof = np.column_stack([preds['pid'], preds['wet'], preds['bottom'], preds['material']])
         return self.combiner_.predict(X_test_oof)
-
-    def generate_reason_codes(self, df_meta: pd.DataFrame) -> pd.DataFrame:
-        """Generates auditable diagnostic hypotheses and fallback reason codes for Silica batches."""
-        primary_codes = []
-        confidence_levels = []
-        pid_active_flags = []
-
-        for idx in range(len(df_meta)):
-            row = df_meta.iloc[idx]
-            batch_codes = []
-            exp_proxy = pd.to_numeric(row.get('pid_silanization_exposure_proxy', np.nan), errors='coerce')
-            risk_proxy = pd.to_numeric(row.get('pid_high_temperature_risk_proxy', np.nan), errors='coerce')
-            instab_proxy = pd.to_numeric(row.get('pid_control_instability_proxy', np.nan), errors='coerce')
-            valid_flag = pd.to_numeric(row.get('pid_data_valid_flag', 1.0), errors='coerce')
-
-            is_pid_ok = not (pd.isna(exp_proxy) or pd.isna(risk_proxy) or valid_flag == 0 or (exp_proxy == 0 and risk_proxy == 0))
-
-            if not is_pid_ok:
-                batch_codes.append('PID_EXPERT_DISABLED_LOW_QUALITY')
-                confidence_levels.append('LOW')
-                pid_active_flags.append(False)
-            else:
-                pid_active_flags.append(True)
-                confidence_levels.append('HIGH')
-                if exp_proxy < 10.0:
-                    batch_codes.append('LOW_PID_REACTION_EXPOSURE')
-                if risk_proxy > 15.0:
-                    batch_codes.append('HIGH_PID_THERMAL_EXPOSURE')
-                if instab_proxy > 2.5:
-                    batch_codes.append('PID_CONTROL_INSTABILITY')
-
-            primary_code = batch_codes[0] if batch_codes else 'NORMAL_REACTION_STATE'
-            primary_codes.append(primary_code)
-
-        return pd.DataFrame({
-            'primary_reason_code': primary_codes,
-            'confidence_level': confidence_levels,
-            'pid_expert_active': pid_active_flags,
-        }, index=df_meta.index)
