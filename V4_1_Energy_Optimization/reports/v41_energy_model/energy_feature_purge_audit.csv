@@ -1,0 +1,36 @@
+﻿feature_name,feature_category,used_in_mode_a,used_in_mode_b,purge_reason,allowed_for_recommendation
+batch_weight_ton,static_recipe_material,True,True,,True
+weight_pct_solid_elastomer,static_recipe_material,True,True,,True
+weight_pct_natural_rubber,static_recipe_material,True,True,,True
+weight_pct_silica,static_recipe_material,True,True,,True
+weight_pct_oil,static_recipe_material,True,True,,True
+weight_pct_silian,static_recipe_material,True,True,,True
+weight_pct_carbon_black,static_recipe_material,True,True,,True
+silica_phr,static_recipe_material,True,True,,True
+supplier_rubber_viscosity_avg,static_recipe_material,True,True,,True
+supplier_silica_surface_area_avg,static_recipe_material,True,True,,True
+supplier_carbon_black_structure_avg,static_recipe_material,True,True,,True
+MixerLine,pre_batch_context,True,True,,True
+material_system,pre_batch_context,True,True,,True
+phase_route,pre_batch_context,True,True,,True
+Stage2_DryMixing_Duration,controllable_setpoint,True,True,,True
+Stage4_WetMixing_Duration,controllable_setpoint,True,True,,True
+Stage5_PID_Duration,controllable_setpoint,True,True,,True
+Stage6_BottomMixing_Duration,controllable_setpoint,True,True,,True
+Target_Temperature,controllable_setpoint,True,True,,True
+Top_Fill_Factor,controllable_setpoint,True,True,,True
+Stage2_DryMixing_RotorSpeed_Mean,post_batch_process_response,True,False,Measured stage response is unavailable at recommendation time,False
+Stage5_PID_temp_Mean,post_batch_process_response,True,False,Measured stage response is unavailable at recommendation time,False
+phys_power_integral,post_batch_process_response,True,False,Measured stage response is unavailable at recommendation time,False
+phys_discharge_temp,post_batch_process_response,True,False,Measured stage response is unavailable at recommendation time,False
+phys_max_power_drop_rate,post_batch_process_response,True,False,Measured stage response is unavailable at recommendation time,False
+phys_avg_power,post_batch_process_response,True,False,Measured stage response is unavailable at recommendation time,False
+phys_temp_rise_rate,post_batch_process_response,True,False,Measured stage response is unavailable at recommendation time,False
+Stage2_DryMixing_power_Integral,post_batch_process_response,True,False,Measured stage response is unavailable at recommendation time,False
+Stage4_WetMixing_power_Integral,post_batch_process_response,True,False,Measured stage response is unavailable at recommendation time,False
+Stage5_PID_power_Integral,post_batch_process_response,True,False,Measured stage response is unavailable at recommendation time,False
+Stage6_BottomMixing_power_Integral,post_batch_process_response,True,False,Measured stage response is unavailable at recommendation time,False
+total_kwh_per_batch,energy_derived_target_proxy,False,False,Energy target or target proxy is prohibited from model features,False
+kwh_per_ton,energy_derived_target_proxy,False,False,Energy target or target proxy is prohibited from model features,False
+top_mixer_kwh,energy_derived_target_proxy,False,False,Energy target or target proxy is prohibited from model features,False
+bottom_mixer_kwh,energy_derived_target_proxy,False,False,Energy target or target proxy is prohibited from model features,False

@@ -1,0 +1,9 @@
+﻿material_system,phase_route,system_route_branch,safe_bounds_match_level,batch_count,route_batch_count,batch_pct_within_route
+CarbonBlack,NoOilDry,CarbonBlack_NoOilDry,EXACT_RECIPE_MIXER_ROUTE,3,6,50.0
+CarbonBlack,NoOilDry,CarbonBlack_NoOilDry,UNAVAILABLE,3,6,50.0
+CarbonBlack,OilWet,CarbonBlack_OilWet,EXACT_RECIPE_MIXER_ROUTE,124,142,87.32
+CarbonBlack,OilWet,CarbonBlack_OilWet,UNAVAILABLE,18,142,12.68
+Silica,NoOilDry,Silica_NoOilDry,EXACT_RECIPE_MIXER_ROUTE,3,26,11.54
+Silica,NoOilDry,Silica_NoOilDry,SILICA_ROUTE_GLOBAL_FALLBACK,23,26,88.46
+Silica,OilWet,Silica_OilWet,EXACT_RECIPE_MIXER_ROUTE,35,86,40.7
+Silica,OilWet,Silica_OilWet,SILICA_ROUTE_GLOBAL_FALLBACK,51,86,59.3

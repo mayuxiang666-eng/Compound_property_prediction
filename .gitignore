@@ -50,3 +50,10 @@ mlflow.db
 mlruns/
 data_store/parquet/
 
+# === V4.1 Energy Optimization archive ===
+!V4_1_Energy_Optimization/
+!V4_1_Energy_Optimization/reports/
+!V4_1_Energy_Optimization/reports/**/*.csv
+!V4_1_Energy_Optimization/models/
+!V4_1_Energy_Optimization/models/**/*.joblib
+

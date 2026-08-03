@@ -1,0 +1,5 @@
+﻿material_system,phase_route,system_route_branch,n_batches,total_stage_kwh,drymix_kwh_share,wetmix_kwh_share,pid_kwh_share,bottom_kwh_share
+CarbonBlack,NoOilDry,CarbonBlack_NoOilDry,277,9802.4,0.5033,0.0,0.2447,0.2323
+CarbonBlack,OilWet,CarbonBlack_OilWet,3918,116566.99,0.3975,0.0347,0.205,0.2527
+Silica,NoOilDry,Silica_NoOilDry,2479,92810.48,0.4563,0.0,0.2633,0.2576
+Silica,OilWet,Silica_OilWet,12109,512917.44,0.1784,0.2109,0.2219,0.3116

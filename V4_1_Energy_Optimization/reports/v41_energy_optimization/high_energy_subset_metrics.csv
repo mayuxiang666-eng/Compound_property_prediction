@@ -1,0 +1,3 @@
+﻿subset,energy_bucket,high_energy_flag,threshold,count,MAE_kWh,RMSE_kWh,R2,MAPE_pct,MAE_kWh_per_ton,Hit_2kWh_pct,Hit_5pct_pct
+Top_10pct_kWh_per_batch,TOP_10PCT_KWH_PER_BATCH,1,47.512,41,5.639,6.601,-2.6716,10.96,24.777,12.2,21.95
+Top_10pct_kWh_per_ton,TOP_10PCT_KWH_PER_TON,1,307.778,17,2.382,4.262,-0.5832,4.57,15.877,58.82,64.71

@@ -1,0 +1,5 @@
+﻿material_system,phase_route,system_route_branch,MAE_kWh,RMSE_kWh,R2,MAPE_pct,MAE_kWh_per_ton,Hit_2kWh_pct,Hit_5pct_pct
+CarbonBlack,NoOilDry,CarbonBlack_NoOilDry,1.742,2.488,0.641,4.87,9.905,61.11,66.67
+CarbonBlack,OilWet,CarbonBlack_OilWet,1.52,2.011,0.8809,5.26,6.978,77.14,64.29
+Silica,NoOilDry,Silica_NoOilDry,3.018,3.735,0.3927,7.87,12.485,38.64,37.29
+Silica,OilWet,Silica_OilWet,1.879,2.618,0.7406,4.97,8.702,66.63,66.3

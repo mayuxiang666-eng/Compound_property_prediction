@@ -1,0 +1,5 @@
+﻿system_route_branch,recommended_row_count,average_saving_pct,total_estimated_saving_kwh,exact_bound_recommendation_count,fallback_bound_recommendation_count
+CarbonBlack_OilWet,10.0,12.409,36.99,10.0,0.0
+Silica_OilWet,9.0,21.081111111111113,89.03,0.0,9.0
+Silica_NoOilDry,1.0,8.23,4.45,0.0,1.0
+CarbonBlack_NoOilDry,0.0,0.0,0.0,0.0,0.0

@@ -1,0 +1,11 @@
+﻿report_type,subset,model_variant,sample_count,specialist_activation_pct,MAE_kWh,RMSE_kWh,R2,MAPE_pct,MAE_kWh_per_ton,Hit_2kWh_pct,Hit_5pct_pct,target_branch,risk_threshold,calibrator_sample_count,high_energy_precision_pct,high_energy_recall_pct,acceptance_target,base_MAE_kWh,specialist_MAE_kWh,base_R2,specialist_R2,base_Hit_2kWh_pct,specialist_Hit_2kWh_pct,acceptance_status
+ENERGY_METRICS,ALL_TEST,MODE_B_BASE,1367.0,3.07,2.086,2.844,0.7638,5.62,9.358,61.59,59.84,,,,,,,,,,,,,
+ENERGY_METRICS,ALL_TEST,MODE_B_PLUS_HIGH_ENERGY_SPECIALIST,1367.0,3.07,2.136,2.872,0.7592,5.74,9.687,59.91,57.94,,,,,,,,,,,,,
+ENERGY_METRICS,BRANCH_P90_KWH_PER_BATCH,MODE_B_BASE,14.0,21.43,5.949,6.951,-3.2068,10.98,28.329,0.0,21.43,,,,,,,,,,,,,
+ENERGY_METRICS,BRANCH_P90_KWH_PER_BATCH,MODE_B_PLUS_HIGH_ENERGY_SPECIALIST,14.0,21.43,5.343,6.282,-2.4362,9.86,24.293,7.14,21.43,,,,,,,,,,,,,
+ENERGY_METRICS,BRANCH_P90_KWH_PER_TON,MODE_B_BASE,3.0,100.0,7.824,9.531,-2.5588,13.79,52.161,0.0,33.33,,,,,,,,,,,,,
+ENERGY_METRICS,BRANCH_P90_KWH_PER_TON,MODE_B_PLUS_HIGH_ENERGY_SPECIALIST,3.0,100.0,4.999,7.039,-0.941,8.56,33.327,33.33,33.33,,,,,,,,,,,,,
+ENERGY_METRICS,BRANCH_P90_UNION,MODE_B_BASE,14.0,21.43,5.949,6.951,-3.2068,10.98,28.329,0.0,21.43,,,,,,,,,,,,,
+ENERGY_METRICS,BRANCH_P90_UNION,MODE_B_PLUS_HIGH_ENERGY_SPECIALIST,14.0,21.43,5.343,6.282,-2.4362,9.86,24.293,7.14,21.43,,,,,,,,,,,,,
+DETECTOR_METRICS,Silica_OilWet,HIGH_ENERGY_DETECTOR,1367.0,3.07,,,,,,,,Silica_OilWet,0.5,331.0,7.14,100.0,,,,,,,,
+ACCEPTANCE_GATE,Silica_OilWet,HIGH_ENERGY_SILICA_OILWET_CALIBRATOR,,,,,,,,,,Silica_OilWet,,,,,"Improve Top10% kWh/batch MAE, R2, and Hit_2kWh over Mode B base",5.949,5.343,-3.2068,-2.4362,0.0,7.14,PASS

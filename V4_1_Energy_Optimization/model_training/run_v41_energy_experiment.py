@@ -130,12 +130,12 @@ def run_v41_master_experiment():
     print("\n[Task 1 & 2] Loading Dataset & Building Labels & Features...", flush=True)
     data_path = os.path.abspath(os.path.join(
         os.path.dirname(__file__),
-        '../../data/stage_statistics_enriched_all_features_weather_v4.csv',
+        '../data/stage_statistics_enriched_all_features_weather_v4.csv',
     ))
     if not os.path.exists(data_path):
         data_path = os.path.abspath(os.path.join(
             os.path.dirname(__file__),
-            '../../data/enriched_mny_all.csv',
+            '../data/enriched_mny_all.csv',
         ))
 
     df_raw = pd.read_csv(data_path, low_memory=False)

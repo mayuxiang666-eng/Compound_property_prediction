@@ -1,0 +1,2 @@
+﻿model_mode,feature_policy,MAE_kWh,RMSE_kWh,R2,MAPE_pct,MAE_kWh_per_ton,Hit_2kWh_pct,Hit_5pct_pct
+Mode_B_Clean_PreBatch_Recommendation,STATIC_PRE_BATCH_AND_CONTROLLABLE_SETPOINTS_ONLY,2.086,2.844,0.7638,5.62,9.358,61.59,59.84
