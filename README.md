@@ -44,8 +44,14 @@ Master batch data fectching/
 │       ├── index.html                          ──> [暗黑深色玻璃拟态可视化交互界面 (Chart.js)]
 │       └── serve_dashboard.py                  ──> [提供 /api/real_batches 接口的 REST HTTP 服务器]
 │
-├── 📁 docs/                                   ──> 【上线后闭环优化与实施方案】
-│   └── production_online_calibration_and_continuous_improvement_plan.md ──> [V1.0/V4.0 闭环实施计划全书]
+├── 📁 docs/                                   ──> 【实施文档（仅保留有用项）】
+│   ├── 门尼系统实施任务书_总目录.md             ──> [入口：文档角色说明]
+│   ├── 门尼系统实施任务书.md                   ──> [中文契约总规格：库表/API/调度]
+│   ├── 门尼系统实施任务书_V3.7.md               ──> [V3.7 执行手册]
+│   ├── 门尼系统实施任务书_V3.8.md               ──> [V3.8 执行手册]
+│   ├── 门尼系统实施任务书_V4.0.md               ──> [V4.0 执行手册]
+│   └── production_online_calibration_and_continuous_improvement_plan.md
+│                                               ──> [英文闭环规范：Pipeline/状态机/α/门禁]
 │
 ├── 📁 reports/                                 ──> 【各维度验证实验与审计报告 CSV】
 │   ├── v37_nominal_audit/                      ──> 名义组级评估报告与数据表
@@ -119,6 +125,5 @@ print(result_df[['OrderID', 'BatchNumber', 'stage1_recipe_baseline', 'stage2_pro
 
 ## 4. 上线后闭环优化与实施计划 (Continuous Improvement Plan)
 
-关于上线后如何异步接收实验室 LIMS/SAP QM 反馈、触发 Stage 3 在线 EWMA 动态补偿与漂移监控的完整实施方案，请参阅专用文档：
-
-📄 **[上线后延迟实验室反馈闭环优化实施计划 (docs/production_online_calibration_and_continuous_improvement_plan.md)](file:///c:/Users/uif35346/OneDrive%20-%20Continental%20AG/Desktop/Compound%20property%20prediction/Master%20batch%20data%20fectching/docs/production_online_calibration_and_continuous_improvement_plan.md)**
+- **英文闭环规范（原则/状态机/α/门禁）：** [docs/production_online_calibration_and_continuous_improvement_plan.md](docs/production_online_calibration_and_continuous_improvement_plan.md)
+- **中文实施总规格 + 分版执行手册：** [docs/门尼系统实施任务书.md](docs/门尼系统实施任务书.md) · [总目录](docs/门尼系统实施任务书_总目录.md)
