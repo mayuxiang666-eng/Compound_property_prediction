@@ -161,8 +161,11 @@ $$\text{new\_bias} = (1 - \alpha_t) \cdot \text{old\_bias} + \alpha_t \cdot \tex
 
 1. **模型训练**：同组 batch 使用 $\text{sample\_weight} = 1.0 / \text{group\_size}$ 或名义组聚合模式。
 2. **上线预测**：保持 batch-level 预测与 stage contribution 解释，现场可查看单车混炼差异。
-3. **校准更新**：**同一个 `label_group_id` 只产生一次 group-level calibration feedback**，禁止将同一个 Lab 结果重复更新多次导致状态过度失真。
+3. **校准更新**：**同一个 `label_group_id` 只产生一次 group-level calibration feedback**，禁止将同一个 Lab 结果重复更新多次导致状态过度失真。  
+   - **组级误差（与评估 mean(pred) 对齐）**：`group_raw_error = lab_actual_mny - mean(raw_prediction_i)` over batches in the label group；EWMA 更新使用该组级 `group_raw_error`，**禁止**用单车“代表车”误差。  
 4. **前端展示**：同时展示 group-level 门尼预测与 batch-level 混炼风险。
+
+> **物理表名**：工程落库以中文总规格 `Mooney*`（`MixingCurveData`）为准；下文 DDL 为逻辑名。
 
 ---
 
@@ -321,4 +324,8 @@ gantt
 2. 🛡️ **Label Group No-Leak**：同一 Lab 采样组多车不得重复触发多次校准；
 3. 🛡️ **Time Holdout Non-Degradation**：时间外推测试集 MAE 未发生退化；
 4. 🛡️ **Cold-Start Non-Degradation**：冷启动胶料配方 MAE $< 3.0\text{ MNY}$；
-5. 🛡️ **Calibration Simulation Gate**：Stage 3 在线仿真中 `online_error` 必须小于等于 `raw_error`。
+5. 🛡️ **Calibration Simulation Gate**：在滚动仿真/回放窗口上，比较**绝对误差**：  
+   \(\mathrm{MAE}(|online\_error|) \le \mathrm{MAE}(|raw\_error|)\)。  
+   **禁止**使用有符号不等式 `online_error ≤ raw_error`（在 `error = lab - pred` 定义下数学上不可靠）。  
+
+> **修订注（2026-08-05）**：与中文总规格 §10 P0-4、§2.2 组级误差对齐；Stage3 生产化细节（SQL State、幂等、影子路径）以中文总规格为准。
