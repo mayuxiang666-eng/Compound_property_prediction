@@ -23,8 +23,9 @@ def aggregate_steps_to_phase_features(df_mapped: pd.DataFrame) -> pd.DataFrame:
     df = df_mapped.copy()
     
     # Calculate step durations from cumulative time_SP per (OrderID, BatchNumber, GroupName)
-    df['time_SP_prev'] = df.groupby(['OrderID', 'BatchNumber', 'GroupName'])['time_SP'].shift(1, fill_value=0)
-    df['dur_SP'] = df['time_SP'] - df['time_SP_prev']
+    time_col = 'recommended_time_SP' if 'recommended_time_SP' in df.columns else 'time_SP'
+    df['time_SP_prev'] = df.groupby(['OrderID', 'BatchNumber', 'GroupName'])[time_col].shift(1, fill_value=0)
+    df['dur_SP'] = df[time_col] - df['time_SP_prev']
 
     results = []
     group_keys = ['OrderID', 'BatchNumber']

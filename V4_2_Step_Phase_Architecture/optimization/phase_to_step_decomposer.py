@@ -99,7 +99,9 @@ def decompose_phase_to_steps(
         'Stage2_DryMixing': 'Stage2_DryMixing_Duration',
         'Stage3_OilLoading': 'Stage3_OilLoading_Duration',
         'Stage4_WetMixing_Ramp': 'Stage4_WetMixing_Duration',
+        'Stage4_WetMixing': 'Stage4_WetMixing_Duration',
         'Stage5_MST_PID_Silanization': 'Stage5_PID_Duration',
+        'Stage5_PID': 'Stage5_PID_Duration',
     }
 
     for phase_name, target_key in phase_map.items():
