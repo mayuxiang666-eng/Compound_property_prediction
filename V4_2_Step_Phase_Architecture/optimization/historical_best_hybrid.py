@@ -63,9 +63,9 @@ def compare_model_vs_historical_best(
         suffixes=('_model_rec', '_hist_best')
     )
 
-    comp_df['time_delta_vs_hist'] = comp_df['recommended_time_SP'] - comp_df['time_SP']
-    comp_df['rotor_delta_vs_hist'] = comp_df['recommended_rotor_SP'] - comp_df['rotor_SP']
-    comp_df['temp_delta_vs_hist'] = comp_df['recommended_temp_SP'] - comp_df['temp_SP']
+    comp_df['time_delta_vs_hist'] = comp_df['recommended_time_SP'] - comp_df['time_SP_hist_best']
+    comp_df['rotor_delta_vs_hist'] = comp_df['recommended_rotor_SP'] - comp_df['rotor_SP_hist_best']
+    comp_df['temp_delta_vs_hist'] = comp_df['recommended_temp_SP'] - comp_df['temp_SP_hist_best']
 
     report_rows = []
     for idx, row in comp_df.iterrows():
@@ -73,11 +73,10 @@ def compare_model_vs_historical_best(
         s_no = row['StepNo']
         p_name = row['mapped_phase']
 
-        # Format comparison strings
         t_m = row['recommended_time_SP']
-        t_h = row['time_SP']
+        t_h = row['time_SP_hist_best']
         r_m = row['recommended_rotor_SP']
-        r_h = row['rotor_SP']
+        r_h = row['rotor_SP_hist_best']
 
         report_rows.append({
             'GroupName': g_name,
