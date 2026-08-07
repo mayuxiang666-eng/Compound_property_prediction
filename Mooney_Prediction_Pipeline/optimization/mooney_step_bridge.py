@@ -50,11 +50,10 @@ def evaluate_mooney_step_bridge_dual_arm(
         base_final = float(base_mny[0])
     else:
         # Dynamic physical proxy calculation based on batch's actual stage durations & speeds
-        # Ensures batch-to-batch variation!
         wet_dur = df_base_phase.get('Stage4_WetMixing_Duration', pd.Series([30.0])).iloc[0]
         pid_dur = df_base_phase.get('Stage5_PID_Duration', pd.Series([13.0])).iloc[0]
-        base_final = round(50.0 + 0.1 * (40.0 - wet_dur) + 0.15 * pid_dur, 2)
-        base_s2 = np.array([0.1 * (40.0 - wet_dur)])
+        base_final = round(55.0 + 0.1 * (80.0 - wet_dur) + 0.15 * pid_dur, 2)
+        base_s2 = np.array([5.0 + 0.1 * (80.0 - wet_dur)])
 
     base_contribs = {
         'WetMixing': float(base_s2[0]),
@@ -93,8 +92,8 @@ def evaluate_mooney_step_bridge_dual_arm(
     else:
         rec_wet_dur = df_rec_phase.get('Stage4_WetMixing_Duration', pd.Series([30.0])).iloc[0]
         rec_pid_dur = df_rec_phase.get('Stage5_PID_Duration', pd.Series([13.0])).iloc[0]
-        rec_final = round(50.0 + 0.1 * (40.0 - rec_wet_dur) + 0.15 * rec_pid_dur, 2)
-        rec_s2 = np.array([0.1 * (40.0 - rec_wet_dur)])
+        rec_final = round(55.0 + 0.1 * (80.0 - rec_wet_dur) + 0.15 * rec_pid_dur, 2)
+        rec_s2 = np.array([5.0 + 0.1 * (80.0 - rec_wet_dur)])
 
     rec_contribs = {
         'WetMixing': float(rec_s2[0]),
@@ -107,9 +106,10 @@ def evaluate_mooney_step_bridge_dual_arm(
     gap_before = abs(spec_center - base_final)
     gap_after = abs(spec_center - rec_final)
 
-    # Overshoot Constraint Check (Rule 3)
+    # Overshoot Constraint Check (Rule 3 & Bug Fix 2: gap_after > gap_before is OVER_SHOOT / EXPANDED_GAP)
     same_side = np.sign(rec_final - spec_center) == np.sign(base_final - spec_center)
-    overshoot_flag = (not same_side) and (gap_after > overshoot_tol)
+    gap_expanded = gap_after > gap_before
+    overshoot_flag = gap_expanded or ((not same_side) and (gap_after > overshoot_tol))
     pull_effective = (gap_after < gap_before) and (same_side or gap_after <= overshoot_tol)
 
     # Side Effect / Competition Check (Rule 4)

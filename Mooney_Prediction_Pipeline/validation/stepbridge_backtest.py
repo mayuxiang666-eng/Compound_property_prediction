@@ -144,7 +144,7 @@ def run_stepbridge_historical_backtest(
     control_group_passed = avg_normal_corr < (0.2 * avg_high_dev_corr + 1e-5)
 
     df_full_log = pd.concat(all_logs, ignore_index=True) if all_logs else pd.DataFrame()
-    out_csv = os.path.join(root_dir, 'Mooney_Prediction_Pipeline', 'reports', 'mooney_stepbridge_backtest_v2.csv')
+    out_csv = os.path.join(root_dir, 'Mooney_Prediction_Pipeline', 'reports', 'mooney_stepbridge_backtest_v3.csv')
     os.makedirs(os.path.dirname(out_csv), exist_ok=True)
     df_full_log.to_csv(out_csv, index=False, encoding='utf-8-sig')
 

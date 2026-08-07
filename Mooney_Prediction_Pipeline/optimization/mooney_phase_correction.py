@@ -61,24 +61,24 @@ def generate_mooney_corrections(
             # Scale recommended duration/energy delta proportional to gap
             intensity_scale = min(2.0, abs(mny_gap) / 5.0)
             
-            if 'increase_wet_energy' in action:
-                dur_delta = 10.0 * intensity_scale
-                rotor_delta = 5.0 * intensity_scale
+            # When mny_pred > spec_center (mny_gap < 0), we NEED to lower Mooney!
+            # For WetMixing/Bottom, increasing energy/time lowers Mooney -> target_dur_delta should be POSITIVE (+dur)
+            # For PID, reducing PID duration lowers Mooney thermal exposure -> target_dur_delta should be NEGATIVE (-dur)
+            if 'increase_wet_energy' in action or 'increase_bottom_energy' in action:
+                dur_delta = 10.0 * intensity_scale if mny_gap < 0 else -10.0 * intensity_scale
+                rotor_delta = 5.0 * intensity_scale if mny_gap < 0 else -5.0 * intensity_scale
             elif 'reduce_pid_duration' in action:
-                dur_delta = -8.0 * intensity_scale
+                dur_delta = -8.0 * intensity_scale if mny_gap < 0 else 8.0 * intensity_scale
                 rotor_delta = 0.0
-            elif 'increase_bottom_energy' in action:
-                dur_delta = 12.0 * intensity_scale
-                rotor_delta = 4.0 * intensity_scale
             else:
-                dur_delta = 5.0 * intensity_scale
+                dur_delta = 5.0 * intensity_scale if mny_gap < 0 else -5.0 * intensity_scale
                 rotor_delta = 0.0
 
             corrections[phase] = {
                 'phase': phase,
                 'contrib': contrib,
-                'target_dur_delta': dur_delta if mny_gap < 0 else -dur_delta,
-                'target_rotor_delta': rotor_delta if mny_gap < 0 else -rotor_delta,
+                'target_dur_delta': dur_delta,
+                'target_rotor_delta': rotor_delta,
                 'mechanism_note': mechanism,
                 'pe_confirmed': bool(rule['pe_confirmed'])
             }

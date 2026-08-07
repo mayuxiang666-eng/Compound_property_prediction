@@ -120,8 +120,18 @@ def decompose_phase_to_steps(
             step_mins = [max(1.0, d * 0.5) for d in sub_durs]
             step_maxs = [d * 2.0 for d in sub_durs]
 
-            rec_times = decompose_duration(sub_durs, target_dur, step_mins, step_maxs)
-            out.loc[p_mask, 'recommended_time_SP'] = rec_times
+            rec_durs = decompose_duration(sub_durs, target_dur, step_mins, step_maxs)
+            
+            # Reconstruct cumulative time_SP values per phase
+            # recommended_time_SP represents cumulative end time of the step
+            cumulative_rec_times = []
+            prev_t = 0.0
+            for idx, r_dur in enumerate(rec_durs):
+                curr_t = prev_t + r_dur
+                cumulative_rec_times.append(curr_t)
+                prev_t = curr_t
+                
+            out.loc[p_mask, 'recommended_time_SP'] = cumulative_rec_times
 
     out['delta_time_SP'] = out['recommended_time_SP'] - out['time_SP']
     out['delta_rotor_SP'] = out['recommended_rotor_SP'] - out['rotor_SP']

@@ -94,7 +94,7 @@ def build_stepbridge_log_rows(
         'mny_pull': 0.0,
         'gap_before': eval_summary['gap_before'],
         'gap_after': eval_summary['gap_before'],
-        'pull_effective': True,
+        'pull_effective': None,  # N/A for BASELINE arm (Bug Fix 1)
         'overshoot_flag': False,
         'side_effect': 0.0,
         'lab_status': 'PENDING',
