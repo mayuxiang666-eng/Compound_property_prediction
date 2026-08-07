@@ -1,0 +1,5 @@
+phase,deviation_signal,mny_effect_direction,correction_action,mechanism_note,pe_confirmed
+WetMixing,power_integral_low,high,increase_wet_energy(+time/+rotor),湿混剪切分散不足导致门尼偏高,TRUE
+PID,thermal_exposure_high,high,reduce_pid_duration_or_temp,热历史过度(高温风险)导致门尼偏高,TRUE
+BottomMixing,shear_work_low,high,increase_bottom_energy(+time/+rotor),下密炼终段剪切做功不足导致门尼偏高,TRUE
+DryMixing,dispersion_time_short,high,increase_dry_mixing_duration,干混时间不足致粉料分散欠佳,TRUE
