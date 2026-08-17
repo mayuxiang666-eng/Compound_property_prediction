@@ -85,10 +85,10 @@ def evaluate_guidance_pipeline():
     assert (wet_rotor_recs['delta_SP'] == -5.0).any(), "FAIL: Wet mixing rotor should be reduced by 5 rpm!"
     print("[PASS] Assertion 4 (Wet Mixing Rotor Reduction by 5 rpm): Verified")
 
-    # --- ASSERTION 4: Direction Accuracy (All actions pull down) ---
+    # --- ASSERTION 4: Rule Engine Intent Tagging (Generated adjustments tagged with intended direction) ---
     active_recs = df_recs[df_recs['delta_SP'] != 0.0]
-    assert (active_recs['expected_direction'] == 'PULL_DOWN').all(), "FAIL: All recommended actions must aim at PULL_DOWN!"
-    print(f"[PASS] Assertion 5 (Direction Accuracy 100% PULL_DOWN): Verified across {len(active_recs)} active recommendations")
+    assert (active_recs['rule_intended_direction'] == 'PULL_DOWN').all(), "FAIL: All recommended actions must be tagged with PULL_DOWN intent!"
+    print(f"[PASS] Assertion 5 (Rule Engine Intent Tagging): Verified 100% of {len(active_recs)} active adjustments are tagged with PULL_DOWN intent (NOTE: This is syntactic contract check, NOT empirical direction accuracy!)")
 
     # --- ASSERTION 5: No Over-Correction (Target delta = 0.0 yields zero changes) ---
     req_zero = TargetDeltaRequest(
@@ -106,7 +106,8 @@ def evaluate_guidance_pipeline():
     print("[PASS] Assertion 6 (No Over-Correction on In-Spec Batch): Verified (All delta = 0.0)")
 
     print("==========================================================================================")
-    print("ALL 6 ACCEPTANCE CRITERIA VERIFIED SUCCESSFULLY (PASS RATE = 100.0%)")
+    print("RULE ENGINE CONTRACT UNIT TESTS PASSED (6/6 Syntactic Checks Passed)")
+    print("NOTE: Empirical validation (B2/B3/Lab effect) remains UNVERIFIED pending offline data join.")
     print("==========================================================================================")
 
 if __name__ == '__main__':

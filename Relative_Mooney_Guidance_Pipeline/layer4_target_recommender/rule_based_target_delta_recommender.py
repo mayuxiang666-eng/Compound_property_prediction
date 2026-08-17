@@ -120,13 +120,14 @@ def recommend_target_delta_actions(
             if param == 'ram_SP' and delta_sp != 0.0:
                 gate_status = 'BLOCKED_RAM_LOCKED'
 
-            # Estimated effect band
+            # Heuristic Target Intent (NOT empirical model prediction or causal effect!)
+            # Marked explicitly as UNCALIBRATED_HEURISTIC_INTENT to avoid circular claims
             if direction == 'PULL_DOWN':
-                band_low = round(target_reduction * 0.6, 1)
-                band_high = round(target_reduction * 1.3, 1)
-                delta_band = f"-{band_low} ~ -{band_high} MU"
+                heuristic_intent = f"INTENT_PULL_DOWN_TARGET_{target_reduction}MU"
+                conf = 'PROTOTYPE_HEURISTIC_UNVERIFIED'
             else:
-                delta_band = "0.0 MU"
+                heuristic_intent = "INTENT_MAINTAIN_CURRENT"
+                conf = 'N/A'
 
             recommendations.append({
                 'user_target_delta_mu': request.target_delta_mu,
@@ -137,11 +138,12 @@ def recommend_target_delta_actions(
                 'current_SP': round(curr_sp, 2),
                 'recommended_SP': round(rec_sp, 2),
                 'delta_SP': round(delta_sp, 2),
-                'expected_direction': direction,
-                'estimated_delta_band': delta_band,
+                'rule_intended_direction': direction,
+                'heuristic_target_intent': heuristic_intent,
                 'confidence': conf,
                 'reason': reason,
-                'gate_status': gate_status
+                'gate_status': gate_status,
+                'empirical_validation_status': 'UNVERIFIED_PENDING_B3_RESPONSE_AND_LAB'
             })
 
     df_rec = pd.DataFrame(recommendations)

@@ -93,8 +93,8 @@ def build_recipe_best_condition_profile(
                 'best_range_low': round(p10, 2),
                 'best_range_high': round(p90, 2),
                 'n_best_batches': n_batches,
-                'best_source': 'same_recipe' if n_batches >= min_best_batches else 'same_cluster',
-                'quality_filter': 'IN_SPEC_LOW_MNY'
+                'best_source': 'multi_batch_historical' if n_batches >= min_best_batches else 'single_batch_prototype_fallback',
+                'quality_filter': 'MULTI_BATCH_IN_SPEC_LOW_MNY' if n_batches >= min_best_batches else 'SINGLE_BATCH_SNAPSHOT_UNFILTERED'
             })
 
     df_profile = pd.DataFrame(profile_rows)
