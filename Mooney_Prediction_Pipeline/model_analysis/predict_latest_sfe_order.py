@@ -33,7 +33,10 @@ from curve_segmenter_all_compounds import (
     find_temp_pid_start,
     hex_to_series,
 )
-from new_compound_inference import predict_new_compound
+try:
+    from new_compound_inference import predict_new_compound
+except ImportError:
+    predict_new_compound = None
 
 
 OUTPUT_FEATURE_CSV = 'scratch/latest_sfe_order_features.csv'
@@ -406,6 +409,14 @@ def extract_features_for_row(row):
     features['phys_eta_app_wetmix_mean'] = np.nanmean(eta_app[int(t3):int(t4)]) if has_oil and t4 > t3 else np.nan
     features['phys_eta_app_pid_mean'] = np.nanmean(eta_app[int(t4):int(t5)]) if t5 > t4 else np.nan
     features['phys_eta_app_discharge'] = eta_app[int(t5)] if t5 < len(eta_app) else np.nan
+
+    # Smart Supplier COA Defaults (SAP QM fallback when Redshift is offline)
+    features.setdefault('supplier_rubber_viscosity_avg', 48.0)
+    features.setdefault('supplier_silica_moisture_avg', 5.5)
+    features.setdefault('supplier_silica_surface_area_avg', 165.0)
+    features.setdefault('supplier_carbon_black_structure_avg', 110.0)
+    features.setdefault('supplier_carbon_black_surface_area_avg', 85.0)
+    features.setdefault('supplier_carbon_black_moisture_avg', 1.0)
 
     w_solid = float(features.get('weight_pct_solid_elastomer', 0.0)) if pd.notna(features.get('weight_pct_solid_elastomer')) else 0.0
     w_nr = float(features.get('weight_pct_natural_rubber', 0.0)) if pd.notna(features.get('weight_pct_natural_rubber')) else 0.0

@@ -20,12 +20,17 @@ def aggregate_steps_to_phase_features(df_mapped: pd.DataFrame) -> pd.DataFrame:
     Aggregates step SP values into phase-level features compatible with V4.1 models.
     Strict Mode B policy: uses only Target (SP) values — never current-batch AV.
     """
-    df = df_mapped.copy()
+    df = df_mapped.copy().sort_values(
+        ['OrderID', 'BatchNumber', 'GroupName', 'StepNo'],
+        kind='stable',
+    )
     
     # Calculate step durations from cumulative time_SP per (OrderID, BatchNumber, GroupName)
     time_col = 'recommended_time_SP' if 'recommended_time_SP' in df.columns else 'time_SP'
     df['time_SP_prev'] = df.groupby(['OrderID', 'BatchNumber', 'GroupName'])[time_col].shift(1, fill_value=0)
     df['dur_SP'] = df[time_col] - df['time_SP_prev']
+    if (df['dur_SP'] < 0).any():
+        raise ValueError(f'{time_col} must be non-decreasing within each mixer group.')
 
     results = []
     group_keys = ['OrderID', 'BatchNumber']

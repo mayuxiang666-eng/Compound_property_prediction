@@ -1,0 +1,32 @@
+{
+  "policy_version": "EXPERT_STEP_VECTOR_V1_20260811",
+  "mode": "SHADOW_ONLY",
+  "locked_step_numbers": [1, 2],
+  "locked_parameters": ["ram"],
+  "dry_temperature_cap_c": 120.0,
+  "wet_temperature_cap_source": "ProcessData.Target_Temperature",
+  "wet_rpm_delta_rpm": -5.0,
+  "wet_duration_delta_s": [5.0, 10.0],
+  "dry_duration_delta_s": [5.0, 10.0],
+  "dry_rotor_delta_rpm": [5.0],
+  "dry_temperature_delta_c": [1.0, 2.0],
+  "wet_temperature_delta_c": [-2.0, -1.0, 1.0, 2.0],
+  "carbon_pid_duration_delta_s": [-10.0, -5.0, 5.0, 10.0],
+  "silica_pid_duration_delta_s": [-10.0, 10.0],
+  "pid_discharge_temperature_delta_c": [-1.0, 1.0],
+  "mst_rotor_range_rpm": [5.0, 50.0],
+  "tracking_gates": {
+    "temperature_mae_c": 2.0,
+    "temperature_p95_abs_error_c": 5.0,
+    "temperature_excursion_rate": 0.05,
+    "duration_mae_s": 5.0,
+    "rotor_mae_rpm": 1.0
+  },
+  "process_response_gates": {
+    "temperature_mae_c": 2.0,
+    "duration_mae_s": 5.0,
+    "interval_coverage": 0.8
+  },
+  "minimum_mooney_response": 0.25,
+  "energy_status": "NOT_RANKED"
+}

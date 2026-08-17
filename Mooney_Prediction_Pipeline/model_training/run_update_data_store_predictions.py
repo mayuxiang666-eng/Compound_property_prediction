@@ -131,18 +131,58 @@ def run_correct_data_store_update():
         s2_val = r['Stage2_Process_Residual']
         pid_contrib = s2_val * 0.45
         bot_contrib = s2_val * 0.20
-        if pid_contrib < -0.4:
+        # Extract Stage Deltas vs Baseline
+        dry_pwr = r.get('Stage2_DryMixing_power_Mean', 0.0)
+        dry_pwr_base = r.get('Stage2_DryMixing_power_Mean_baseline', dry_pwr)
+        dry_pwr_delta = dry_pwr - dry_pwr_base if (dry_pwr_base > 0 and pd.notnull(dry_pwr_base)) else 0.0
+
+        wet_pwr = r.get('Stage4_WetMixing_power_Mean', 0.0)
+        wet_pwr_base = r.get('Stage4_WetMixing_power_Mean_baseline', wet_pwr)
+        wet_pwr_delta = wet_pwr - wet_pwr_base if (wet_pwr_base > 0 and pd.notnull(wet_pwr_base)) else 0.0
+
+        pid_pwr = r.get('Stage5_PID_power_Mean', 0.0)
+        pid_pwr_base = r.get('Stage5_PID_power_Mean_baseline', pid_pwr)
+        pid_pwr_delta = pid_pwr - pid_pwr_base if (pid_pwr_base > 0 and pd.notnull(pid_pwr_base)) else 0.0
+
+        bot_pwr = r.get('Stage6_BottomMixing_power_Mean', 0.0)
+        bot_pwr_base = r.get('Stage6_BottomMixing_power_Mean_baseline', bot_pwr)
+        bot_pwr_delta = bot_pwr - bot_pwr_base if (bot_pwr_base > 0 and pd.notnull(bot_pwr_base)) else 0.0
+
+        pid_contrib = s2_val * 0.45
+        bot_contrib = s2_val * 0.20
+        wet_contrib = s2_val * 0.20
+        dry_contrib = s2_val * 0.15
+
+        # Multi-stage Curve-Aware Hierarchy Evaluation:
+        if pid_contrib > 0.4:
+            if pid_pwr_delta > 15.0 or r.get('Stage5_PID_power_Integral', 0.0) > r.get('Stage5_PID_power_Integral_baseline', 0.0):
+                code = "PID_OVER_REACTION_POWER_SURGE"
+                exp = f"PID 阶段功率高于正常曲线（功率偏差 +{pid_pwr_delta:.1f} kW），发生热过载/热过反应，导致 Mooney 异常偏高"
+            else:
+                code = "LOW_PID_REACTION_UNDER_EXPOSURE"
+                exp = f"PID 阶段反应做功/温度暴露不足（功率偏差 {pid_pwr_delta:.1f} kW），偶联反应未完成导致 Mooney 偏高"
+        elif pid_contrib < -0.4:
             code = "HIGH_PID_REACTION_EXPOSURE"
-            exp = "PID 反应温度处于135°C-155°C黄金窗口且时间覆盖充分，偶联反应好"
-        elif pid_contrib > 0.4:
-            code = "LOW_PID_REACTION_EXPOSURE"
-            exp = "PID 阶段反应暴露不足，偶联不充分导致 Mooney 偏高"
-        elif bot_contrib > 0.3:
+            exp = "PID 反应温度处于 135°C-155°C 黄金窗口且时间覆盖充分，偶联反应效果极佳，降低 Mooney"
+        elif dry_contrib > 0.35 and dry_pwr_delta > 15.0:
+            code = "DRY_MIXING_POWER_OVERLOAD"
+            exp = f"Stage 2 干混阶段功率显著偏高（功率偏差 +{dry_pwr_delta:.1f} kW），高剪切负荷增大导致基础粘度偏高"
+        elif dry_contrib > 0.35 and dry_pwr_delta < -10.0:
+            code = "DRY_MIXING_UNDER_WORK"
+            exp = f"Stage 2 干混阶段做功不足（功率偏差 {dry_pwr_delta:.1f} kW），填料初步分散破聚不完全导致 Mooney 偏高"
+        elif wet_contrib > 0.35 and wet_pwr_delta < -15.0:
+            code = "WET_MIXING_POWER_SLIP_LAG"
+            exp = f"Stage 4 湿混阶段功率偏低（功率偏差 {wet_pwr_delta:.1f} kW），油液未完全吸收产生转子打滑与局部干摩擦"
+        elif wet_contrib > 0.35 and wet_pwr_delta > 15.0:
+            code = "WET_MIXING_OVER_SHEAR"
+            exp = f"Stage 4 湿混阶段功率偏高（功率偏差 +{wet_pwr_delta:.1f} kW），湿态混炼负荷过高导致粘度异常"
+        elif bot_contrib > 0.3 or bot_pwr_delta > 15.0:
             code = "BOTTOM_POST_REACTION_RESISTANCE"
-            exp = "Bottom Mix 混炼终段阻力增大，物料流动阻力增加"
+            exp = f"Stage 6 下混合器终段功率/阻力偏高（功率偏差 +{bot_pwr_delta:.1f} kW），物料流动阻力增加"
         else:
             code = "NORMAL_PROCESS_BALANCE"
-            exp = "混炼温度、能量与时间处于标准工艺平衡窗口"
+            exp = "全流程混炼功率、温度与能量曲线处于标准工艺平衡窗口"
+
         reason_codes.append(code)
         explanations.append(exp)
 

@@ -45,7 +45,6 @@ from optimization.safe_bounds_builder import build_safe_parameter_bounds
 from optimization.mooney_constraint_checker import MooneyQualityConstraintChecker
 from optimization.energy_optimizer import EnergyMooneyOptimizer
 from optimization.candidate_generator import derive_route_stage_mask
-from optimization.historical_candidate_builder import build_historical_best_reference_cohort
 
 SHADOW_PRIORITY_RECIPES = {'B00458', 'B00163R4', 'B00163RT'}
 SHADOW_PRIORITY_MIXER = 'MB02'
@@ -608,7 +607,7 @@ def run_v41_master_experiment():
     bounds_df.to_csv(os.path.join(out_dir, 'safe_parameter_bounds.csv'), index=False, encoding='utf-8-sig')
 
     mooney_checker = MooneyQualityConstraintChecker(mooney_model)
-    optimizer = EnergyMooneyOptimizer(model_mode_b, mooney_checker, historical_df=df_tr)
+    optimizer = EnergyMooneyOptimizer(model_mode_b, mooney_checker)
 
     # ------------------------------------------------------------------------
     # STEP 6: Execute Gated Shadow Mode Simulation
@@ -648,10 +647,6 @@ def run_v41_master_experiment():
     shadow_audit_rows = []
     raw_shadow_rows = []
     validated_shadow_rows = []
-    historical_template_rows = []
-    normalized_prediction_rows = []
-    operating_profile_rows = []
-    uncertainty_rows = []
     recipe_history_counts = df_tr.groupby('CompoundName').size().to_dict()
 
     for idx, r in sample_te.iterrows():
@@ -712,30 +707,7 @@ def run_v41_master_experiment():
             spec_high,
             n_candidates=25,
             bounds_rejection_reason=bounds_rejection_reason,
-            historical_df=df_tr,
         )
-
-        historical_templates = build_historical_best_reference_cohort(
-            df_tr, r, spec_low, spec_high
-        )
-        for _, template in historical_templates.iterrows():
-            profile = template.get('process_profile', {})
-            template_row = {
-                'CompoundName': cmp,
-                'MixerLine': mix,
-                'material_system': material_system,
-                'phase_route': route,
-                'template_id': template.get('template_id', ''),
-                'historical_order_id': template.get('historical_order_id', ''),
-                'historical_batch_number': template.get('historical_batch_number', ''),
-                'historical_actual_kwh': template.get('historical_actual_kwh', np.nan),
-                'historical_actual_mooney': template.get('historical_actual_mooney', np.nan),
-                'historical_best_actual_saving_pct': template.get('historical_best_actual_saving_pct', np.nan),
-                'candidate_role': 'HISTORICAL_TEMPLATE_AND_BENCHMARK_ONLY',
-                **{f'profile_{key}': value for key, value in profile.items()},
-                **{f'context_difference_{key}': value for key, value in template.items() if key.endswith('_difference') or key == 'historical_batch_age_days'},
-            }
-            historical_template_rows.append(template_row)
 
         recipe_history_n_batches = int(recipe_history_counts.get(cmp, 0))
         similar_recipe_count, similar_recipe_list, similarity_score = find_similar_recipes(
@@ -806,44 +778,6 @@ def run_v41_master_experiment():
             **stage_mask,
         }
 
-        normalized_prediction_rows.append({
-            **common_item,
-            'selected_template_id': res.get('selected_template_id', ''),
-            'model_predicted_current_kwh': res.get('mode_b_predicted_current_kwh_per_batch', np.nan),
-            'model_predicted_normalized_candidate_kwh': res.get('mode_b_predicted_recommended_kwh_per_batch', np.nan),
-            'model_based_saving_kwh': res.get('model_based_saving_kwh', np.nan),
-            'model_based_saving_pct': res.get('model_based_saving_pct', np.nan),
-            'historical_best_actual_saving_pct': res.get('historical_best_actual_saving_pct', np.nan),
-            'confidence_label': res.get('confidence_label', 'LOW'),
-            'ood_flag': res.get('ood_flag', True),
-            'safe_bound_status': res.get('safe_bound_status', 'UNAVAILABLE'),
-            'route_stage_status': res.get('route_stage_status', 'UNAVAILABLE'),
-            'recommendation_status': res.get('recommendation_status', ''),
-        })
-        operating_profile_rows.append({
-            **common_item,
-            'profile_reference_status': res.get('operating_profile_reference_status', 'NONE'),
-            'profile_reference_type': 'OPERATING_PROFILE_REFERENCE',
-            **{f'{key}': value for key, value in res.get('operating_profile_reference', {}).items()},
-        })
-        uncertainty_rows.append({
-            **common_item,
-            'historical_best_actual_saving_pct': res.get('historical_best_actual_saving_pct', np.nan),
-            'model_adjusted_saving_pct': res.get('model_adjusted_saving_pct', np.nan),
-            'top_uncertainty_factor_1': res.get('top_uncertainty_factor_1', ''),
-            'top_uncertainty_factor_2': res.get('top_uncertainty_factor_2', ''),
-            'top_uncertainty_factor_3': res.get('top_uncertainty_factor_3', ''),
-            'uncertainty_explanation_text': res.get('uncertainty_explanation_text', ''),
-            'engineer_facing_explanation': (
-                'Historical best performance suggests this candidate profile has been feasible. '
-                'The model re-predicts it under current material, environment, batch, and machine conditions. '
-                'The reported saving is model-adjusted, not raw historical saving. '
-                f"Main uncertainty factors: {res.get('top_uncertainty_factor_1', '')}, "
-                f"{res.get('top_uncertainty_factor_2', '')}, {res.get('top_uncertainty_factor_3', '')}. "
-                'Rotor speed and ram averages are monitoring references, not setpoint recommendations unless confirmed controllable.'
-            ),
-        })
-
         raw_kwh = res['raw_recommended_kwh_per_batch']
         raw_saving_kwh = res['actual_kwh_per_batch'] - raw_kwh
         raw_item = {
@@ -906,14 +840,6 @@ def run_v41_master_experiment():
             'route_stage_status': res['route_stage_status'],
             'recommendation_status': res['recommendation_status'],
             'rejection_reason': res['rejection_reason'],
-            'selected_template_id': res.get('selected_template_id', ''),
-            'historical_best_actual_saving_pct': res.get('historical_best_actual_saving_pct', np.nan),
-            'model_adjusted_saving_pct': res.get('model_adjusted_saving_pct', np.nan),
-            'top_uncertainty_factor_1': res.get('top_uncertainty_factor_1', ''),
-            'top_uncertainty_factor_2': res.get('top_uncertainty_factor_2', ''),
-            'top_uncertainty_factor_3': res.get('top_uncertainty_factor_3', ''),
-            'uncertainty_explanation_text': res.get('uncertainty_explanation_text', ''),
-            'operating_profile_reference_status': res.get('operating_profile_reference_status', 'NONE'),
             **duration_fields(res['recommended_setpoints']),
             # Existing column aliases retained for downstream compatibility.
             'actual_mny': round(mny_actual, 2),
@@ -988,10 +914,6 @@ def run_v41_master_experiment():
     pd.DataFrame(shadow_summary_rows).to_csv(os.path.join(out_dir, 'shadow_recommendation_summary.csv'), index=False, encoding='utf-8-sig')
     pd.DataFrame(rejection_rows).to_csv(os.path.join(out_dir, 'shadow_recommendation_rejection_reasons.csv'), index=False, encoding='utf-8-sig')
     pd.DataFrame(tradeoff_rows).to_csv(os.path.join(out_dir, 'energy_mooney_tradeoff_report.csv'), index=False, encoding='utf-8-sig')
-    pd.DataFrame(historical_template_rows).to_csv(os.path.join(out_dir, 'historical_best_candidate_templates.csv'), index=False, encoding='utf-8-sig')
-    pd.DataFrame(normalized_prediction_rows).to_csv(os.path.join(out_dir, 'model_normalized_candidate_predictions.csv'), index=False, encoding='utf-8-sig')
-    pd.DataFrame(operating_profile_rows).to_csv(os.path.join(out_dir, 'recipe_operating_profile_reference.csv'), index=False, encoding='utf-8-sig')
-    pd.DataFrame(uncertainty_rows).to_csv(os.path.join(out_dir, 'recommendation_uncertainty_explanation.csv'), index=False, encoding='utf-8-sig')
 
     shadow_audit_df = pd.DataFrame(shadow_audit_rows)
     shadow_summary_df = pd.DataFrame(shadow_summary_rows)
@@ -1044,11 +966,6 @@ def run_v41_master_experiment():
             'n_recommended_batches': len(group),
             'avg_shadow_actual_saving_pct': round(group['shadow_actual_saving_pct'].mean(), 2),
             'avg_model_based_saving_pct': round(group['model_based_saving_pct'].mean(), 2),
-            'avg_historical_best_actual_saving_pct': round(group['historical_best_actual_saving_pct'].mean(), 2),
-            'avg_model_adjusted_saving_pct': round(group['model_adjusted_saving_pct'].mean(), 2),
-            'uncertainty_factor_1': group['top_uncertainty_factor_1'].mode().iloc[0] if not group['top_uncertainty_factor_1'].mode().empty else '',
-            'uncertainty_factor_2': group['top_uncertainty_factor_2'].mode().iloc[0] if not group['top_uncertainty_factor_2'].mode().empty else '',
-            'uncertainty_factor_3': group['top_uncertainty_factor_3'].mode().iloc[0] if not group['top_uncertainty_factor_3'].mode().empty else '',
             'min_recommended_mooney_low': round(group['recommended_mooney_low'].min(), 3),
             'max_recommended_mooney_high': round(group['recommended_mooney_high'].max(), 3),
             'min_mooney_spec_low': round(group['mooney_spec_low'].min(), 3),
@@ -1070,11 +987,6 @@ def run_v41_master_experiment():
         window_rows.append(window_row)
     pd.DataFrame(window_rows).to_csv(
         os.path.join(out_dir, 'recipe_level_pilot_recommendation_window.csv'),
-        index=False,
-        encoding='utf-8-sig',
-    )
-    pd.DataFrame(window_rows).to_csv(
-        os.path.join(out_dir, 'recipe_level_pilot_recommendation_window_with_uncertainty.csv'),
         index=False,
         encoding='utf-8-sig',
     )

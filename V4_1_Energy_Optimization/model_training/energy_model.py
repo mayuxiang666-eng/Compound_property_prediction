@@ -12,6 +12,8 @@ pipeline_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if pipeline_root not in sys.path:
     sys.path.insert(0, pipeline_root)
 
+from model_training.bias_shrinkage import RegularizedBiasEstimator
+
 PRE_BATCH_SETPOINT_COLS = [
     'Stage2_DryMixing_Duration',
     'Stage4_WetMixing_Duration',
@@ -31,8 +33,11 @@ RECIPE_BASELINE_COLS = [
     'weight_pct_carbon_black',
     'silica_phr',
     'supplier_rubber_viscosity_avg',
+    'supplier_silica_moisture_avg',
     'supplier_silica_surface_area_avg',
     'supplier_carbon_black_structure_avg',
+    'supplier_carbon_black_surface_area_avg',
+    'supplier_carbon_black_moisture_avg',
 ]
 
 CATEGORICAL_CONTEXT_COLS = [
@@ -72,6 +77,24 @@ MODE_B_FORBIDDEN_FEATURE_TOKENS = (
     'phys_',
 )
 
+STAGE_FEATURE_SCHEMES = {
+    'stage1': RECIPE_BASELINE_COLS + CATEGORICAL_CONTEXT_COLS + ['Top_Fill_Factor'],
+    'stage2': RECIPE_BASELINE_COLS + CATEGORICAL_CONTEXT_COLS + ['Top_Fill_Factor', 'Stage2_DryMixing_Duration'],
+    'stage3': RECIPE_BASELINE_COLS + CATEGORICAL_CONTEXT_COLS + ['Top_Fill_Factor'],
+    'stage4': RECIPE_BASELINE_COLS + CATEGORICAL_CONTEXT_COLS + ['Top_Fill_Factor', 'Stage4_WetMixing_Duration'],
+    'stage5': RECIPE_BASELINE_COLS + CATEGORICAL_CONTEXT_COLS + ['Top_Fill_Factor', 'Stage5_PID_Duration', 'Target_Temperature'],
+    'stage6': RECIPE_BASELINE_COLS + CATEGORICAL_CONTEXT_COLS + ['Top_Fill_Factor', 'Stage6_BottomMixing_Duration'],
+}
+
+STAGE_TARGET_INT_COLS = {
+    'stage1': 'Stage1_Loading_power_Integral',
+    'stage2': 'Stage2_DryMixing_power_Integral',
+    'stage3': 'Stage3_OilLoading_power_Integral',
+    'stage4': 'Stage4_WetMixing_power_Integral',
+    'stage5': 'Stage5_PID_power_Integral',
+    'stage6': 'Stage6_BottomMixing_power_Integral',
+}
+
 
 def build_energy_feature_purge_audit() -> pd.DataFrame:
     """Returns the allowed/forbidden feature policy for both energy-model modes."""
@@ -99,7 +122,12 @@ def build_energy_feature_purge_audit() -> pd.DataFrame:
 class MixingEnergyPredictionModel:
     def __init__(self, mode='mode_b'):
         self.mode = mode.lower()
-        self.baseline_model = LGBMRegressor(n_estimators=40, learning_rate=0.08, max_depth=4, n_jobs=-1, random_state=42, verbose=-1)
+        self.stage_models = {
+            s: LGBMRegressor(n_estimators=35, learning_rate=0.08, max_depth=4, n_jobs=-1, random_state=42, verbose=-1)
+            for s in STAGE_FEATURE_SCHEMES
+        }
+        self.stage_feature_meta = {}
+        self.bias_estimator = RegularizedBiasEstimator(shrinkage_k=5.0, compound_col="CompoundName", cluster_col="material_system")
         self.branch_experts = {
             'CarbonBlack_OilWet': LGBMRegressor(n_estimators=30, learning_rate=0.08, max_depth=3, n_jobs=-1, random_state=42, verbose=-1),
             'CarbonBlack_NoOilDry': LGBMRegressor(n_estimators=30, learning_rate=0.08, max_depth=3, n_jobs=-1, random_state=42, verbose=-1),
@@ -110,6 +138,41 @@ class MixingEnergyPredictionModel:
         self.feature_names = []
         self.numeric_feature_names = []
         self.categorical_context_values: dict[str, list[str]] = {}
+
+    def _fit_stage_feature_schema(self, df: pd.DataFrame, stage_name: str, allowed_cols: list[str]) -> tuple[list[str], tuple[list[str], dict[str, list[str]]]]:
+        num_cols = [c for c in allowed_cols if c not in CATEGORICAL_CONTEXT_COLS and c in df.columns]
+        cat_vals = {}
+        cat_feature_names = []
+
+        for column in CATEGORICAL_CONTEXT_COLS:
+            if column not in allowed_cols or column not in df.columns:
+                continue
+            values = df[column].fillna('__MISSING__').astype(str)
+            categories = sorted(values.unique().tolist())
+            cat_vals[column] = categories
+            cat_feature_names.extend(f'{column}={category}' for category in categories)
+
+        return num_cols + cat_feature_names, (num_cols, cat_vals)
+
+    def _get_stage_feature_matrix(self, df: pd.DataFrame, meta_tuple: tuple) -> np.ndarray:
+        num_cols, cat_vals = meta_tuple
+        numeric_columns = []
+        for column in num_cols:
+            if column in df.columns:
+                numeric_columns.append(pd.to_numeric(df[column], errors='coerce').fillna(0.0).to_numpy())
+            else:
+                numeric_columns.append(np.zeros(len(df), dtype=np.float32))
+        mat = np.column_stack(numeric_columns) if numeric_columns else np.empty((len(df), 0))
+
+        for column, categories in cat_vals.items():
+            values = (
+                df[column].fillna('__MISSING__').astype(str)
+                if column in df.columns
+                else pd.Series('__MISSING__', index=df.index)
+            )
+            encoded = np.column_stack([(values == category).to_numpy(dtype=np.float32) for category in categories])
+            mat = np.hstack([mat, encoded])
+        return mat
 
     def _fit_feature_schema(self, df: pd.DataFrame, numeric_feature_cols: list) -> None:
         self.numeric_feature_names = numeric_feature_cols
@@ -179,19 +242,45 @@ class MixingEnergyPredictionModel:
 
         if self.mode == 'mode_a':
             actual_cols = [c for c in POST_BATCH_ACTUAL_COLS if c in df_train.columns]
-            feature_cols = recipe_cols + setpoint_cols + actual_cols
+            all_cols = recipe_cols + setpoint_cols + actual_cols
         else:
-            feature_cols = recipe_cols + setpoint_cols
-            self._validate_mode_b_feature_policy(feature_cols)
+            all_cols = recipe_cols + setpoint_cols
+            self._validate_mode_b_feature_policy(all_cols)
 
-        self._fit_feature_schema(df_train, feature_cols)
-        X_tr = self._get_feature_matrix(df_train)
+        self._fit_feature_schema(df_train, all_cols)
+        X_tr_global = self._get_feature_matrix(df_train)
         y_tr = df_train[target_col].values
         training_weights = self._get_training_weights(df_train)
 
-        self.baseline_model.fit(X_tr, y_tr, sample_weight=training_weights)
-        base_preds = self.baseline_model.predict(X_tr)
-        residuals = y_tr - base_preds
+        # 1. Fit 6 Decoupled Stage Models
+        self.stage_feature_meta.clear()
+        baseline_preds_sum = np.zeros(len(df_train), dtype=np.float64)
+
+        for s_name, allowed_cols in STAGE_FEATURE_SCHEMES.items():
+            if self.mode == 'mode_a':
+                allowed_cols = allowed_cols + [c for c in POST_BATCH_ACTUAL_COLS if c in df_train.columns]
+            _, meta_tuple = self._fit_stage_feature_schema(df_train, s_name, allowed_cols)
+            self.stage_feature_meta[s_name] = meta_tuple
+
+            X_stage = self._get_stage_feature_matrix(df_train, meta_tuple)
+
+            # Compute stage target kWh (power integral / 3600.0)
+            int_col = STAGE_TARGET_INT_COLS[s_name]
+            if int_col in df_train.columns:
+                y_stage = pd.to_numeric(df_train[int_col], errors='coerce').fillna(0.0).values / 3600.0
+            else:
+                y_stage = np.zeros(len(df_train), dtype=np.float64)
+
+            self.stage_models[s_name].fit(X_stage, y_stage, sample_weight=training_weights)
+            baseline_preds_sum += self.stage_models[s_name].predict(X_stage)
+
+        # 2. Fit Compound Bias Shrinkage on Baseline Residuals
+        self.bias_estimator.fit(y_tr, baseline_preds_sum, df_train)
+        bias_preds = self.bias_estimator.predict_bias(df_train)
+
+        # 3. Fit Branch Experts on Bias-Corrected Residuals
+        baseline_residuals = y_tr - baseline_preds_sum
+        expert_residuals = baseline_residuals - bias_preds
 
         branches = df_train['system_route_branch'].values if 'system_route_branch' in df_train.columns else np.full(len(df_train), 'Silica_OilWet')
 
@@ -199,8 +288,8 @@ class MixingEnergyPredictionModel:
         for branch_name, expert in self.branch_experts.items():
             mask = (branches == branch_name)
             if np.sum(mask) >= 10:
-                X_sub = X_tr[mask]
-                y_sub = residuals[mask]
+                X_sub = X_tr_global[mask]
+                y_sub = expert_residuals[mask]
                 branch_weights = training_weights[mask] if training_weights is not None else None
                 expert.fit(X_sub, y_sub, sample_weight=branch_weights)
                 self.fitted_branch_experts.add(branch_name)
@@ -208,16 +297,27 @@ class MixingEnergyPredictionModel:
         return self
 
     def predict(self, df_in: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
-        X_in = self._get_feature_matrix(df_in)
-        base_preds = self.baseline_model.predict(X_in)
-        final_kwh = base_preds.copy()
+        # 1. Sum 6 Stage Model Predictions
+        baseline_preds_sum = np.zeros(len(df_in), dtype=np.float64)
+        for s_name, model in self.stage_models.items():
+            meta_tuple = self.stage_feature_meta[s_name]
+            X_stage = self._get_stage_feature_matrix(df_in, meta_tuple)
+            baseline_preds_sum += model.predict(X_stage)
 
+        final_kwh = baseline_preds_sum.copy()
+
+        # 2. Add Compound Bias Shrinkage
+        bias_preds = self.bias_estimator.predict_bias(df_in)
+        final_kwh += bias_preds
+
+        # 3. Add Branch Expert Residual Predictions
+        X_in_global = self._get_feature_matrix(df_in)
         branches = df_in['system_route_branch'].values if 'system_route_branch' in df_in.columns else np.full(len(df_in), 'Silica_OilWet')
 
         for branch_name, expert in self.branch_experts.items():
             mask = (branches == branch_name)
             if np.any(mask) and branch_name in self.fitted_branch_experts:
-                X_branch = X_in[mask]
+                X_branch = X_in_global[mask]
                 res_preds = expert.predict(X_branch)
                 final_kwh[mask] += res_preds
 

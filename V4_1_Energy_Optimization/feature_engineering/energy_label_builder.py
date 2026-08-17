@@ -82,15 +82,16 @@ def build_energy_labels_and_features(df_in: pd.DataFrame) -> pd.DataFrame:
 
     df['bottom_mixer_kwh'] = df['Stage6_BottomMixing_power_Integral'] / 3600.0
 
-    # 3. Total kWh per batch (Meter reading if present, power curve integral fallback)
+    # 3. Total kWh per batch (Pure power curve integral target for physical shaft work)
+    df['total_kwh_per_batch'] = df['top_mixer_kwh'] + df['bottom_mixer_kwh']
+    df['label_source'] = 'power_integral_pure'
+
     if 'meter_end_kwh' in df.columns and 'meter_start_kwh' in df.columns:
         meter_kwh = df['meter_end_kwh'] - df['meter_start_kwh']
         valid_meter = (meter_kwh > 5.0) & (meter_kwh < 200.0)
-        df['total_kwh_per_batch'] = np.where(valid_meter, meter_kwh, df['top_mixer_kwh'] + df['bottom_mixer_kwh'])
-        df['label_source'] = np.where(valid_meter, 'meter_reading', 'power_integral_fallback')
+        df['meter_kwh_per_batch'] = np.where(valid_meter, meter_kwh, np.nan)
     else:
-        df['total_kwh_per_batch'] = df['top_mixer_kwh'] + df['bottom_mixer_kwh']
-        df['label_source'] = 'power_integral_fallback'
+        df['meter_kwh_per_batch'] = np.nan
 
     # 4. Batch Weight in Tons & kWh/ton
     if 'batch_weight_ton' in df.columns:

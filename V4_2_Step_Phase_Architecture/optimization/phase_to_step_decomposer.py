@@ -87,9 +87,30 @@ def decompose_phase_to_steps(
 ) -> pd.DataFrame:
     """
     Decomposes phase-level targets into step-level SP candidate DataFrame.
+
+    ``time_SP`` is the cumulative end time for each Step within a GroupName.
+    Optimization therefore operates on derived per-step durations and reconstructs
+    cumulative recommended times once across the complete mixer group.
     """
-    out = current_steps_df.copy()
+    required_columns = {'OrderID', 'BatchNumber', 'GroupName', 'StepNo', 'time_SP'}
+    missing_columns = required_columns - set(current_steps_df.columns)
+    if missing_columns:
+        raise ValueError(f"Missing cumulative-time columns: {sorted(missing_columns)}")
+
+    out = current_steps_df.copy().sort_values(
+        ['OrderID', 'BatchNumber', 'GroupName', 'StepNo'],
+        kind='stable',
+    )
+    group_keys = ['OrderID', 'BatchNumber', 'GroupName']
+    out['dur_SP'] = out['time_SP'].astype(float) - out.groupby(group_keys)['time_SP'].shift(
+        1,
+        fill_value=0.0,
+    ).astype(float)
+    if (out['dur_SP'] < 0).any():
+        raise ValueError('time_SP must be non-decreasing within each mixer group.')
+
     out['recommended_time_SP'] = out['time_SP'].astype(float)
+    out['recommended_dur_SP'] = out['dur_SP']
     out['recommended_rotor_SP'] = out['rotor_SP'].astype(float)
     out['recommended_ram_SP'] = out['ram_SP'].astype(float)
     out['recommended_temp_SP'] = out['temp_SP'].astype(float)
@@ -112,26 +133,18 @@ def decompose_phase_to_steps(
         target_dur = phase_targets.get(target_key, None)
         if target_dur is not None:
             sub = out[p_mask]
-            sub_times = sub['time_SP'].tolist()
-            # Derive current durations
-            sub_durs = sub['dur_SP'].tolist() if 'dur_SP' in sub.columns else sub_times
+            sub_durs = sub['dur_SP'].tolist()
             
             # Step bounds fallback
             step_mins = [max(1.0, d * 0.5) for d in sub_durs]
             step_maxs = [d * 2.0 for d in sub_durs]
 
             rec_durs = decompose_duration(sub_durs, target_dur, step_mins, step_maxs)
-            
-            # Reconstruct cumulative time_SP values per phase
-            # recommended_time_SP represents cumulative end time of the step
-            cumulative_rec_times = []
-            prev_t = 0.0
-            for idx, r_dur in enumerate(rec_durs):
-                curr_t = prev_t + r_dur
-                cumulative_rec_times.append(curr_t)
-                prev_t = curr_t
-                
-            out.loc[p_mask, 'recommended_time_SP'] = cumulative_rec_times
+            out.loc[p_mask, 'recommended_dur_SP'] = rec_durs
+
+    # Reconstruct cumulative end times once per full MST/MSB group. This preserves
+    # the timing of all later phases after an earlier step duration changes.
+    out['recommended_time_SP'] = out.groupby(group_keys)['recommended_dur_SP'].cumsum()
 
     out['delta_time_SP'] = out['recommended_time_SP'] - out['time_SP']
     out['delta_rotor_SP'] = out['recommended_rotor_SP'] - out['rotor_SP']

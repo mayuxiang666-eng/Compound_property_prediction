@@ -1,0 +1,107 @@
+{
+  "contract": "M1-RELATIVE-IMPROVEMENT-GATE0-A-B-V1",
+  "generated_utc": "2026-08-17T02:37:05.995714+00:00",
+  "scope": "M1_ONLY",
+  "source_policy": "FROZEN_SNAPSHOT_ONLY_RDS_ACTIVE_OR_LOCAL_PARQUET_CSV",
+  "local_mms_access": false,
+  "archive_access": false,
+  "database_access": false,
+  "stage3_calibration_enabled": false,
+  "automatic_control": "DISABLED",
+  "energy_status": "NOT_RANKED",
+  "input_hashes": {
+    "reports\\v371_challenger\\v371_c1_history_augmented_phase_v1\\current_common_batch_features.parquet": "61efffe72f0c95d5ad43a80aa5bc12b6903f0482454eea40f03a5e331a685159",
+    "reports\\v371_challenger\\global_rds_active_v1\\m1_temporal_jit_v1\\m1_temporal_jit_acceptance_input.csv": "fb4e03b4a2bf7ed5c6029ee491286027d18bddb26a29fec3dfa40809b85b90a8",
+    "reports\\v371_challenger\\global_rds_active_v1\\dual_target_readiness\\dual_pilot_group_step_features.csv": "84c28b7cb29d78d8c9369930cde79e5a113b2bb1c15f9b5b46a2784b6e2c544c",
+    "reports\\corrected_phase_history\\active_exact_pilot_step_history_v1\\active_exact_pilot_step_vectors.csv": "889c6bd98c231e6687f83db8134f013c4263104805624a36ac69391f9c94e32b",
+    "reports\\corrected_phase_history\\active_exact_pilot_step_history_v1\\active_exact_pilot_template_assignments_v2.csv": "3cea7d408c7ca1b8276dc40d1db7d9905f2485db02f54db7f35228d9d42d59a6"
+  },
+  "gate0": {
+    "action_rows": 1127,
+    "causal_action_supported": 0,
+    "status_counts": {
+      "LOCKED_EXPERT_RULE": 424,
+      "INSUFFICIENT_LAB_SUPPORT": 365,
+      "FIXED_IN_HISTORY": 338
+    },
+    "extensions": [
+      {
+        "CompoundName": "M1-T09170---- 23 003",
+        "material_system": "Silica",
+        "lab_groups": 100,
+        "gate_status": "INSUFFICIENT_STEP_SNAPSHOT",
+        "policy_status": "RECIPE_SPECIFIC_POLICY_REQUIRED"
+      },
+      {
+        "CompoundName": "M1-T33025W3-- 04 005",
+        "material_system": "Silica",
+        "lab_groups": 41,
+        "gate_status": "INSUFFICIENT_STEP_SNAPSHOT",
+        "policy_status": "RECIPE_SPECIFIC_POLICY_REQUIRED"
+      },
+      {
+        "CompoundName": "M1-B00460B--- 04 007",
+        "material_system": "CarbonBlack",
+        "lab_groups": 7,
+        "gate_status": "INSUFFICIENT_STEP_SNAPSHOT",
+        "policy_status": "RECIPE_SPECIFIC_POLICY_REQUIRED"
+      },
+      {
+        "CompoundName": "M1-B15563R1-- 01 005",
+        "material_system": "CarbonBlack",
+        "lab_groups": 7,
+        "gate_status": "INSUFFICIENT_STEP_SNAPSHOT",
+        "policy_status": "RECIPE_SPECIFIC_POLICY_REQUIRED"
+      }
+    ]
+  },
+  "scheme_a": {
+    "adjusted_groups": 1173,
+    "supported_envelopes": 7,
+    "confounded_envelopes": 0,
+    "static_oot_mae": 5.245754952228841,
+    "static_oot_bias": -1.0733489739395463,
+    "recommendation_status": "HISTORICAL_ENVELOPE_SHADOW_ONLY"
+  },
+  "b2": {
+    "release_gate_passed": false,
+    "transition_counts": {
+      "train": 147,
+      "val": 36,
+      "oot": 29
+    }
+  },
+  "b3": {
+    "statuses": {
+      "T15760": "CONTROL_TRANSFER_UNAVAILABLE",
+      "B00458": "CONTROL_TRANSFER_UNAVAILABLE"
+    },
+    "templates": {
+      "T15760": {
+        "selected_structural_template": "9922A1576030_PV27_002|31.0|ML09|oil_wet|465435d826d4528e|9b93edacf0e1b133",
+        "physical_batches": 275,
+        "template_selection": "LARGEST_EXACT_STRUCTURAL_TEMPLATE"
+      },
+      "B00458": {
+        "selected_structural_template": "0A497A75CABE",
+        "physical_batches": 186,
+        "template_selection": "LARGEST_EXACT_STRUCTURAL_TEMPLATE"
+      }
+    }
+  },
+  "b4": "BLOCKED_NO_CAUSAL_ACTION_SUPPORT",
+  "b5": "BLOCKED_PREREQUISITE_GATES",
+  "b6": {
+    "T15760": "B6_NOT_STARTED",
+    "B00458": "B6_NOT_STARTED"
+  },
+  "b7": {
+    "dual_pilot_gate_passed": false,
+    "micro_trial_status": "BLOCKED_DUAL_PILOT_GATE",
+    "missing_pilots": [],
+    "failed_pilots": [
+      "T15760",
+      "B00458"
+    ]
+  }
+}

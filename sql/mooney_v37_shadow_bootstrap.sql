@@ -1,0 +1,10 @@
+/* SQLCMD wrapper: required SET options for filtered indexes on SQL Server. */
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_PADDING ON;
+SET ANSI_WARNINGS ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET ARITHABORT ON;
+SET NUMERIC_ROUNDABORT OFF;
+GO
+:r .\mooney_v37_shadow_ddl.sql

@@ -15,12 +15,78 @@ if root_dir not in sys.path:
 
 from V4_2_Step_Phase_Architecture.optimization.phase_to_step_decomposer import decompose_phase_to_steps
 from V4_2_Step_Phase_Architecture.feature_engineering.aggregate_sp_to_phase import aggregate_steps_to_phase_features
-from Mooney_Prediction_Pipeline.model_training.hybrid_unified_model import HybridUnifiedMooneyModel
+from Mooney_Prediction_Pipeline.optimization.v37_raw_predictor import V37RawPredictor
+from Mooney_Prediction_Pipeline.optimization.step_candidate_search import (
+    CandidateSearchResult,
+    search_duration_candidates,
+    search_temperature_candidates,
+)
+
+
+def recommend_step_durations(
+    df_step_mapped: pd.DataFrame,
+    baseline_feature_row: pd.Series,
+    raw_predictor: V37RawPredictor,
+    *,
+    target_phase: str,
+    expected_time_direction: int,
+    spec_center: float,
+    spec_low: float,
+    spec_high: float,
+    duration_increment_s: float = 1.0,
+    max_candidates: int = 100,
+) -> CandidateSearchResult:
+    """Return a shadow-only multi-Step duration recommendation and full audit trail.
+
+    ``baseline_feature_row`` must be produced by the same V3.7 BatchCurve/recipe
+    feature pipeline as the production prediction. It must not contain Lab Mooney.
+    ``expected_time_direction`` is ``+1`` to add Phase duration and ``-1`` to reduce it.
+    """
+    return search_duration_candidates(
+        df_step_mapped,
+        baseline_feature_row,
+        raw_predictor,
+        target_phase=target_phase,
+        expected_time_direction=expected_time_direction,
+        target_center=spec_center,
+        spec_lower=spec_low,
+        spec_upper=spec_high,
+        duration_increment_s=duration_increment_s,
+        max_candidates=max_candidates,
+    )
+
+
+def recommend_step_temperatures(
+    df_step_mapped: pd.DataFrame,
+    baseline_feature_row: pd.Series,
+    raw_predictor: V37RawPredictor,
+    *,
+    target_phase: str,
+    expected_temp_direction: int,
+    spec_center: float,
+    spec_low: float,
+    spec_high: float,
+    temperature_increment_c: float = 1.0,
+    max_candidates: int = 100,
+) -> CandidateSearchResult:
+    """Return a shadow-only multi-Step temperature recommendation and full audit trail."""
+    return search_temperature_candidates(
+        df_step_mapped,
+        baseline_feature_row,
+        raw_predictor,
+        target_phase=target_phase,
+        expected_temp_direction=expected_temp_direction,
+        target_center=spec_center,
+        spec_lower=spec_low,
+        spec_upper=spec_high,
+        temperature_increment_c=temperature_increment_c,
+        max_candidates=max_candidates,
+    )
 
 def evaluate_mooney_step_bridge_dual_arm(
     df_step_mapped: pd.DataFrame,
     corrections: Dict[str, Dict[str, Any]],
-    mooney_model: HybridUnifiedMooneyModel,
+    raw_predictor: V37RawPredictor,
     recipe_context: pd.Series,
     spec_center: float = 50.0,
     spec_low: float = 45.0,
@@ -44,22 +110,10 @@ def evaluate_mooney_step_bridge_dual_arm(
     if 'is_oil_loading_present' not in df_base_phase.columns:
         df_base_phase['is_oil_loading_present'] = 1.0
 
-    # REAL Model Inference Call
-    if hasattr(mooney_model, 'stage1_model_') and mooney_model.stage1_model_ is not None:
-        base_mny, base_s1, base_s1b, base_s2 = mooney_model.predict(df_base_phase, cluster_col='material_system')
-        base_final = float(base_mny[0])
-    else:
-        # Dynamic physical proxy calculation based on batch's actual stage durations & speeds
-        wet_dur = df_base_phase.get('Stage4_WetMixing_Duration', pd.Series([30.0])).iloc[0]
-        pid_dur = df_base_phase.get('Stage5_PID_Duration', pd.Series([13.0])).iloc[0]
-        base_final = round(55.0 + 0.1 * (80.0 - wet_dur) + 0.15 * pid_dur, 2)
-        base_s2 = np.array([5.0 + 0.1 * (80.0 - wet_dur)])
-
-    base_contribs = {
-        'WetMixing': float(base_s2[0]),
-        'Stage5_PID': 0.15 * df_base_phase.get('Stage5_PID_Duration', pd.Series([13.0])).iloc[0],
-        'BottomMixing': 0.5
-    }
+    # Both comparison arms must use the same fitted raw V3.7 artifact.
+    base_prediction = raw_predictor.predict_raw(df_base_phase)
+    base_final = float(base_prediction.final_prediction[0])
+    base_contribs = {}
 
     # 2. Extract Phase Targets from corrections
     phase_targets = {}
@@ -85,21 +139,9 @@ def evaluate_mooney_step_bridge_dual_arm(
     if 'is_oil_loading_present' not in df_rec_phase.columns:
         df_rec_phase['is_oil_loading_present'] = 1.0
 
-    # REAL Model Inference Call on RECOMMENDED arm
-    if hasattr(mooney_model, 'stage1_model_') and mooney_model.stage1_model_ is not None:
-        rec_mny, rec_s1, rec_s1b, rec_s2 = mooney_model.predict(df_rec_phase, cluster_col='material_system')
-        rec_final = float(rec_mny[0])
-    else:
-        rec_wet_dur = df_rec_phase.get('Stage4_WetMixing_Duration', pd.Series([30.0])).iloc[0]
-        rec_pid_dur = df_rec_phase.get('Stage5_PID_Duration', pd.Series([13.0])).iloc[0]
-        rec_final = round(55.0 + 0.1 * (80.0 - rec_wet_dur) + 0.15 * rec_pid_dur, 2)
-        rec_s2 = np.array([5.0 + 0.1 * (80.0 - rec_wet_dur)])
-
-    rec_contribs = {
-        'WetMixing': float(rec_s2[0]),
-        'Stage5_PID': 0.15 * df_rec_phase.get('Stage5_PID_Duration', pd.Series([13.0])).iloc[0],
-        'BottomMixing': 0.5
-    }
+    rec_prediction = raw_predictor.predict_raw(df_rec_phase)
+    rec_final = float(rec_prediction.final_prediction[0])
+    rec_contribs = {}
 
     # 4. Core Comparison Metrics
     mny_pull = rec_final - base_final
@@ -145,14 +187,15 @@ if __name__ == '__main__':
     df_flags = build_settable_flags(df_wide)
     df_mapped = build_step_phase_mapping(df_flags, target_temp=165.0)
 
-    mooney_model = HybridUnifiedMooneyModel()
+    package_dir = os.path.join(root_dir, 'Mooney_Prediction_Pipeline', 'models', 'v37_production_model_package')
+    raw_predictor = V37RawPredictor(package_dir).load()
     context = pd.Series({'CompoundName': 'M1-T15760', 'material_system': 'Silica'})
     corrections = {'Stage5_PID': {'target_dur_delta': -3.0}}
 
     df_rec, summary = evaluate_mooney_step_bridge_dual_arm(
-        df_mapped, corrections, mooney_model, context, spec_center=50.0
+        df_mapped, corrections, raw_predictor, context, spec_center=50.0
     )
 
-    print("\n[OK] Dynamic Physical Proxy Dual-Arm Evaluation Verified:")
+    print("\n[OK] Fitted V3.7 Raw Dual-Arm Evaluation Verified:")
     print(summary)
     conn.close()

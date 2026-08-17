@@ -1,0 +1,63 @@
+{
+  "contract_version": "ACTIVE-PILOT-PROSPECTIVE-TRIAL-V1-20260811",
+  "mode": "SHADOW_DATA_COLLECTION_AND_PROCESS_ENGINEER_APPROVAL_ONLY",
+  "execution_authorized": false,
+  "automatic_control": "DISABLED",
+  "database_writes": false,
+  "lab_contract": "ONE_MNY_PER_ORDERID_PALLETID; DO_NOT_TREAT_BATCHES_AS_INDEPENDENT_LABELS",
+  "assignment_unit_for_mny_validation": "ENTIRE_ORDERID_PALLETID_GROUP",
+  "common_gates": {
+    "minimum_target_levels": 3,
+    "minimum_complete_label_groups_per_level": 30,
+    "minimum_complete_label_groups_per_exact_recipe": 150,
+    "template_consistency_min": 0.9,
+    "temperature_mae_max_c": 2.0,
+    "temperature_p95_abs_error_max_c": 5.0,
+    "temperature_excursion_rate_max": 0.05,
+    "process_interval_coverage_min": 0.8,
+    "minimum_absolute_group_mooney_response": 0.25,
+    "same_order_cross_split_allowed": false,
+    "endpoint_temperature_may_replace_phase_mean": false
+  },
+  "named_pilots": [
+    {
+      "material_system": "CarbonBlack",
+      "compound": "M1-B00458---- 12 004",
+      "recipe_id": "9922A00458BT_PV77_004",
+      "current_active_status": "NO_ORDER_AFTER_2025-11-05",
+      "eligible_template_id": "0A497A75CABE",
+      "action": "AVR_MSB_STEP3_DURATION",
+      "historical_safe_domain_seconds": [20, 50],
+      "proposed_levels_seconds": [20, 25, 35],
+      "proposed_levels_status": "PENDING_PROCESS_ENGINEER_APPROVAL",
+      "blocked_templates": [
+        {
+          "template_id": "CDAE36A0B0FB",
+          "reason": "DISCHARGE_TEMPERATURE_TRACKING_FAILED"
+        }
+      ]
+    },
+    {
+      "material_system": "Silica",
+      "compound": "M1-T09170WS-- 02 004",
+      "recipe_id": "9922A09170AX_PV50_004",
+      "current_active_status": "NO_ORDER_AFTER_2025-11-07",
+      "eligible_template_id": "BF3EC40AB5D1",
+      "action": "STAGE6_DURATION_BIDIRECTIONAL",
+      "proposed_levels_status": "BLOCKED_PENDING_COMPLETE_SCP_CONTRACT_AND_PROCESS_ENGINEER_APPROVAL",
+      "historical_action_support": "NO_STAGE6_DURATION_VARIATION",
+      "missing_scp_steps": ["AVR_MST_2", "AVR_MST_7", "AVR_MST_8", "AVR_MST_9", "AVR_MST_10"]
+    }
+  ],
+  "current_family_candidate_rule": {
+    "may_replace_named_pilot_automatically": false,
+    "required_before_proposal": [
+      "EXACT_RECIPE_PROCESS_ENGINEER_CONFIRMATION",
+      "AT_LEAST_150_COMPLETE_ORDERID_PALLETID_LABEL_GROUPS",
+      "AT_LEAST_90_PERCENT_TEMPLATE_CONSISTENCY",
+      "AT_LEAST_3_TARGET_LEVELS_FOR_EACH_PROPOSED_ACTION",
+      "SCP_CONTRACT_COMPLETE",
+      "PROCESS_AND_TEMPERATURE_GATES_PASS"
+    ]
+  }
+}

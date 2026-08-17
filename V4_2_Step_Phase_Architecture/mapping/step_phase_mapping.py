@@ -34,10 +34,16 @@ def build_step_phase_mapping(
     sources = []
 
     for idx, row in out.iterrows():
-        group = row['GroupName']
+        group = str(row['GroupName'])
         step = int(row['StepNo'])
-        t_av = row['temp_AV'] if pd.notna(row['temp_AV']) else 0
-        t_sp = row['temp_SP'] if pd.notna(row['temp_SP']) else 0
+        try:
+            t_av = float(row['temp_AV']) if pd.notna(row['temp_AV']) else 0.0
+        except (ValueError, TypeError):
+            t_av = 0.0
+        try:
+            t_sp = float(row['temp_SP']) if pd.notna(row['temp_SP']) else 0.0
+        except (ValueError, TypeError):
+            t_sp = 0.0
 
         if group == 'AVR_MST':
             if t_av >= pid_threshold or t_sp >= pid_threshold or step in (10, 11):

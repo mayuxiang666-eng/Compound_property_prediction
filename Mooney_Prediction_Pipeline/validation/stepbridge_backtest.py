@@ -22,7 +22,7 @@ from V4_2_Step_Phase_Architecture.data_extraction.settable_flag_builder import b
 from V4_2_Step_Phase_Architecture.mapping.step_phase_mapping import build_step_phase_mapping
 from V4_2_Step_Phase_Architecture.feature_engineering.aggregate_sp_to_phase import aggregate_steps_to_phase_features
 
-from Mooney_Prediction_Pipeline.model_training.hybrid_unified_model import HybridUnifiedMooneyModel
+from Mooney_Prediction_Pipeline.optimization.v37_raw_predictor import V37RawPredictor
 from Mooney_Prediction_Pipeline.optimization.mooney_phase_correction import generate_mooney_corrections
 from Mooney_Prediction_Pipeline.optimization.mooney_step_bridge import evaluate_mooney_step_bridge_dual_arm
 from Mooney_Prediction_Pipeline.validation.stepbridge_logger import build_stepbridge_log_rows
@@ -64,7 +64,8 @@ def run_stepbridge_historical_backtest(
         high_dev_orders = df_o['OrderID'].tolist()[:5]
         normal_control_orders = df_o['OrderID'].tolist()[5:10]
 
-    mooney_model = HybridUnifiedMooneyModel()
+    package_dir = os.path.join(root_dir, 'Mooney_Prediction_Pipeline', 'models', 'v37_production_model_package')
+    raw_predictor = V37RawPredictor(package_dir).load()
     recipe_context = pd.Series({'CompoundName': 'M1-T15760', 'material_system': 'Silica'})
     spec_center = 50.0
 
@@ -103,7 +104,7 @@ def run_stepbridge_historical_backtest(
         high_dev_corrections_mag.append(corr_mag)
 
         df_rec_steps, summary = evaluate_mooney_step_bridge_dual_arm(
-            df_mapped, corrections, mooney_model, recipe_context, spec_center=spec_center
+            df_mapped, corrections, raw_predictor, recipe_context, spec_center=spec_center
         )
 
         total_evaluated += 1

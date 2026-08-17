@@ -130,8 +130,13 @@ def run_v41_master_experiment():
     print("\n[Task 1 & 2] Loading Dataset & Building Labels & Features...", flush=True)
     data_path = os.path.abspath(os.path.join(
         os.path.dirname(__file__),
-        '../data/stage_statistics_enriched_all_features_weather_v4.csv',
+        '../../data/stage_statistics_enriched_all_features_weather_v4.csv',
     ))
+    if not os.path.exists(data_path):
+        data_path = os.path.abspath(os.path.join(
+            os.path.dirname(__file__),
+            '../data/stage_statistics_enriched_all_features_weather_v4.csv',
+        ))
     if not os.path.exists(data_path):
         data_path = os.path.abspath(os.path.join(
             os.path.dirname(__file__),
@@ -608,6 +613,7 @@ def run_v41_master_experiment():
     bounds_df.to_csv(os.path.join(out_dir, 'safe_parameter_bounds.csv'), index=False, encoding='utf-8-sig')
 
     mooney_checker = MooneyQualityConstraintChecker(mooney_model)
+    mooney_checker.fit_sigmas(df_val, target_col='MNY')
     optimizer = EnergyMooneyOptimizer(model_mode_b, mooney_checker, historical_df=df_tr)
 
     # ------------------------------------------------------------------------
@@ -1094,9 +1100,9 @@ def run_v41_master_experiment():
         encoding='utf-8-sig',
     )
 
-    branch_index = shadow_audit_df[['system_route_branch']].drop_duplicates()
-    management_summary_df = branch_index.merge(
-        shadow_summary_df.groupby('system_route_branch', dropna=False).agg(
+    branch_index = shadow_audit_df[['system_route_branch']].drop_duplicates() if 'system_route_branch' in shadow_audit_df.columns else pd.DataFrame({'system_route_branch': []})
+    if not shadow_summary_df.empty and 'system_route_branch' in shadow_summary_df.columns:
+        summary_agg = shadow_summary_df.groupby('system_route_branch', dropna=False).agg(
             recommended_row_count=('recommendation_status', 'size'),
             average_saving_pct=('shadow_actual_saving_pct', 'mean'),
             total_estimated_saving_kwh=('shadow_actual_saving_kwh', 'sum'),
@@ -1108,7 +1114,15 @@ def run_v41_master_experiment():
                 'safe_bounds_match_level',
                 lambda levels: levels.isin(fallback_bound_levels).sum(),
             ),
-        ).reset_index(),
+        ).reset_index()
+    else:
+        summary_agg = pd.DataFrame(columns=[
+            'system_route_branch', 'recommended_row_count', 'average_saving_pct',
+            'total_estimated_saving_kwh', 'exact_bound_recommendation_count', 'fallback_bound_recommendation_count'
+        ])
+
+    management_summary_df = branch_index.merge(
+        summary_agg,
         on='system_route_branch',
         how='left',
     )

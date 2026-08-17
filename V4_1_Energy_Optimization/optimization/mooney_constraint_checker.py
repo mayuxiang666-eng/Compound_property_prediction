@@ -24,6 +24,46 @@ class MooneyQualityConstraintChecker:
     def __init__(self, mooney_model: HybridUnifiedMooneyModel, default_sigma=1.1):
         self.mooney_model = mooney_model
         self.default_sigma = default_sigma
+        self.compound_sigmas: dict[str, float] = {}
+        self.branch_sigmas: dict[str, float] = {}
+
+    def fit_sigmas(self, df_val: pd.DataFrame, target_col: str = 'MNY', min_compound_samples: int = 15) -> None:
+        """
+        Estimates dynamic data-driven standard deviations from validation residuals.
+        """
+        if df_val is None or df_val.empty or target_col not in df_val.columns:
+            return
+
+        df_v = df_val.dropna(subset=[target_col]).copy()
+        if len(df_v) == 0:
+            return
+
+        try:
+            uncal_preds, _, _, _ = self.mooney_model.predict(df_v, cluster_col='material_system')
+            df_v['mooney_pred'] = uncal_preds
+            df_v['residual'] = df_v[target_col] - df_v['mooney_pred']
+
+            # 1. Compound-level sigmas
+            if 'CompoundName' in df_v.columns:
+                comp_grp = df_v.groupby('CompoundName')['residual']
+                for comp, group in comp_grp:
+                    if len(group) >= min_compound_samples:
+                        std_val = float(group.std())
+                        if pd.notnull(std_val) and std_val > 0.1:
+                            self.compound_sigmas[str(comp)] = std_val
+
+            # 2. Branch-level sigmas
+            branch_col = 'system_route_branch' if 'system_route_branch' in df_v.columns else 'material_system'
+            if branch_col in df_v.columns:
+                b_grp = df_v.groupby(branch_col)['residual']
+                for b_name, group in b_grp:
+                    if len(group) >= 5:
+                        std_val = float(group.std())
+                        if pd.notnull(std_val) and std_val > 0.1:
+                            self.branch_sigmas[str(b_name)] = std_val
+
+        except Exception as exc:
+            print(f"Warning: Failed to fit dynamic sigmas: {exc}")
 
     def evaluate_candidates(
         self,
@@ -51,9 +91,20 @@ class MooneyQualityConstraintChecker:
         # 2. Predict Mooney Viscosity for ALL candidates in 1 single call
         uncal_preds, _, _, _ = self.mooney_model.predict(df_candidates, cluster_col='material_system')
 
-        # 3. Determine Sigma & Margin
-        mat_sys = base_df_row.get('material_system', 'Silica')
-        sigma = 1.2 if mat_sys == 'Silica' else 0.9
+        # 3. Determine Dynamic Sigma & Margin
+        comp_name = str(base_df_row.get('CompoundName', ''))
+        branch_name = str(base_df_row.get('system_route_branch', base_df_row.get('material_system', 'Silica')))
+        mat_sys = str(base_df_row.get('material_system', 'Silica'))
+
+        if comp_name in self.compound_sigmas:
+            sigma = self.compound_sigmas[comp_name]
+        elif branch_name in self.branch_sigmas:
+            sigma = self.branch_sigmas[branch_name]
+        elif mat_sys in self.branch_sigmas:
+            sigma = self.branch_sigmas[mat_sys]
+        else:
+            sigma = 1.2 if mat_sys == 'Silica' else 0.9
+
         margin = 1.96 * sigma
 
         results = []

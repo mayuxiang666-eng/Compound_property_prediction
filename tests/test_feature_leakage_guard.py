@@ -1,0 +1,21 @@
+import pandas as pd
+import pytest
+
+from Mooney_Prediction_Pipeline.model_training.feature_leakage_guard import assert_no_target_leakage, find_target_leakage
+
+
+def test_actual_mny_alias_is_blocked():
+    frame = pd.DataFrame({"MNY": range(30), "actual_mny": range(30), "step_phase__wet__temp": range(100, 130)})
+    assert find_target_leakage(frame, ["actual_mny", "step_phase__wet__temp"]) == ["actual_mny"]
+    with pytest.raises(ValueError, match="TARGET_LEAKAGE_BLOCKED"):
+        assert_no_target_leakage(frame, ["actual_mny"])
+
+
+def test_numeric_copy_of_target_is_blocked_even_under_process_name():
+    frame = pd.DataFrame({"MNY": range(30), "step_phase__wet__temp": range(30)})
+    assert find_target_leakage(frame, ["step_phase__wet__temp"]) == ["step_phase__wet__temp"]
+
+
+def test_process_target_temperature_is_not_confused_with_lab_target():
+    frame = pd.DataFrame({"MNY": range(30), "Target_Temperature": range(100, 130)})
+    assert_no_target_leakage(frame, ["Target_Temperature"])

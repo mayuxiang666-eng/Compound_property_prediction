@@ -12,6 +12,7 @@ if root_dir not in sys.path:
     sys.path.insert(0, root_dir)
 
 from V4_2_Step_Phase_Architecture.feature_engineering.aggregate_sp_to_phase import aggregate_steps_to_phase_features
+from V4_2_Step_Phase_Architecture.optimization.acceptance_evaluator import AcceptanceEvaluator
 
 def validate_step_candidates(
     candidates_df: pd.DataFrame,
@@ -70,12 +71,14 @@ def validate_step_candidates(
     except Exception:
         pred_mny = np.nan
 
-    # 5. Apply 7 Engineering Gates
+    # 5. Apply fail-closed engineering gates.
     step_bounds_ok = True
     if 'recommended_time_SP' in out.columns and 'step_time_min' in out.columns:
         step_bounds_ok = all(out['recommended_time_SP'].between(out['step_time_min'], out['step_time_max']))
 
-    if not step_bounds_ok:
+    if pd.isna(pred_kwh) or pd.isna(pred_mny):
+        status = 'REJECTED_MODEL_PREDICTION_UNAVAILABLE'
+    elif not step_bounds_ok:
         status = 'REJECTED_STEP_OUT_OF_BOUNDS'
     elif not consistent:
         status = 'REJECTED_PHASE_INCONSISTENT'
