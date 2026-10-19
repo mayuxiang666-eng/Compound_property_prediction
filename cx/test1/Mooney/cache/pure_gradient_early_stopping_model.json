@@ -1,0 +1,25 @@
+{
+  "best_epoch": 611,
+  "learning_rate": 0.02,
+  "theta_0_baseline": 11.0835,
+  "theta_w_weights": {
+    "MST_S1_Time_s": -1.9039,
+    "MST_S2_Time_s": -1.8645,
+    "MST_S3_Time_s": 0.6081,
+    "MST_S6_Time_s": 4.1451,
+    "MST_S7_Time_s": 3.9651,
+    "MST_S7_Rpm": 11.1631,
+    "MST_S8_Time_s": 3.5752,
+    "MST_S9_Time_s": 4.5053,
+    "MST_S10_Time_s": 4.5542,
+    "MSB_S1_Time_s": 8.5296,
+    "MSB_S2_Time_s": 7.3928,
+    "MSB_S3_Time_s": 7.1392,
+    "Curve_Temp_Max_MST_C": 11.0365,
+    "MSB_S3_Temp_C": 10.8973,
+    "Curve_Torque_Mean_MST_Nm": 11.1204,
+    "Curve_Power_Mean_MST_kW": 11.0965
+  },
+  "val_mae": 5.4054,
+  "val_pass_3mu": 43.75
+}

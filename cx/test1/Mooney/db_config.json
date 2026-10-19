@@ -1,0 +1,18 @@
+{
+  "SFEAPAC": {
+    "user": "uif35346_ro",
+    "password": "NBZkSTxbu1xZ",
+    "host": "mustang-apac-rds-01-dbinstance-01.ch6kpnfcmztf.eu-central-1.rds.amazonaws.com",
+    "port": 1433,
+    "database": "HESFESFEPLANT",
+    "description": "MMS 混炼车间工艺过程与做功电量数据库"
+  },
+  "AIDATASERVER": {
+    "user": "sa",
+    "password": "Conti@2025",
+    "host": "10.246.97.159\\AIDATASERVER",
+    "port": 1433,
+    "database": "MooneyIntegratedData",
+    "description": "实验室门尼粘度实测数据与AI特征集成数据库"
+  }
+}

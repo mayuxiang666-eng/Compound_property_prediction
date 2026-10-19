@@ -1,0 +1,42 @@
+{
+  "solve_timestamp": "2026-10-16 14:56:52",
+  "n_samples": 139,
+  "mooney_model": {
+    "Y0_baseline_MU": 58.9118,
+    "centers_xi": {
+      "MST_Step7_Duration_s": 31.5818,
+      "MST_Step7_Rpm": 37.8152,
+      "MSB_Step1_Duration_s": 44.5726,
+      "Dump_Temp_C": 166.101,
+      "Start_Temp_C": 91.2138
+    },
+    "sensitivities_w": {
+      "MST_Step7_Duration_s": -0.14,
+      "MST_Step7_Rpm": 0.2974,
+      "MSB_Step1_Duration_s": -0.0418,
+      "Dump_Temp_C": 0.1639,
+      "Start_Temp_C": 0.037
+    },
+    "iterations": 26,
+    "final_loss": 15.2837
+  },
+  "energy_model": {
+    "E0_baseline_kWh": 35.4289,
+    "centers_xi": {
+      "MST_Step7_Duration_s": 31.3978,
+      "MST_Step7_Rpm": 41.4784,
+      "MSB_Step1_Duration_s": 43.8571,
+      "Dump_Temp_C": 165.7624,
+      "Start_Temp_C": 92.1514
+    },
+    "sensitivities_w": {
+      "MST_Step7_Duration_s": -0.0973,
+      "MST_Step7_Rpm": -0.5338,
+      "MSB_Step1_Duration_s": 0.0623,
+      "Dump_Temp_C": 0.5119,
+      "Start_Temp_C": -0.1248
+    },
+    "iterations": 23,
+    "final_loss": 5.7412
+  }
+}
