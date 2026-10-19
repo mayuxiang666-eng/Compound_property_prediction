@@ -158,16 +158,27 @@ python compound_energy_optimizer.py --mode all --top 5
 
 ### 5.3 Web 看板系统与 10.246.97.159 生产服务器部署 (Mixing Energy Dashboard)
 - **生产访问入口**：`http://10.246.97.159:8888/`（直接在浏览器访问，顶部点击「**⚡ 胶料节能潜力与优化**」Tab）
-- **核心功能**：
+- **核心模块一：全厂潜力排行与机理推荐 (Plant-Wide Potential & Prescriptions)**：
   1. **全厂胶料能耗潜力排行 (Energy Potential Ranking)**：全厂 33 款高产量胶料多维度排行，支持按「全部」、「炭黑 TOP 5」、「白炭黑 TOP 5」一键筛选与模糊搜索；
-  2. **工步级遥测与方差贡献率 Wi 诊断 (Step-Level Diagnosis)**：查看任意胶料各工步设定与实测转速、功率、电耗及方差贡献率 $W_i$；
+  2. **工步级遥测与方差贡献率 Wi 诊断 (Step-Level Diagnosis)**：彻底剔除阶段文本描述，仅保留精确工步序号（`MST-1`, `MST-2`... `MSB-1`, `MSB-2`），查看设定/实测转速、实测时长、功率、电耗及方差贡献率 $W_i$；
   3. **三大工艺优化处方建议**：MST 降速处方（-5 RPM）、MSB 降时处方（-9s）、白炭黑专属 PID 总体时长门禁（PASS/CLAMPED）及炭黑规则豁免（EXEMPT）；
   4. **全流程一键批处理重算**：支持前端一键执行动态多阶段批处理重算，并热更新前端数据；
   5. **高清四联看板放大预览**：集成嵌入 Top 5 潜力排行看板与重点胶料分步诊断看板，支持点击放大。
-- **本地开发运行**：
+- **核心模块二：专用实测 DOE 实验记录与 SOP 追踪工作台 (Dedicated DOE Logger & SOP Tracker)**：
+  1. **生产工单核验与数据库确认 (Order ID Verification)**：用户输入工单号（如 `8101635`, `8113482`, `8110496`, `8098831`, `8098313` 等），系统在 359 个生产工单 20,985 批次数据库中瞬间核验，调出胶料全称、体系、机台、车次数、时段、单车标称称重与门尼规格；
+  2. **实验车次划分与工步参数修改设置 (Batch Range & Step Change)**：自由配置对照基准车次（如第 1~19 车）与实验调整车次（如第 20~60 车），选择调整工步（如 `MST-7`, `MSB-1`）、参数类型（转速/时长/温度）、基准 SP 与实验 SP，自动联动计算变化幅度 $\Delta$ 与工程调整依据；
+  3. **实验节能结果自动测算与逐车能耗阶跃动态图 (Batch Dynamics Chart)**：自动计算基线车次平均单耗 vs 实验车次平均单耗（kWh/车、kWh/t）、净节能幅度与节电百分比，渲染交互式**逐车能耗阶跃动态柱状图**（灰蓝对照基准车次 vs 翠绿实验车次），直观展现节能降幅与车次稳定性；
+  4. **车次门尼粘度检测填报与质量闭环 (Lab Mooney Verification)**：填报各车次化验室实测门尼粘度，或一键从质检数据库载入化验记录，自动计算均值 $\mu$、标准差 $\sigma$ 与规格符合率，给出 `100% IN SPEC 合格通过` 的工程闭环裁决；
+  5. **永久保存与历史 DOE 实验归档库 (Permanent Archive)**：点击「💾 永久保存本次 DOE 实验记录」，生成永久实验编码（如 `DOE-20260924-8113482-01`），持久化写入服务器数据资产 `doe_experiment_records.json` 与浏览器缓存，归档表支持「👁️ 一键载入工作台复现」与「📥 导出全厂归档 CSV」；
+  6. **SOP 固化阶段记录与前后能耗长效对比 (SOP Phased Audit)**：记录从实验阶段进入 SOP 的生效形式（支持按起始生效工单号固化或按生效时间日期固化），系统自动对比【SOP 实施前 Pre-SOP】vs【SOP 固化后长效运行 Post-SOP】的吨单耗均值、长效净节约（如 `-6.45 kWh/t (-4.85%)`）与后续生产累计节电总量（已累计节电 `14.2 MWh`）。
+- **本地开发运行与数据同步**：
   ```bash
-  # 运行本地 Flask 测试看板 (Port 5000)
-  python web_dashboard/app.py
+  # 1. 重新构建 359 订单与 DOE 归档库
+  python build_doe_orders_database.py
+
+  # 2. 重新构建胶料能耗潜力排行与分步处方 JSON
+  python build_energy_optimization_data.py
   ```
 - **服务器批处理重算脚本**：
   在服务器 `D:\HefeiEnergyDashboard_Release\run_server\` 目录下双击 `run_batch_optimization.bat`，即可一键重算并刷新全部数据资产。
+

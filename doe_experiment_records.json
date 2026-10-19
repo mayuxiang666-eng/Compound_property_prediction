@@ -1,0 +1,211 @@
+[
+  {
+    "record_id": "DOE-20260924-8113482-01",
+    "order_id": "8113482",
+    "compound_name": "M1-T15760---- 06 002",
+    "short_code": "T15760",
+    "is_silica": true,
+    "mixer": "92-1090",
+    "total_batches": 73,
+    "baseline_batches": {
+      "start": 1,
+      "end": 9
+    },
+    "trial_batches": {
+      "start": 10,
+      "end": 73
+    },
+    "step_id": "MSB-1",
+    "param_type": "混炼时长 (Duration)",
+    "base_sp": 75.0,
+    "trial_sp": 65.0,
+    "delta": -10.0,
+    "unit": "秒 (s)",
+    "rationale": "白炭黑下密炼主控温均化时间压缩 10s，消除反应完成后的冗余能耗，PID 总体时长控制在 101s (处于 80-140s 刚性合格范围)。",
+    "baseline_kwh_batch": 36.65,
+    "trial_kwh_batch": 34.87,
+    "saving_kwh_batch": -1.78,
+    "baseline_kwh_t": 132.87,
+    "trial_kwh_t": 126.42,
+    "saving_kwh_t": -6.45,
+    "saving_pct": 4.85,
+    "pid_status": "PASS 刚性门禁通过 (实测 101s 在 [80-140s] 范围内)",
+    "mooney_results": [
+      {
+        "batch_no": 15,
+        "pallet_id": "811348201",
+        "mooney": 56.42,
+        "delta": -0.08,
+        "in_spec": true
+      },
+      {
+        "batch_no": 30,
+        "pallet_id": "811348202",
+        "mooney": 57.1,
+        "delta": 0.6,
+        "in_spec": true
+      },
+      {
+        "batch_no": 50,
+        "pallet_id": "811348203",
+        "mooney": 55.85,
+        "delta": -0.65,
+        "in_spec": true
+      },
+      {
+        "batch_no": 70,
+        "pallet_id": "811348204",
+        "mooney": 56.3,
+        "delta": -0.2,
+        "in_spec": true
+      }
+    ],
+    "mooney_mean": 56.42,
+    "mooney_std": 0.51,
+    "mooney_spec": "[52.0 - 62.0] MU",
+    "mooney_verdict": "✅ 100% IN SPEC 合格通过 - 粘度未见异常波动，无二次絮凝返粗",
+    "created_at": "2026-09-24 16:30:00",
+    "sop_status": "PROMOTED",
+    "sop_info": {
+      "promoted_date": "2026-10-02 08:00:00",
+      "starting_order_id": "8124855",
+      "sop_code": "SOP-MIX-T15760-2026-V2",
+      "pre_sop_kwh_t": 132.87,
+      "post_sop_kwh_t": 126.42,
+      "delta_kwh_t": -6.45,
+      "cumulative_mwh_saved": 14.2
+    }
+  },
+  {
+    "record_id": "DOE-20260922-8110496-01",
+    "order_id": "8110496",
+    "compound_name": "M1-B00163---- 08 010",
+    "short_code": "B00163",
+    "is_silica": false,
+    "mixer": "92-1020",
+    "total_batches": 61,
+    "baseline_batches": {
+      "start": 1,
+      "end": 14
+    },
+    "trial_batches": {
+      "start": 15,
+      "end": 61
+    },
+    "step_id": "MSB-1",
+    "param_type": "混炼时长 (Duration)",
+    "base_sp": 90.0,
+    "trial_sp": 60.0,
+    "delta": -30.0,
+    "unit": "秒 (s)",
+    "rationale": "炭黑胶料下密炼无硅烷化化学反应，直接压缩无效翻滚均化时长 30s，大幅压减电机能耗。",
+    "baseline_kwh_batch": 30.17,
+    "trial_kwh_batch": 28.02,
+    "saving_kwh_batch": -2.15,
+    "baseline_kwh_t": 113.02,
+    "trial_kwh_t": 104.97,
+    "saving_kwh_t": -8.05,
+    "saving_pct": 7.12,
+    "pid_status": "规则豁免 (炭黑体系独享豁免，不设限)",
+    "mooney_results": [
+      {
+        "batch_no": 20,
+        "pallet_id": "811049601",
+        "mooney": 51.2,
+        "delta": -0.3,
+        "in_spec": true
+      },
+      {
+        "batch_no": 40,
+        "pallet_id": "811049602",
+        "mooney": 51.8,
+        "delta": 0.3,
+        "in_spec": true
+      },
+      {
+        "batch_no": 58,
+        "pallet_id": "811049603",
+        "mooney": 51.5,
+        "delta": 0.0,
+        "in_spec": true
+      }
+    ],
+    "mooney_mean": 51.5,
+    "mooney_std": 0.3,
+    "mooney_spec": "[45.0 - 58.0] MU",
+    "mooney_verdict": "✅ 100% IN SPEC 合格通过 - 门尼粘度处于正中心靶点",
+    "created_at": "2026-09-22 18:15:00",
+    "sop_status": "PROMOTED",
+    "sop_info": {
+      "promoted_date": "2026-09-28 08:00:00",
+      "starting_order_id": "8125100",
+      "sop_code": "SOP-MIX-B00163-2026-V1",
+      "pre_sop_kwh_t": 113.02,
+      "post_sop_kwh_t": 104.97,
+      "delta_kwh_t": -8.05,
+      "cumulative_mwh_saved": 18.6
+    }
+  },
+  {
+    "record_id": "DOE-20260920-8101635-01",
+    "order_id": "8101635",
+    "compound_name": "M1-T15760---- 06 002",
+    "short_code": "T15760",
+    "is_silica": true,
+    "mixer": "92-1090",
+    "total_batches": 146,
+    "baseline_batches": {
+      "start": 1,
+      "end": 19
+    },
+    "trial_batches": {
+      "start": 20,
+      "end": 60
+    },
+    "step_id": "MST-7",
+    "param_type": "混炼转速 (Speed)",
+    "base_sp": 50.0,
+    "trial_sp": 45.0,
+    "delta": -5.0,
+    "unit": "RPM",
+    "rationale": "上密炼 Step 7 湿混/吸热平原段转速由 50 RPM 下调至 45 RPM，削减峰值剪切生热，避免机械剪切过量。",
+    "baseline_kwh_batch": 36.65,
+    "trial_kwh_batch": 35.13,
+    "saving_kwh_batch": -1.52,
+    "baseline_kwh_t": 132.87,
+    "trial_kwh_t": 127.36,
+    "saving_kwh_t": -5.51,
+    "saving_pct": 4.15,
+    "pid_status": "PASS 刚性门禁通过 (实测 108s 在 [80-140s] 范围内)",
+    "mooney_results": [
+      {
+        "batch_no": 25,
+        "pallet_id": "810163501",
+        "mooney": 57.2,
+        "delta": 0.7,
+        "in_spec": true
+      },
+      {
+        "batch_no": 40,
+        "pallet_id": "810163502",
+        "mooney": 56.9,
+        "delta": 0.4,
+        "in_spec": true
+      },
+      {
+        "batch_no": 55,
+        "pallet_id": "810163503",
+        "mooney": 57.1,
+        "delta": 0.6,
+        "in_spec": true
+      }
+    ],
+    "mooney_mean": 57.07,
+    "mooney_std": 0.15,
+    "mooney_spec": "[52.0 - 62.0] MU",
+    "mooney_verdict": "✅ 100% IN SPEC 合格通过 - 湿混吸热平原平稳过渡",
+    "created_at": "2026-09-20 22:40:00",
+    "sop_status": "VALIDATED",
+    "sop_info": null
+  }
+]

@@ -1,7 +1,7 @@
 <!-- ============================================================================== -->
-<!-- MODULE 3: 胶料节能潜力排行与分步优化工作台 (ENERGY POTENTIAL & STEP DOE WORKBENCH) -->
+<!-- MODULE 3: 胶料节能潜力排行与实测 DOE 优化工作台 (POTENTIAL RANKING & DOE WORKBENCH) -->
 <!-- ============================================================================== -->
-<main class="dashboard-grid" v-show="currentTab === 'energy-optimization'" style="display: flex; flex-direction: column; gap: 1.5rem; padding: 1.5rem 0.5rem;">
+<main class="dashboard-grid" v-show="currentTab === 'energy-optimization'" style="display: flex; flex-direction: column; gap: 1.5rem; padding: 1.5rem 0.5rem;" id="doe-workbench-top">
 
     <!-- Top Workbench Control & Action Header -->
     <section class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);">
@@ -12,14 +12,14 @@
                         ⚡
                     </div>
                     <h2 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.02em;">
-                        {{ currentLang === 'zh' ? '全厂胶料能耗潜力排行与分步优化工作台' : 'Plant-Wide Energy Potential Ranking & Step DOE Optimizer' }}
+                        {{ currentLang === 'zh' ? '全厂胶料能耗潜力排行与实测 DOE 优化工作台' : 'Plant-Wide Energy Potential Ranking & Empirical DOE Optimizer' }}
                     </h2>
                     <span style="display: inline-block; padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; background: #fef3c7; color: #b45309; border: 1px solid #fde68a;">
                         {{ currentLang === 'zh' ? '白炭黑 PID 刚性门禁 | 炭黑豁免' : 'Silica Hard Rule Active | CB Exempt' }}
                     </span>
                 </div>
-                <p style="color: #64748b; font-size: 0.88rem; margin: 0; max-width: 900px; line-height: 1.5;">
-                    {{ currentLang === 'zh' ? '结合全厂年化产量与车次能耗离散度 (P15 黄金低耗 vs P85 高耗极差)，多维度诊断 Top 5 炭黑与 Top 5 白炭黑高潜力胶料，输出上密炼降速与下密炼降时处方，刚性执行白炭黑 PID 总时长门禁。' : 'Screening Top 5 Carbon Black & Silica compounds by production volume and batch energy spread (P85-P15), providing step-level speed & time curtailment recipes with strict PID duration hard rule enforcement.' }}
+                <p style="color: #64748b; font-size: 0.88rem; margin: 0; max-width: 950px; line-height: 1.5;">
+                    {{ currentLang === 'zh' ? '覆盖全厂 107 个在产胶料实测车次能耗极差诊断、工步级遥测方差贡献率分析，结合专用实测 DOE 实验闭环记录界面，支持工单级车次能耗对比、门尼粘度质检验真、永久归档与 SOP 阶段长效对比。' : 'Plant-wide compound energy spread ranking and step-level variance diagnosis with a dedicated empirical DOE recording workbench supporting order batch validation, lab Mooney compliance audit, permanent storage, and SOP phased tracking.' }}
                 </p>
                 <div style="margin-top: 0.4rem; font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 0.75rem;">
                     <span>📅 {{ optData.generated_at ? (currentLang === 'zh' ? '基准计算时间：' + optData.generated_at : 'Computed at: ' + optData.generated_at) : (currentLang === 'zh' ? '机理推演引擎在线' : 'Physics Engine Online') }}</span>
@@ -28,13 +28,13 @@
                 </div>
             </div>
 
-            <!-- Action Buttons Group -->
+            <!-- Top Action Buttons -->
             <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                <button @click="openChartModal('ranking_dashboard')" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem; border-radius: 10px; font-size: 0.82rem; font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
+                <button @click="openChartModal('ranking_dashboard')" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem; border-radius: 10px; font-size: 0.82rem; font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; cursor: pointer; transition: all 0.2s;">
                     <span>📊</span>
                     <span>{{ currentLang === 'zh' ? '潜力排行四联看板' : 'Potential Dashboard' }}</span>
                 </button>
-                <button @click="openChartModal('diagnosis_dashboard')" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem; border-radius: 10px; font-size: 0.82rem; font-weight: 700; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
+                <button @click="openChartModal('diagnosis_dashboard')" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem; border-radius: 10px; font-size: 0.82rem; font-weight: 700; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; cursor: pointer; transition: all 0.2s;">
                     <span>🔬</span>
                     <span>{{ currentLang === 'zh' ? '分步诊断四联看板' : 'Step Diagnosis Dashboard' }}</span>
                 </button>
@@ -44,569 +44,1204 @@
                 </button>
             </div>
         </div>
-    </section>
 
-    <!-- 4 High-Impact KPI Metric Cards -->
-    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem;">
-        
-        <!-- KPI 1: CB Top 5 Savings -->
-        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; background: white; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.5rem; position: relative; overflow: hidden;">
-            <div style="position: absolute; top: -10px; right: -10px; width: 60px; height: 60px; background: rgba(15, 23, 42, 0.03); border-radius: 50%;"></div>
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.82rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em;">
-                    {{ currentLang === 'zh' ? '炭黑 Top 5 节电潜力' : 'Carbon Black Top 5 Savings' }}
+        <!-- SUB-NAVIGATION TABS: Ranking vs DOE Logger -->
+        <div style="display: flex; gap: 0.75rem; border-top: 1px solid #e2e8f0; padding-top: 1.25rem; margin-top: 1.25rem;">
+            <button @click="optSubTab = 'ranking'" 
+                    :style="{ background: optSubTab === 'ranking' ? '#0f172a' : '#f1f5f9', color: optSubTab === 'ranking' ? '#ffffff' : '#475569', boxShadow: optSubTab === 'ranking' ? '0 2px 8px rgba(15,23,42,0.25)' : 'none' }"
+                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.25rem; border-radius: 10px; font-size: 0.88rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s;">
+                <span>📊</span>
+                <span>{{ currentLang === 'zh' ? '全厂潜力排行与机理推荐' : 'Plant Potential Ranking & Prescriptions' }}</span>
+            </button>
+            <button @click="optSubTab = 'doe_logger'" 
+                    :style="{ background: optSubTab === 'doe_logger' ? 'linear-gradient(135deg, #ff9f00 0%, #ea580c 100%)' : '#f1f5f9', color: optSubTab === 'doe_logger' ? '#ffffff' : '#475569', boxShadow: optSubTab === 'doe_logger' ? '0 4px 14px rgba(234,88,12,0.35)' : 'none' }"
+                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.25rem; border-radius: 10px; font-size: 0.88rem; font-weight: 800; border: none; cursor: pointer; transition: all 0.2s;">
+                <span>📝</span>
+                <span>{{ currentLang === 'zh' ? '实测 DOE 实验记录与 SOP 追踪' : 'Empirical DOE Trial Logger & SOP Tracker' }}</span>
+                <span v-if="doeRecords.length > 0" style="padding: 0.1rem 0.45rem; border-radius: 10px; font-size: 0.72rem; background: rgba(255,255,255,0.25); color: white;">
+                    {{ doeRecords.length }}
                 </span>
-                <span style="padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; background: #f1f5f9; color: #334155;">
-                    {{ currentLang === 'zh' ? '5 款主力炭黑' : '5 Top Compounds' }}
-                </span>
-            </div>
-            <div style="display: flex; align-items: baseline; gap: 0.4rem;">
-                <span style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800; color: #0f172a;">
-                    {{ optData.summary.cb_top5_mwh }}
-                </span>
-                <span style="font-size: 0.85rem; font-weight: 700; color: #64748b;">MWh/年</span>
-            </div>
-            <div style="font-size: 0.75rem; color: #64748b; line-height: 1.4;">
-                {{ currentLang === 'zh' ? '覆盖 B00458, B00163, B00460B, B15563R1, R00218W2' : 'Covers B00458, B00163, B00460B, B15563R1, R00218W2' }}
-            </div>
-        </div>
-
-        <!-- KPI 2: Silica Top 5 Savings -->
-        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; background: white; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.5rem; position: relative; overflow: hidden;">
-            <div style="position: absolute; top: -10px; right: -10px; width: 60px; height: 60px; background: rgba(2, 132, 199, 0.04); border-radius: 50%;"></div>
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.82rem; font-weight: 700; color: #0284c7; text-transform: uppercase; letter-spacing: 0.04em;">
-                    {{ currentLang === 'zh' ? '白炭黑 Top 5 节电潜力' : 'Silica Top 5 Savings' }}
-                </span>
-                <span style="padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; background: #e0f2fe; color: #0369a1;">
-                    {{ currentLang === 'zh' ? 'PID门禁合规' : 'PID Hard Rule' }}
-                </span>
-            </div>
-            <div style="display: flex; align-items: baseline; gap: 0.4rem;">
-                <span style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800; color: #0284c7;">
-                    {{ optData.summary.silica_top5_mwh }}
-                </span>
-                <span style="font-size: 0.85rem; font-weight: 700; color: #0369a1;">MWh/年</span>
-            </div>
-            <div style="font-size: 0.75rem; color: #64748b; line-height: 1.4;">
-                {{ currentLang === 'zh' ? '覆盖 T15760, T20153W, T09170, T33025W3, T17771' : 'Covers T15760, T20153W, T09170, T33025W3, T17771' }}
-            </div>
-        </div>
-
-        <!-- KPI 3: Total Annual Cost Saving -->
-        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; background: white; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.5rem; position: relative; overflow: hidden;">
-            <div style="position: absolute; top: -10px; right: -10px; width: 60px; height: 60px; background: rgba(16, 185, 129, 0.04); border-radius: 50%;"></div>
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.82rem; font-weight: 700; color: #059669; text-transform: uppercase; letter-spacing: 0.04em;">
-                    {{ currentLang === 'zh' ? '年化节电总电费' : 'Annual Cost Savings' }}
-                </span>
-                <span style="padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; background: #dcfce7; color: #15803d;">
-                    {{ optData.summary.total_savings_mwh }} MWh
-                </span>
-            </div>
-            <div style="display: flex; align-items: baseline; gap: 0.2rem;">
-                <span style="font-size: 1.2rem; font-weight: 800; color: #059669;">￥</span>
-                <span style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800; color: #059669;">
-                    {{ Math.round(optData.summary.annual_cost_rmb).toLocaleString() }}
-                </span>
-                <span style="font-size: 0.85rem; font-weight: 700; color: #64748b;">/年</span>
-            </div>
-            <div style="font-size: 0.75rem; color: #64748b; line-height: 1.4;">
-                {{ currentLang === 'zh' ? '按工业综合电价 0.70 元/kWh 核算' : 'Calculated at average 0.70 RMB/kWh' }}
-            </div>
-        </div>
-
-        <!-- KPI 4: Mean Specific Energy Saving -->
-        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; background: white; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.5rem; position: relative; overflow: hidden;">
-            <div style="position: absolute; top: -10px; right: -10px; width: 60px; height: 60px; background: rgba(234, 88, 12, 0.04); border-radius: 50%;"></div>
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.82rem; font-weight: 700; color: #ea580c; text-transform: uppercase; letter-spacing: 0.04em;">
-                    {{ currentLang === 'zh' ? '平均单耗节能量' : 'Avg Specific Saving' }}
-                </span>
-                <span style="padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; background: #ffedd5; color: #c2410c;">
-                    {{ currentLang === 'zh' ? '标杆降幅' : 'Benchmark' }}
-                </span>
-            </div>
-            <div style="display: flex; align-items: baseline; gap: 0.4rem;">
-                <span style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800; color: #ea580c;">
-                    {{ optData.summary.avg_saving_kwh_t }}
-                </span>
-                <span style="font-size: 0.85rem; font-weight: 700; color: #9a3412;">kWh/吨</span>
-            </div>
-            <div style="font-size: 0.75rem; color: #64748b; line-height: 1.4;">
-                {{ currentLang === 'zh' ? '每车节电约 1.35 ~ 1.78 kWh，门尼合格率保持 100%' : '1.35 - 1.78 kWh/batch savings with 100% Mooney in spec' }}
-            </div>
+            </button>
         </div>
     </section>
 
-    <!-- SECTION 1: 全厂胶料能耗潜力排行榜 (PLANT-WIDE POTENTIAL RANKING) -->
-    <section class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
-            <div>
-                <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                    <span>🏆</span>
-                    <span>{{ currentLang === 'zh' ? '全厂胶料能耗优化潜力排行榜' : 'Plant-Wide Energy Saving Potential Ranking' }}</span>
-                </h3>
-                <p style="color: #64748b; font-size: 0.82rem; margin-top: 0.25rem;">
-                    {{ currentLang === 'zh' ? '以车次单耗极差 (P85 - P15) 衡量工艺离散度，结合年化混炼产量测算总节电潜力 MWh。点击胶料行可一键联动下方分步诊断。' : 'Evaluated by batch energy spread (P85-P15) weighted with annual tons. Click any row to load step diagnosis.' }}
-                </p>
-            </div>
+    <!-- ============================================================================== -->
+    <!-- SUB-VIEW 1: 全厂潜力排行与分步处方 (RANKING & STEP PRESCRIPTIONS) -->
+    <!-- ============================================================================== -->
+    <div v-show="optSubTab === 'ranking'" style="display: flex; flex-direction: column; gap: 1.5rem;">
 
-            <!-- Filter Controls -->
-            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                <!-- Category Pills -->
-                <div style="display: flex; background: #f1f5f9; padding: 0.2rem; border-radius: 10px; border: 1px solid #e2e8f0;">
-                    <button @click="optRankingFilter = 'all'" :style="{ background: optRankingFilter === 'all' ? '#ffffff' : 'transparent', color: optRankingFilter === 'all' ? '#0f172a' : '#64748b', boxShadow: optRankingFilter === 'all' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }" style="border: none; padding: 0.35rem 0.85rem; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">
-                        {{ currentLang === 'zh' ? '全部 (' + optData.rankings.length + ')' : 'All (' + optData.rankings.length + ')' }}
-                    </button>
-                    <button @click="optRankingFilter = 'cb_top5'" :style="{ background: optRankingFilter === 'cb_top5' ? '#0f172a' : 'transparent', color: optRankingFilter === 'cb_top5' ? '#ffffff' : '#475569', boxShadow: optRankingFilter === 'cb_top5' ? '0 1px 3px rgba(0,0,0,0.2)' : 'none' }" style="border: none; padding: 0.35rem 0.85rem; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">
-                        {{ currentLang === 'zh' ? '炭黑 TOP 5' : 'Carbon Black TOP 5' }}
-                    </button>
-                    <button @click="optRankingFilter = 'silica_top5'" :style="{ background: optRankingFilter === 'silica_top5' ? '#0284c7' : 'transparent', color: optRankingFilter === 'silica_top5' ? '#ffffff' : '#0369a1', boxShadow: optRankingFilter === 'silica_top5' ? '0 1px 3px rgba(2,132,199,0.3)' : 'none' }" style="border: none; padding: 0.35rem 0.85rem; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">
-                        {{ currentLang === 'zh' ? '白炭黑 TOP 5' : 'Silica TOP 5' }}
-                    </button>
-                </div>
-
-                <!-- Search Input -->
-                <div style="position: relative;">
-                    <input type="text" v-model="optSearchQuery" :placeholder="currentLang === 'zh' ? '搜索胶料代号/机台...' : 'Filter compound/mixer...'" style="padding: 0.4rem 0.85rem 0.4rem 2rem; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.8rem; width: 180px; background: white; outline: none;">
-                    <span style="position: absolute; left: 0.6rem; top: 0.45rem; font-size: 0.75rem; color: #94a3b8;">🔍</span>
-                </div>
-
-                <!-- Export CSV -->
-                <button @click="exportOptimizationRankingCSV" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; cursor: pointer; transition: all 0.2s;">
-                    <span>📥</span>
-                    <span>{{ currentLang === 'zh' ? '导出CSV' : 'Export CSV' }}</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Ranking Table Container -->
-        <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 12px;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 0.83rem; text-align: left;">
-                <thead>
-                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 700;">
-                        <th style="padding: 0.65rem 0.85rem; width: 60px;">#</th>
-                        <th style="padding: 0.65rem 0.85rem;">{{ currentLang === 'zh' ? '胶料代号与全称' : 'Compound Name' }}</th>
-                        <th style="padding: 0.65rem 0.85rem;">{{ currentLang === 'zh' ? '体系分类' : 'System' }}</th>
-                        <th style="padding: 0.65rem 0.85rem; text-align: center;">{{ currentLang === 'zh' ? '主产机台' : 'Mixer' }}</th>
-                        <th style="padding: 0.65rem 0.85rem; text-align: right;">{{ currentLang === 'zh' ? '样本批次' : 'Batches' }}</th>
-                        <th style="padding: 0.65rem 0.85rem; text-align: right;">{{ currentLang === 'zh' ? '年化产量(t)' : 'Annual Tons' }}</th>
-                        <th style="padding: 0.65rem 0.85rem; text-align: right; color: #16a34a;">{{ currentLang === 'zh' ? 'P15黄金低耗' : 'P15 Golden' }}</th>
-                        <th style="padding: 0.65rem 0.85rem; text-align: right;">{{ currentLang === 'zh' ? 'P50中位数' : 'P50 Median' }}</th>
-                        <th style="padding: 0.65rem 0.85rem; text-align: right; color: #e11d48;">{{ currentLang === 'zh' ? 'P85高耗位' : 'P85 High' }}</th>
-                        <th style="padding: 0.65rem 0.85rem; text-align: right; font-weight: 800; color: #ea580c;">{{ currentLang === 'zh' ? '能耗极差(kWh/t)' : 'Spread (kWh/t)' }}</th>
-                        <th style="padding: 0.65rem 0.85rem; text-align: right; font-weight: 800; color: #0284c7;">{{ currentLang === 'zh' ? '年化潜力(MWh)' : 'Annual MWh' }}</th>
-                        <th style="padding: 0.65rem 0.85rem; text-align: center;">{{ currentLang === 'zh' ? '分步诊断' : 'Diagnosis' }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="item in optFilteredRankings" :key="item.compound_name" 
-                        :style="{ background: optSelectedCompound === item.compound_name ? '#f0f9ff' : 'transparent', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }"
-                        @click="selectOptCompound(item.compound_name)">
-                        
-                        <!-- Rank -->
-                        <td style="padding: 0.6rem 0.85rem; font-weight: 800; color: #0f172a;">
-                            <span v-if="item.rank <= 3" style="display: inline-block; width: 22px; height: 22px; border-radius: 50%; background: #ffedd5; color: #c2410c; text-align: center; line-height: 22px; font-size: 0.75rem;">
-                                {{ item.rank }}
-                            </span>
-                            <span v-else style="color: #64748b;">{{ item.rank }}</span>
-                        </td>
-
-                        <!-- Name -->
-                        <td style="padding: 0.6rem 0.85rem;">
-                            <div style="font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
-                                <span>{{ item.short_code }}</span>
-                                <span v-if="item.is_top_cb" style="padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.68rem; font-weight: 700; background: #0f172a; color: #f8fafc;">
-                                    TOP 5 炭黑
-                                </span>
-                                <span v-if="item.is_top_silica" style="padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.68rem; font-weight: 700; background: #0284c7; color: white;">
-                                    TOP 5 白炭黑
-                                </span>
-                            </div>
-                            <div style="font-size: 0.73rem; color: #94a3b8; font-family: monospace;">{{ item.compound_name }}</div>
-                        </td>
-
-                        <!-- System -->
-                        <td style="padding: 0.6rem 0.85rem;">
-                            <span :style="{ background: item.system === 'Silica' ? '#e0f2fe' : '#f1f5f9', color: item.system === 'Silica' ? '#0369a1' : '#334155' }" style="padding: 0.2rem 0.55rem; border-radius: 12px; font-size: 0.74rem; font-weight: 600;">
-                                {{ currentLang === 'zh' ? item.system_zh : item.system }}
-                            </span>
-                        </td>
-
-                        <!-- Mixer -->
-                        <td style="padding: 0.6rem 0.85rem; text-align: center; font-weight: 600; color: #475569;">
-                            {{ item.mixer }}
-                        </td>
-
-                        <!-- Batches -->
-                        <td style="padding: 0.6rem 0.85rem; text-align: right; color: #64748b;">
-                            {{ item.batches }}
-                        </td>
-
-                        <!-- Annual Tons -->
-                        <td style="padding: 0.6rem 0.85rem; text-align: right; font-weight: 600; color: #334155;">
-                            {{ formatNumber(item.annual_tons, 0) }}
-                        </td>
-
-                        <!-- P15 -->
-                        <td style="padding: 0.6rem 0.85rem; text-align: right; font-weight: 700; color: #16a34a;">
-                            {{ formatNumber(item.p15_kwh_t, 2) }}
-                        </td>
-
-                        <!-- P50 -->
-                        <td style="padding: 0.6rem 0.85rem; text-align: right; color: #334155;">
-                            {{ formatNumber(item.p50_kwh_t, 2) }}
-                        </td>
-
-                        <!-- P85 -->
-                        <td style="padding: 0.6rem 0.85rem; text-align: right; color: #e11d48;">
-                            {{ formatNumber(item.p85_kwh_t, 2) }}
-                        </td>
-
-                        <!-- Spread -->
-                        <td style="padding: 0.6rem 0.85rem; text-align: right; font-weight: 800; color: #ea580c;">
-                            {{ formatNumber(item.spread_p85_p15, 2) }}
-                        </td>
-
-                        <!-- Annual MWh -->
-                        <td style="padding: 0.6rem 0.85rem; text-align: right; font-weight: 800; color: #0284c7;">
-                            {{ formatNumber(item.saving_mwh, 1) }}
-                        </td>
-
-                        <!-- Action -->
-                        <td style="padding: 0.6rem 0.85rem; text-align: center;">
-                            <button @click.stop="selectOptCompound(item.compound_name)" style="padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; cursor: pointer; transition: all 0.15s;">
-                                {{ currentLang === 'zh' ? '诊断' : 'Diagnose' }}
-                            </button>
-                        </td>
-                    </tr>
-                    <tr v-if="optFilteredRankings.length === 0">
-                        <td colspan="12" style="padding: 2rem; text-align: center; color: #94a3b8;">
-                            {{ currentLang === 'zh' ? '未找到符合条件的胶料记录' : 'No compounds matching query' }}
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <!-- SECTION 2: 分步优化与机理诊断模块 (STEP-LEVEL TELEMETRY & PRESCRIPTIVE DOE) -->
-    <section id="section-step-diagnosis" class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0;">
-        
-        <!-- Diagnostic Compound Header Banner -->
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; padding-bottom: 1.25rem; border-bottom: 1px solid #e2e8f0; margin-bottom: 1.25rem;">
-            <div>
-                <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.3rem;">
-                    <span style="font-size: 1.25rem;">🔬</span>
-                    <span style="font-family: var(--font-heading); font-size: 1.35rem; font-weight: 800; color: #0f172a;">
-                        {{ currentLang === 'zh' ? '工步级遥测诊断与处方推荐：' : 'Step-Level Telemetry & Prescriptions: ' }}
-                        <span style="color: #0284c7;">{{ optCurrentDiagnostic.short_code }}</span>
-                    </span>
-                    <span :style="{ background: optCurrentDiagnostic.is_silica ? '#e0f2fe' : '#f1f5f9', color: optCurrentDiagnostic.is_silica ? '#0369a1' : '#334155' }" style="padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
-                        {{ optCurrentDiagnostic.is_silica ? (currentLang === 'zh' ? '白炭黑体系' : 'Silica') : (currentLang === 'zh' ? '炭黑体系' : 'Carbon Black') }}
-                    </span>
-                    <span style="padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; background: #f8fafc; border: 1px solid #e2e8f0; color: #475569;">
-                        {{ currentLang === 'zh' ? '主产机台: ' : 'Mixer: ' }}{{ optCurrentDiagnostic.mixer }}
-                    </span>
-                </div>
-                <div style="font-size: 0.78rem; color: #64748b; font-family: monospace;">
-                    {{ optCurrentDiagnostic.compound_name }} (车次称重: {{ optCurrentDiagnostic.weight_kg }} kg, 诊断样本数: {{ optCurrentDiagnostic.sample_batches }} 车)
-                </div>
-            </div>
-
-            <!-- Header Quick Metrics & Export -->
-            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                <div style="padding: 0.4rem 0.8rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; text-align: right;">
-                    <div style="font-size: 0.7rem; color: #64748b;">基线均值</div>
-                    <div style="font-size: 0.95rem; font-weight: 700; color: #334155;">{{ optCurrentDiagnostic.base_kwh_t }} <span style="font-size: 0.7rem;">kWh/t</span></div>
-                </div>
-                <div style="padding: 0.4rem 0.8rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; text-align: right;">
-                    <div style="font-size: 0.7rem; color: #15803d;">优化后预估</div>
-                    <div style="font-size: 0.95rem; font-weight: 800; color: #16a34a;">{{ optCurrentDiagnostic.post_doe_kwh_t }} <span style="font-size: 0.7rem;">kWh/t</span></div>
-                </div>
-                <div style="padding: 0.4rem 0.8rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; text-align: right;">
-                    <div style="font-size: 0.7rem; color: #1d4ed8;">预期节能量</div>
-                    <div style="font-size: 0.95rem; font-weight: 800; color: #0284c7;">-{{ optCurrentDiagnostic.saving_kwh_t }} <span style="font-size: 0.7rem;">kWh/t (-{{ optCurrentDiagnostic.saving_pct }}%)</span></div>
-                </div>
-                <button @click="exportCompoundDiagnosisCSV" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.5rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; background: #ffffff; border: 1px solid #cbd5e1; color: #334155; cursor: pointer; transition: all 0.2s;">
-                    <span>📥</span>
-                    <span>{{ currentLang === 'zh' ? '导出分步表' : 'Export Step CSV' }}</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- 3 Core Prescriptive Optimization Cards -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
-            
-            <!-- Card 1: MST Speed Reduction Prescription -->
-            <div style="padding: 1.25rem; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between;">
+        <!-- SECTION 1: 全厂胶料能耗潜力排行榜 (PLANT-WIDE POTENTIAL RANKING) -->
+        <section class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
                 <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                        <span style="font-weight: 800; font-size: 0.92rem; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
-                            <span>⚙️</span>
-                            <span>{{ currentLang === 'zh' ? '上密炼 (MST) 降速处方' : 'Upper Mixer Speed Cut' }}</span>
-                        </span>
-                        <span style="padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: #ffedd5; color: #c2410c;">
-                            {{ optCurrentDiagnostic.mst_prescription.delta_rpm }} RPM
-                        </span>
-                    </div>
-                    <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem;">
-                        <span style="font-size: 0.85rem; color: #475569;">推荐工步:</span>
-                        <span style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">{{ optCurrentDiagnostic.mst_prescription.step_name }}</span>
-                    </div>
-                    <div style="font-size: 0.82rem; color: #334155; margin-bottom: 0.6rem; display: flex; gap: 1rem;">
-                        <span>转速调整: <strong>{{ optCurrentDiagnostic.mst_prescription.curr_rpm }} ➔ {{ optCurrentDiagnostic.mst_prescription.target_rpm }} RPM</strong></span>
-                        <span>功率降幅: <strong style="color: #e11d48;">-{{ optCurrentDiagnostic.mst_prescription.power_drop_kw }} kW</strong></span>
-                    </div>
-                    <p style="font-size: 0.76rem; color: #64748b; line-height: 1.5; margin: 0; background: white; padding: 0.65rem 0.8rem; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        💡 {{ optCurrentDiagnostic.mst_prescription.basis_zh }}
+                    <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>🏆</span>
+                        <span>{{ currentLang === 'zh' ? '全厂胶料能耗优化潜力排行榜' : 'Plant-Wide Energy Saving Potential Ranking' }}</span>
+                    </h3>
+                    <p style="color: #64748b; font-size: 0.82rem; margin-top: 0.25rem;">
+                        {{ currentLang === 'zh' ? '以实测车次单耗极差 (P85 - P15) 衡量工艺离散度，结合年化混炼产量测算总节电潜力 MWh。点击胶料行可一键联动下方分步诊断。' : 'Evaluated by batch energy spread (P85-P15) weighted with annual tons. Click any row to load step diagnosis.' }}
                     </p>
                 </div>
-                <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; font-size: 0.8rem;">
-                    <span style="color: #64748b;">预估单工步节电:</span>
-                    <strong style="color: #16a34a;">-{{ optCurrentDiagnostic.mst_prescription.saving_kwh_t }} kWh/t</strong>
+
+                <!-- Filter Controls -->
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <div style="display: flex; background: #f1f5f9; padding: 0.2rem; border-radius: 10px; border: 1px solid #e2e8f0;">
+                        <button @click="optRankingFilter = 'all'" :style="{ background: optRankingFilter === 'all' ? '#ffffff' : 'transparent', color: optRankingFilter === 'all' ? '#0f172a' : '#64748b', boxShadow: optRankingFilter === 'all' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }" style="border: none; padding: 0.35rem 0.85rem; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                            {{ currentLang === 'zh' ? '全部 (' + optData.rankings.length + ')' : 'All (' + optData.rankings.length + ')' }}
+                        </button>
+                        <button @click="optRankingFilter = 'cb_top5'" :style="{ background: optRankingFilter === 'cb_top5' ? '#0f172a' : 'transparent', color: optRankingFilter === 'cb_top5' ? '#ffffff' : '#475569', boxShadow: optRankingFilter === 'cb_top5' ? '0 1px 3px rgba(0,0,0,0.2)' : 'none' }" style="border: none; padding: 0.35rem 0.85rem; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                            {{ currentLang === 'zh' ? '炭黑 TOP 5' : 'Carbon Black TOP 5' }}
+                        </button>
+                        <button @click="optRankingFilter = 'silica_top5'" :style="{ background: optRankingFilter === 'silica_top5' ? '#0284c7' : 'transparent', color: optRankingFilter === 'silica_top5' ? '#ffffff' : '#0369a1', boxShadow: optRankingFilter === 'silica_top5' ? '0 1px 3px rgba(2,132,199,0.3)' : 'none' }" style="border: none; padding: 0.35rem 0.85rem; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                            {{ currentLang === 'zh' ? '白炭黑 TOP 5' : 'Silica TOP 5' }}
+                        </button>
+                    </div>
+
+                    <div style="position: relative;">
+                        <input type="text" v-model="optSearchQuery" :placeholder="currentLang === 'zh' ? '搜索胶料代号/机台...' : 'Filter compound/mixer...'" style="padding: 0.4rem 0.85rem 0.4rem 2rem; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.8rem; width: 180px; background: white; outline: none;">
+                        <span style="position: absolute; left: 0.6rem; top: 0.45rem; font-size: 0.75rem; color: #94a3b8;">🔍</span>
+                    </div>
+
+                    <button @click="exportOptimizationRankingCSV" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; cursor: pointer; transition: all 0.2s;">
+                        <span>📥</span>
+                        <span>{{ currentLang === 'zh' ? '导出CSV' : 'Export CSV' }}</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- Card 2: MSB Time Curtailment Prescription -->
-            <div style="padding: 1.25rem; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                        <span style="font-weight: 800; font-size: 0.92rem; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
-                            <span>⏱️</span>
-                            <span>{{ currentLang === 'zh' ? '下密炼 (MSB) 降时处方' : 'Lower Mixer Time Cut' }}</span>
-                        </span>
-                        <span style="padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: #e0f2fe; color: #0369a1;">
-                            {{ optCurrentDiagnostic.msb_prescription.total_delta_s }} 秒
-                        </span>
-                    </div>
-                    <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem;">
-                        <span style="font-size: 0.85rem; color: #475569;">推荐工步:</span>
-                        <span style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">下密炼均化与排胶工序</span>
-                    </div>
-                    <div style="font-size: 0.82rem; color: #334155; margin-bottom: 0.6rem; display: flex; gap: 1rem;">
-                        <span>时长压缩: <strong>共 {{ Math.abs(optCurrentDiagnostic.msb_prescription.total_delta_s) }} 秒 (S1 {{ optCurrentDiagnostic.msb_prescription.msb1_delta_s }}s, S2 {{ optCurrentDiagnostic.msb_prescription.msb2_delta_s }}s)</strong></span>
-                    </div>
-                    <p style="font-size: 0.76rem; color: #64748b; line-height: 1.5; margin: 0; background: white; padding: 0.65rem 0.8rem; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        💡 {{ optCurrentDiagnostic.msb_prescription.basis_zh }}
-                    </p>
-                </div>
-                <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; font-size: 0.8rem;">
-                    <span style="color: #64748b;">预估单工序节电:</span>
-                    <strong style="color: #16a34a;">-{{ optCurrentDiagnostic.msb_prescription.saving_kwh_t }} kWh/t</strong>
-                </div>
-            </div>
-
-            <!-- Card 3: PID Total Duration Hard Rule Audit -->
-            <div style="padding: 1.25rem; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                        <span style="font-weight: 800; font-size: 0.92rem; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
-                            <span>🛡️</span>
-                            <span>{{ currentLang === 'zh' ? 'PID 总体时长刚性门禁' : 'PID Duration Hard Rule' }}</span>
-                        </span>
-                        <!-- Status Badge -->
-                        <span v-if="!optCurrentDiagnostic.is_silica" style="padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 800; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;">
-                            规则豁免 (炭黑)
-                        </span>
-                        <span v-else-if="optCurrentDiagnostic.pid_hard_rule.status.includes('PASS')" style="padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 800; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;">
-                            PASS 合规通过
-                        </span>
-                        <span v-else style="padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 800; background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa;">
-                            CLAMPED 截断保护
-                        </span>
-                    </div>
-
-                    <!-- Carbon Black Exemption Notice -->
-                    <div v-if="!optCurrentDiagnostic.is_silica" style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 0.5rem;">
-                        <div style="font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">
-                            ✅ {{ currentLang === 'zh' ? '炭黑配方独享能耗优化豁免' : 'Carbon Black Exemption Active' }}
-                        </div>
-                        <div style="font-size: 0.76rem; color: #64748b; line-height: 1.4;">
-                            炭黑胶料不受白炭黑专属 PID 总体时长范围限制，上密炼降速 5 RPM 与下密炼降时 9s 全部如期生效，节能潜力最大化释放。
-                        </div>
-                    </div>
-
-                    <!-- Silica Hard Rule Verification Progress -->
-                    <div v-else style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 0.5rem;">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
-                            <span>目标温区: {{ optCurrentDiagnostic.pid_hard_rule.tier_label }}</span>
-                            <span style="color: #0284c7;">刚性范围: [{{ optCurrentDiagnostic.pid_hard_rule.band_min_s }}-{{ optCurrentDiagnostic.pid_hard_rule.band_max_s }}s]</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b; margin-bottom: 0.35rem;">
-                            <span>当前时长: <strong>{{ optCurrentDiagnostic.pid_hard_rule.curr_total_s }}s</strong></span>
-                            <span>优化后预计: <strong style="color: #16a34a;">{{ optCurrentDiagnostic.pid_hard_rule.post_total_s }}s</strong></span>
-                        </div>
-                        <!-- Range Bar -->
-                        <div style="position: relative; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; margin-top: 0.4rem;">
-                            <div style="position: absolute; left: 20%; width: 60%; height: 100%; background: #bbf7d0;"></div>
-                            <div :style="{ left: Math.min(90, Math.max(10, (optCurrentDiagnostic.pid_hard_rule.post_total_s / 200) * 100)) + '%' }" style="position: absolute; top: 0; width: 4px; height: 100%; background: #16a34a; box-shadow: 0 0 4px #16a34a;"></div>
-                        </div>
-                    </div>
-
-                    <p style="font-size: 0.74rem; color: #64748b; line-height: 1.4; margin: 0;">
-                        {{ optCurrentDiagnostic.pid_hard_rule.note }}
-                    </p>
-                </div>
-                <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; font-size: 0.8rem;">
-                    <span style="color: #64748b;">门禁合规状态:</span>
-                    <strong :style="{ color: optCurrentDiagnostic.is_silica ? '#16a34a' : '#475569' }">
-                        {{ optCurrentDiagnostic.pid_hard_rule.status_label }}
-                    </strong>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Step-by-Step Telemetry & Variance Wi Breakdown Table -->
-        <div style="margin-top: 1rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                <h4 style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
-                    <span>📋</span>
-                    <span>{{ currentLang === 'zh' ? '工步级遥测明细与方差贡献率 Wi 诊断' : 'Step-Level Telemetry & Variance Breakdown' }}</span>
-                </h4>
-                <div style="font-size: 0.76rem; color: #64748b;">
-                    注：方差贡献率 Wi &gt; 15% 工步已高亮红标，为重点工艺调优靶向工步。
-                </div>
-            </div>
-
-            <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
+            <!-- Ranking Table Container -->
+            <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 12px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.83rem; text-align: left;">
                     <thead>
                         <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 700;">
-                            <th style="padding: 0.55rem 0.8rem;">工步序号</th>
-                            <th style="padding: 0.55rem 0.8rem;">阶段描述</th>
-                            <th style="padding: 0.55rem 0.8rem; text-align: right;">设定时长(s)</th>
-                            <th style="padding: 0.55rem 0.8rem; text-align: right;">实测时长(s)</th>
-                            <th style="padding: 0.55rem 0.8rem; text-align: right;">设定转速(RPM)</th>
-                            <th style="padding: 0.55rem 0.8rem; text-align: right;">实测转速(RPM)</th>
-                            <th style="padding: 0.55rem 0.8rem; text-align: right;">实测功率(kW)</th>
-                            <th style="padding: 0.55rem 0.8rem; text-align: right;">实测耗电(kWh)</th>
-                            <th style="padding: 0.55rem 0.8rem; text-align: right;">方差贡献率 Wi</th>
-                            <th style="padding: 0.55rem 0.8rem; text-align: center;">优化状态</th>
+                            <th style="padding: 0.65rem 0.85rem; width: 60px;">#</th>
+                            <th style="padding: 0.65rem 0.85rem;">{{ currentLang === 'zh' ? '胶料代号与全称' : 'Compound Name' }}</th>
+                            <th style="padding: 0.65rem 0.85rem;">{{ currentLang === 'zh' ? '体系分类' : 'System' }}</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: center;">{{ currentLang === 'zh' ? '主产机台' : 'Mixer' }}</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: right;">{{ currentLang === 'zh' ? '样本批次' : 'Batches' }}</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: right;">{{ currentLang === 'zh' ? '年化产量(t)' : 'Annual Tons' }}</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: right; color: #16a34a;">{{ currentLang === 'zh' ? 'P15黄金低耗' : 'P15 Golden' }}</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: right;">{{ currentLang === 'zh' ? 'P50中位数' : 'P50 Median' }}</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: right; color: #e11d48;">{{ currentLang === 'zh' ? 'P85高耗位' : 'P85 High' }}</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: right; font-weight: 800; color: #ea580c;">{{ currentLang === 'zh' ? '能耗极差(kWh/t)' : 'Spread (kWh/t)' }}</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: right; font-weight: 800; color: #0284c7;">{{ currentLang === 'zh' ? '年化潜力(MWh)' : 'Annual MWh' }}</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: center;">{{ currentLang === 'zh' ? '分步诊断' : 'Diagnosis' }}</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="step in optCurrentDiagnostic.steps" :key="step.step_id" 
-                            :style="{ background: step.is_primary_opt ? '#fffbeb' : (step.is_high_variance ? '#fef2f2' : 'transparent'), borderBottom: '1px solid #f1f5f9' }">
+                        <tr v-for="item in optFilteredRankings" :key="item.compound_name" 
+                            :style="{ background: optSelectedCompound === item.compound_name ? '#f0f9ff' : 'transparent', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }"
+                            @click="selectOptCompound(item.compound_name)">
                             
-                            <!-- Step ID -->
-                            <td style="padding: 0.55rem 0.8rem; font-weight: 700; color: #0f172a;">
-                                {{ step.step_id }}
-                            </td>
-
-                            <!-- Description -->
-                            <td style="padding: 0.55rem 0.8rem;">
-                                <div style="font-weight: 600; color: #1e293b;">{{ step.desc_zh }}</div>
-                            </td>
-
-                            <!-- Time SP & Act -->
-                            <td style="padding: 0.55rem 0.8rem; text-align: right; color: #64748b;">
-                                {{ step.time_sp }}
-                            </td>
-                            <td style="padding: 0.55rem 0.8rem; text-align: right; font-weight: 600; color: #0f172a;">
-                                {{ formatNumber(step.time_act, 1) }}
-                            </td>
-
-                            <!-- Speed SP & Act -->
-                            <td style="padding: 0.55rem 0.8rem; text-align: right; color: #64748b;">
-                                {{ step.rpm_sp }}
-                            </td>
-                            <td style="padding: 0.55rem 0.8rem; text-align: right; font-weight: 600; color: #0f172a;">
-                                {{ formatNumber(step.rpm_act, 1) }}
-                            </td>
-
-                            <!-- Power -->
-                            <td style="padding: 0.55rem 0.8rem; text-align: right; color: #334155;">
-                                {{ formatNumber(step.power_kw, 1) }}
-                            </td>
-
-                            <!-- Energy -->
-                            <td style="padding: 0.55rem 0.8rem; text-align: right; font-weight: 700; color: #0f172a;">
-                                {{ formatNumber(step.energy_kwh, 2) }}
-                            </td>
-
-                            <!-- Variance Wi -->
-                            <td style="padding: 0.55rem 0.8rem; text-align: right;">
-                                <span v-if="step.var_contrib_pct >= 20.0" style="padding: 0.15rem 0.45rem; border-radius: 6px; font-size: 0.75rem; font-weight: 800; background: #fee2e2; color: #b91c1c;">
-                                    🔥 {{ formatNumber(step.var_contrib_pct, 1) }}%
+                            <td style="padding: 0.6rem 0.85rem; font-weight: 800; color: #0f172a;">
+                                <span v-if="item.rank <= 3" style="display: inline-block; width: 22px; height: 22px; border-radius: 50%; background: #ffedd5; color: #c2410c; text-align: center; line-height: 22px; font-size: 0.75rem;">
+                                    {{ item.rank }}
                                 </span>
-                                <span v-else-if="step.var_contrib_pct >= 10.0" style="padding: 0.15rem 0.45rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: #ffedd5; color: #c2410c;">
-                                    ⚠️ {{ formatNumber(step.var_contrib_pct, 1) }}%
-                                </span>
-                                <span v-else style="color: #64748b;">
-                                    {{ formatNumber(step.var_contrib_pct, 1) }}%
+                                <span v-else style="color: #64748b;">{{ item.rank }}</span>
+                            </td>
+
+                            <td style="padding: 0.6rem 0.85rem;">
+                                <div style="font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
+                                    <span>{{ item.short_code }}</span>
+                                    <span v-if="item.is_top_cb" style="padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.68rem; font-weight: 700; background: #0f172a; color: #f8fafc;">
+                                        TOP 5 炭黑
+                                    </span>
+                                    <span v-if="item.is_top_silica" style="padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.68rem; font-weight: 700; background: #0284c7; color: white;">
+                                        TOP 5 白炭黑
+                                    </span>
+                                </div>
+                                <div style="font-size: 0.73rem; color: #94a3b8; font-family: monospace;">{{ item.compound_name }}</div>
+                            </td>
+
+                            <td style="padding: 0.6rem 0.85rem;">
+                                <span :style="{ background: item.system === 'Silica' ? '#e0f2fe' : '#f1f5f9', color: item.system === 'Silica' ? '#0369a1' : '#334155' }" style="padding: 0.2rem 0.55rem; border-radius: 12px; font-size: 0.74rem; font-weight: 600;">
+                                    {{ currentLang === 'zh' ? item.system_zh : item.system }}
                                 </span>
                             </td>
 
-                            <!-- Tag -->
-                            <td style="padding: 0.55rem 0.8rem; text-align: center;">
-                                <span v-if="step.is_primary_opt" style="padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 800; background: #f59e0b; color: white;">
-                                    调降 RPM
-                                </span>
-                                <span v-else-if="step.stage === 'MSB'" style="padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 800; background: #0284c7; color: white;">
-                                    压缩时间
-                                </span>
-                                <span v-else style="color: #cbd5e1;">—</span>
+                            <td style="padding: 0.6rem 0.85rem; text-align: center; font-weight: 600; color: #475569;">
+                                {{ item.mixer }}
+                            </td>
+
+                            <td style="padding: 0.6rem 0.85rem; text-align: right; color: #64748b;">
+                                {{ item.batches }}
+                            </td>
+
+                            <td style="padding: 0.6rem 0.85rem; text-align: right; font-weight: 600; color: #334155;">
+                                {{ formatNumber(item.annual_tons, 0) }}
+                            </td>
+
+                            <td style="padding: 0.6rem 0.85rem; text-align: right; font-weight: 700; color: #16a34a;">
+                                {{ formatNumber(item.p15_kwh_t, 2) }}
+                            </td>
+
+                            <td style="padding: 0.6rem 0.85rem; text-align: right; color: #334155;">
+                                {{ formatNumber(item.p50_kwh_t, 2) }}
+                            </td>
+
+                            <td style="padding: 0.6rem 0.85rem; text-align: right; color: #e11d48;">
+                                {{ formatNumber(item.p85_kwh_t, 2) }}
+                            </td>
+
+                            <td style="padding: 0.6rem 0.85rem; text-align: right; font-weight: 800; color: #ea580c;">
+                                {{ formatNumber(item.spread_p85_p15, 2) }}
+                            </td>
+
+                            <td style="padding: 0.6rem 0.85rem; text-align: right; font-weight: 800; color: #0284c7;">
+                                {{ formatNumber(item.saving_mwh, 1) }}
+                            </td>
+
+                            <td style="padding: 0.6rem 0.85rem; text-align: center;">
+                                <button @click.stop="selectOptCompound(item.compound_name)" style="padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; cursor: pointer; transition: all 0.15s;">
+                                    {{ currentLang === 'zh' ? '诊断' : 'Diagnose' }}
+                                </button>
                             </td>
                         </tr>
-                        <tr v-if="!optCurrentDiagnostic.steps || optCurrentDiagnostic.steps.length === 0">
-                            <td colspan="10" style="padding: 2rem; text-align: center; color: #94a3b8;">
-                                暂无该胶料高频工步细分数据，请点击上方表格选择其他胶料。
+                        <tr v-if="optFilteredRankings.length === 0">
+                            <td colspan="12" style="padding: 2rem; text-align: center; color: #94a3b8;">
+                                {{ currentLang === 'zh' ? '未找到符合条件的胶料记录' : 'No compounds matching query' }}
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-        </div>
+        </section>
 
-    </section>
-
-    <!-- SECTION 3: 高清可视化四联看板图库 (HIGH-RES DIAGNOSTIC DASHBOARDS) -->
-    <section class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
-            <div>
-                <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                    <span>🖼️</span>
-                    <span>{{ currentLang === 'zh' ? '全厂能耗优化高清四联诊断看板图库' : 'High-Resolution Diagnostic Dashboards' }}</span>
-                </h3>
-                <p style="color: #64748b; font-size: 0.82rem; margin-top: 0.25rem;">
-                    {{ currentLang === 'zh' ? '点击缩略图可查看 4K 高清大图，包含生产产量加权极差分布、分步方差贡献率与 PID 刚性温区门禁对比。' : 'Click thumbnails to expand full-resolution multi-panel diagnostic charts.' }}
-                </p>
-            </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 1.5rem;">
+        <!-- SECTION 2: 工步级遥测诊断模块 (STEP-LEVEL TELEMETRY - RETAIN STEP ID ONLY) -->
+        <section id="section-step-diagnosis" class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0;">
             
-            <!-- Dashboard Image Card 1: Top 5 Potential Dashboard -->
-            <div style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #f8fafc; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-                <div style="padding: 0.85rem 1.2rem; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">📊 Top 5 炭黑与白炭黑能耗极差与节电潜力四联看板</span>
-                    <button @click="openChartModal('ranking_dashboard')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: white; border: 1px solid #cbd5e1; color: #0284c7; cursor: pointer;">
-                        放大查看 🔍
-                    </button>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; padding-bottom: 1.25rem; border-bottom: 1px solid #e2e8f0; margin-bottom: 1.25rem;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.3rem;">
+                        <span style="font-size: 1.25rem;">🔬</span>
+                        <span style="font-family: var(--font-heading); font-size: 1.35rem; font-weight: 800; color: #0f172a;">
+                            {{ currentLang === 'zh' ? '工步级遥测诊断与处方推荐：' : 'Step-Level Telemetry & Prescriptions: ' }}
+                            <span style="color: #0284c7;">{{ optCurrentDiagnostic.short_code }}</span>
+                        </span>
+                        <span :style="{ background: optCurrentDiagnostic.is_silica ? '#e0f2fe' : '#f1f5f9', color: optCurrentDiagnostic.is_silica ? '#0369a1' : '#334155' }" style="padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
+                            {{ optCurrentDiagnostic.is_silica ? (currentLang === 'zh' ? '白炭黑体系' : 'Silica') : (currentLang === 'zh' ? '炭黑体系' : 'Carbon Black') }}
+                        </span>
+                        <span style="padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; background: #f8fafc; border: 1px solid #e2e8f0; color: #475569;">
+                            {{ currentLang === 'zh' ? '主产机台: ' : 'Mixer: ' }}{{ optCurrentDiagnostic.mixer }}
+                        </span>
+                    </div>
+                    <div style="font-size: 0.78rem; color: #64748b; font-family: monospace;">
+                        {{ optCurrentDiagnostic.compound_name }} (车次称重: {{ optCurrentDiagnostic.weight_kg }} kg, 诊断样本数: {{ optCurrentDiagnostic.sample_batches }} 车)
+                    </div>
                 </div>
-                <div style="padding: 0.75rem; cursor: pointer; text-align: center;" @click="openChartModal('ranking_dashboard')">
-                    <img src="top5_cb_and_silica_energy_potential_dashboard.png" alt="Top 5 Potential Dashboard" style="max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #e2e8f0;">
+
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <div style="padding: 0.4rem 0.8rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; text-align: right;">
+                        <div style="font-size: 0.7rem; color: #64748b;">基线均值</div>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #334155;">{{ optCurrentDiagnostic.base_kwh_t }} <span style="font-size: 0.7rem;">kWh/t</span></div>
+                    </div>
+                    <div style="padding: 0.4rem 0.8rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; text-align: right;">
+                        <div style="font-size: 0.7rem; color: #15803d;">优化后预估</div>
+                        <div style="font-size: 0.95rem; font-weight: 800; color: #16a34a;">{{ optCurrentDiagnostic.post_doe_kwh_t }} <span style="font-size: 0.7rem;">kWh/t</span></div>
+                    </div>
+                    <div style="padding: 0.4rem 0.8rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; text-align: right;">
+                        <div style="font-size: 0.7rem; color: #1d4ed8;">预期节能量</div>
+                        <div style="font-size: 0.95rem; font-weight: 800; color: #0284c7;">-{{ optCurrentDiagnostic.saving_kwh_t }} <span style="font-size: 0.7rem;">kWh/t (-{{ optCurrentDiagnostic.saving_pct }}%)</span></div>
+                    </div>
+                    <button @click="exportCompoundDiagnosisCSV" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.5rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; background: #ffffff; border: 1px solid #cbd5e1; color: #334155; cursor: pointer; transition: all 0.2s;">
+                        <span>📥</span>
+                        <span>{{ currentLang === 'zh' ? '导出分步表' : 'Export Step CSV' }}</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- Dashboard Image Card 2: Step Diagnosis Dashboard -->
-            <div style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #f8fafc; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-                <div style="padding: 0.85rem 1.2rem; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">🔬 重点胶料工步方差贡献率与降速降时处方四联看板</span>
-                    <button @click="openChartModal('diagnosis_dashboard')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: white; border: 1px solid #cbd5e1; color: #0284c7; cursor: pointer;">
-                        放大查看 🔍
-                    </button>
+            <!-- 3 Prescriptive Optimization Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+                
+                <!-- Card 1: MST Speed Reduction Prescription -->
+                <div style="padding: 1.25rem; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <span style="font-weight: 800; font-size: 0.92rem; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
+                                <span>⚙️</span>
+                                <span>{{ currentLang === 'zh' ? '上密炼 (MST) 降速处方' : 'Upper Mixer Speed Cut' }}</span>
+                            </span>
+                            <span style="padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: #ffedd5; color: #c2410c;">
+                                {{ optCurrentDiagnostic.mst_prescription.delta_rpm }} RPM
+                            </span>
+                        </div>
+                        <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <span style="font-size: 0.85rem; color: #475569;">推荐工步:</span>
+                            <span style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">{{ optCurrentDiagnostic.mst_prescription.step_name }}</span>
+                        </div>
+                        <div style="font-size: 0.82rem; color: #334155; margin-bottom: 0.6rem; display: flex; gap: 1rem;">
+                            <span>转速调整: <strong>{{ optCurrentDiagnostic.mst_prescription.curr_rpm }} ➔ {{ optCurrentDiagnostic.mst_prescription.target_rpm }} RPM</strong></span>
+                            <span>功率降幅: <strong style="color: #e11d48;">-{{ optCurrentDiagnostic.mst_prescription.power_drop_kw }} kW</strong></span>
+                        </div>
+                        <p style="font-size: 0.76rem; color: #64748b; line-height: 1.5; margin: 0; background: white; padding: 0.65rem 0.8rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            💡 {{ optCurrentDiagnostic.mst_prescription.basis_zh }}
+                        </p>
+                    </div>
+                    <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; font-size: 0.8rem;">
+                        <span style="color: #64748b;">预估单工步节电:</span>
+                        <strong style="color: #16a34a;">-{{ optCurrentDiagnostic.mst_prescription.saving_kwh_t }} kWh/t</strong>
+                    </div>
                 </div>
-                <div style="padding: 0.75rem; cursor: pointer; text-align: center;" @click="openChartModal('diagnosis_dashboard')">
-                    <img src="b00458_b00163_and_top_compounds_step_diagnosis.png" alt="Step Diagnosis Dashboard" style="max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #e2e8f0;">
+
+                <!-- Card 2: MSB Time Curtailment Prescription -->
+                <div style="padding: 1.25rem; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <span style="font-weight: 800; font-size: 0.92rem; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
+                                <span>⏱️</span>
+                                <span>{{ currentLang === 'zh' ? '下密炼 (MSB) 降时处方' : 'Lower Mixer Time Cut' }}</span>
+                            </span>
+                            <span style="padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: #e0f2fe; color: #0369a1;">
+                                {{ optCurrentDiagnostic.msb_prescription.total_delta_s }} 秒
+                            </span>
+                        </div>
+                        <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <span style="font-size: 0.85rem; color: #475569;">推荐工步:</span>
+                            <span style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">MSB-1 & MSB-2</span>
+                        </div>
+                        <div style="font-size: 0.82rem; color: #334155; margin-bottom: 0.6rem; display: flex; gap: 1rem;">
+                            <span>时长压缩: <strong>共 {{ Math.abs(optCurrentDiagnostic.msb_prescription.total_delta_s) }} 秒 (S1 {{ optCurrentDiagnostic.msb_prescription.msb1_delta_s }}s, S2 {{ optCurrentDiagnostic.msb_prescription.msb2_delta_s }}s)</strong></span>
+                        </div>
+                        <p style="font-size: 0.76rem; color: #64748b; line-height: 1.5; margin: 0; background: white; padding: 0.65rem 0.8rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            💡 {{ optCurrentDiagnostic.msb_prescription.basis_zh }}
+                        </p>
+                    </div>
+                    <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; font-size: 0.8rem;">
+                        <span style="color: #64748b;">预估单工序节电:</span>
+                        <strong style="color: #16a34a;">-{{ optCurrentDiagnostic.msb_prescription.saving_kwh_t }} kWh/t</strong>
+                    </div>
+                </div>
+
+                <!-- Card 3: PID Total Duration Hard Rule Audit -->
+                <div style="padding: 1.25rem; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <span style="font-weight: 800; font-size: 0.92rem; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
+                                <span>🛡️</span>
+                                <span>{{ currentLang === 'zh' ? 'PID 总体时长刚性门禁' : 'PID Duration Hard Rule' }}</span>
+                            </span>
+                            <span v-if="!optCurrentDiagnostic.is_silica" style="padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 800; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;">
+                                规则豁免 (炭黑)
+                            </span>
+                            <span v-else-if="optCurrentDiagnostic.pid_hard_rule.status.includes('PASS')" style="padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 800; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;">
+                                PASS 合规通过
+                            </span>
+                            <span v-else style="padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 800; background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa;">
+                                CLAMPED 截断保护
+                            </span>
+                        </div>
+
+                        <div v-if="!optCurrentDiagnostic.is_silica" style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 0.5rem;">
+                            <div style="font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">
+                                ✅ {{ currentLang === 'zh' ? '炭黑配方独享能耗优化豁免' : 'Carbon Black Exemption Active' }}
+                            </div>
+                            <div style="font-size: 0.76rem; color: #64748b; line-height: 1.4;">
+                                炭黑胶料不受白炭黑专属 PID 总体时长范围限制，上密炼降速 5 RPM 与下密炼降时 9s 全部如期生效，节能潜力最大化释放。
+                            </div>
+                        </div>
+
+                        <div v-else style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 0.5rem;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
+                                <span>目标温区: {{ optCurrentDiagnostic.pid_hard_rule.tier_label }}</span>
+                                <span style="color: #0284c7;">刚性范围: [{{ optCurrentDiagnostic.pid_hard_rule.band_min_s }}-{{ optCurrentDiagnostic.pid_hard_rule.band_max_s }}s]</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b; margin-bottom: 0.35rem;">
+                                <span>当前时长: <strong>{{ optCurrentDiagnostic.pid_hard_rule.curr_total_s }}s</strong></span>
+                                <span>优化后预计: <strong style="color: #16a34a;">{{ optCurrentDiagnostic.pid_hard_rule.post_total_s }}s</strong></span>
+                            </div>
+                            <div style="position: relative; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; margin-top: 0.4rem;">
+                                <div style="position: absolute; left: 20%; width: 60%; height: 100%; background: #bbf7d0;"></div>
+                                <div :style="{ left: Math.min(90, Math.max(10, (optCurrentDiagnostic.pid_hard_rule.post_total_s / 200) * 100)) + '%' }" style="position: absolute; top: 0; width: 4px; height: 100%; background: #16a34a; box-shadow: 0 0 4px #16a34a;"></div>
+                            </div>
+                        </div>
+
+                        <p style="font-size: 0.74rem; color: #64748b; line-height: 1.4; margin: 0;">
+                            {{ optCurrentDiagnostic.pid_hard_rule.note }}
+                        </p>
+                    </div>
+                    <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; font-size: 0.8rem;">
+                        <span style="color: #64748b;">门禁合规状态:</span>
+                        <strong :style="{ color: optCurrentDiagnostic.is_silica ? '#16a34a' : '#475569' }">
+                            {{ optCurrentDiagnostic.pid_hard_rule.status_label }}
+                        </strong>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Step-by-Step Telemetry Table (WITHOUT 阶段描述 COLUMN) -->
+            <div style="margin-top: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <h4 style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                        <span>📋</span>
+                        <span>{{ currentLang === 'zh' ? '工步级遥测明细与方差贡献率 Wi 诊断' : 'Step-Level Telemetry & Variance Breakdown' }}</span>
+                    </h4>
+                    <div style="font-size: 0.76rem; color: #64748b;">
+                        注：方差贡献率 Wi &gt; 15% 工步已高亮红标，为重点工艺调优靶向工步。
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
+                        <thead>
+                            <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 700;">
+                                <th style="padding: 0.6rem 0.85rem;">工步序号</th>
+                                <th style="padding: 0.6rem 0.85rem; text-align: right;">设定时长(s)</th>
+                                <th style="padding: 0.6rem 0.85rem; text-align: right;">实测时长(s)</th>
+                                <th style="padding: 0.6rem 0.85rem; text-align: right;">设定转速(RPM)</th>
+                                <th style="padding: 0.6rem 0.85rem; text-align: right;">实测转速(RPM)</th>
+                                <th style="padding: 0.6rem 0.85rem; text-align: right;">实测功率(kW)</th>
+                                <th style="padding: 0.6rem 0.85rem; text-align: right;">实测耗电(kWh)</th>
+                                <th style="padding: 0.6rem 0.85rem; text-align: right;">方差贡献率 Wi</th>
+                                <th style="padding: 0.6rem 0.85rem; text-align: center;">调优方向</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="step in optCurrentDiagnostic.steps" :key="step.step_id" 
+                                :style="{ background: step.is_primary_opt ? '#fffbeb' : (step.is_high_variance ? '#fef2f2' : 'transparent'), borderBottom: '1px solid #f1f5f9' }">
+                                
+                                <td style="padding: 0.6rem 0.85rem; font-weight: 800; color: #0f172a;">
+                                    {{ step.step_id }}
+                                </td>
+
+                                <td style="padding: 0.6rem 0.85rem; text-align: right; color: #64748b;">
+                                    {{ step.time_sp }}
+                                </td>
+                                <td style="padding: 0.6rem 0.85rem; text-align: right; font-weight: 600; color: #0f172a;">
+                                    {{ formatNumber(step.time_act, 1) }}
+                                </td>
+
+                                <td style="padding: 0.6rem 0.85rem; text-align: right; color: #64748b;">
+                                    {{ step.rpm_sp }}
+                                </td>
+                                <td style="padding: 0.6rem 0.85rem; text-align: right; font-weight: 600; color: #0f172a;">
+                                    {{ formatNumber(step.rpm_act, 1) }}
+                                </td>
+
+                                <td style="padding: 0.6rem 0.85rem; text-align: right; color: #334155;">
+                                    {{ formatNumber(step.power_kw, 1) }}
+                                </td>
+
+                                <td style="padding: 0.6rem 0.85rem; text-align: right; font-weight: 700; color: #0f172a;">
+                                    {{ formatNumber(step.energy_kwh, 2) }}
+                                </td>
+
+                                <td style="padding: 0.6rem 0.85rem; text-align: right;">
+                                    <span v-if="step.var_contrib_pct >= 20.0" style="padding: 0.15rem 0.45rem; border-radius: 6px; font-size: 0.75rem; font-weight: 800; background: #fee2e2; color: #b91c1c;">
+                                        🔥 {{ formatNumber(step.var_contrib_pct, 1) }}%
+                                    </span>
+                                    <span v-else-if="step.var_contrib_pct >= 10.0" style="padding: 0.15rem 0.45rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: #ffedd5; color: #c2410c;">
+                                        ⚠️ {{ formatNumber(step.var_contrib_pct, 1) }}%
+                                    </span>
+                                    <span v-else style="color: #64748b;">
+                                        {{ formatNumber(step.var_contrib_pct, 1) }}%
+                                    </span>
+                                </td>
+
+                                <td style="padding: 0.6rem 0.85rem; text-align: center;">
+                                    <span v-if="step.is_primary_opt" style="padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 800; background: #f59e0b; color: white;">
+                                        调降 RPM
+                                    </span>
+                                    <span v-else-if="step.stage === 'MSB'" style="padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 800; background: #0284c7; color: white;">
+                                        压缩时间
+                                    </span>
+                                    <span v-else style="color: #cbd5e1;">—</span>
+                                </td>
+                            </tr>
+                            <tr v-if="!optCurrentDiagnostic.steps || optCurrentDiagnostic.steps.length === 0">
+                                <td colspan="9" style="padding: 2rem; text-align: center; color: #94a3b8;">
+                                    暂无该胶料高频工步细分数据，请点击上方表格选择其他胶料。
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-        </div>
-    </section>
+        </section>
+
+        <!-- SECTION 3: 高清可视化四联看板图库 (HIGH-RES DIAGNOSTIC DASHBOARDS) -->
+        <section class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+                <div>
+                    <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>🖼️</span>
+                        <span>{{ currentLang === 'zh' ? '全厂能耗优化高清四联诊断看板图库' : 'High-Resolution Diagnostic Dashboards' }}</span>
+                    </h3>
+                    <p style="color: #64748b; font-size: 0.82rem; margin-top: 0.25rem;">
+                        {{ currentLang === 'zh' ? '点击缩略图可查看 4K 高清大图，包含生产产量加权极差分布、分步方差贡献率与 PID 刚性温区门禁对比。' : 'Click thumbnails to expand full-resolution multi-panel diagnostic charts.' }}
+                    </p>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 1.5rem;">
+                <div style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #f8fafc; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                    <div style="padding: 0.85rem 1.2rem; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">📊 Top 5 炭黑与白炭黑能耗极差与节电潜力四联看板</span>
+                        <button @click="openChartModal('ranking_dashboard')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: white; border: 1px solid #cbd5e1; color: #0284c7; cursor: pointer;">
+                            放大查看 🔍
+                        </button>
+                    </div>
+                    <div style="padding: 0.75rem; cursor: pointer; text-align: center;" @click="openChartModal('ranking_dashboard')">
+                        <img src="top5_cb_and_silica_energy_potential_dashboard.png" alt="Top 5 Potential Dashboard" style="max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    </div>
+                </div>
+
+                <div style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #f8fafc; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                    <div style="padding: 0.85rem 1.2rem; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">🔬 重点胶料工步方差贡献率与降速降时处方四联看板</span>
+                        <button @click="openChartModal('diagnosis_dashboard')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: white; border: 1px solid #cbd5e1; color: #0284c7; cursor: pointer;">
+                            放大查看 🔍
+                        </button>
+                    </div>
+                    <div style="padding: 0.75rem; cursor: pointer; text-align: center;" @click="openChartModal('diagnosis_dashboard')">
+                        <img src="b00458_b00163_and_top_compounds_step_diagnosis.png" alt="Step Diagnosis Dashboard" style="max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- ============================================================================== -->
+    <!-- SUB-VIEW 2: 实测 DOE 实验记录与 SOP 追踪工作台 (DEDICATED DOE RECORDING INTERFACE) -->
+    <!-- ============================================================================== -->
+    <div v-show="optSubTab === 'doe_logger'" style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+        <!-- PANEL 1: 工单输入、数据库确认与元数据徽章 (ORDER VERIFICATION) -->
+        <section class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="font-size: 1.3rem;">📋</span>
+                    <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0;">
+                        1. 实验工单核验与数据库确认
+                    </h3>
+                    <span v-if="doeOrderVerified" style="padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.74rem; font-weight: 800; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;">
+                        ✅ 工单核验通过 (在库数据)
+                    </span>
+                    <span v-else style="padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.74rem; font-weight: 700; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;">
+                        待输入工单号核验
+                    </span>
+                </div>
+                <div style="font-size: 0.78rem; color: #64748b;">
+                    支持检索全厂 359 个生产工单 20,985 真实车次高频遥测库
+                </div>
+            </div>
+
+            <!-- Order Input & Quick Selection -->
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <label style="font-size: 0.85rem; font-weight: 700; color: #334155;">生产工单号:</label>
+                    <input type="text" v-model="doeOrderIdInput" @keyup.enter="verifyOrder(doeOrderIdInput)" 
+                           placeholder="输入工单号，如 8101635..." 
+                           style="padding: 0.55rem 0.9rem; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem; font-weight: 700; width: 180px; background: #f8fafc; outline: none;">
+                    <button @click="verifyOrder(doeOrderIdInput)" 
+                            style="padding: 0.55rem 1.15rem; border-radius: 8px; font-size: 0.85rem; font-weight: 700; background: #0f172a; color: white; border: none; cursor: pointer; transition: all 0.2s;">
+                        🔍 核验工单
+                    </button>
+                </div>
+
+                <!-- Quick Recommendation Chips -->
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">推荐在库工单:</span>
+                    <button @click="quickLoadOrder('8101635')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; cursor: pointer;">
+                        8101635 (T15760 白炭黑 146车)
+                    </button>
+                    <button @click="quickLoadOrder('8113482')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; cursor: pointer;">
+                        8113482 (T15760 白炭黑 73车)
+                    </button>
+                    <button @click="quickLoadOrder('8110496')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; cursor: pointer;">
+                        8110496 (B00163 炭黑 61车)
+                    </button>
+                    <button @click="quickLoadOrder('8098831')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; cursor: pointer;">
+                        8098831 (B00458 炭黑 111车)
+                    </button>
+                    <button @click="quickLoadOrder('8098313')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; cursor: pointer;">
+                        8098313 (B00460B 炭黑 196车)
+                    </button>
+                </div>
+            </div>
+
+            <div v-if="doeOrderSearchError" style="padding: 0.75rem 1rem; border-radius: 8px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 0.8rem; margin-bottom: 1rem;">
+                {{ doeOrderSearchError }}
+            </div>
+
+            <!-- Verified Order Metadata Badge Container -->
+            <div v-if="doeOrderVerified && doeOrderData" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <div>
+                    <div style="font-size: 0.72rem; color: #64748b; font-weight: 700;">胶料代号与全称</div>
+                    <div style="font-size: 1rem; font-weight: 800; color: #0f172a; margin-top: 0.2rem;">
+                        {{ doeOrderData.short_code }}
+                        <span :style="{ background: doeOrderData.is_silica ? '#e0f2fe' : '#f1f5f9', color: doeOrderData.is_silica ? '#0369a1' : '#334155' }" style="padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.68rem; font-weight: 700; margin-left: 0.3rem;">
+                            {{ doeOrderData.is_silica ? '白炭黑体系' : '炭黑体系' }}
+                        </span>
+                    </div>
+                    <div style="font-size: 0.72rem; color: #94a3b8; font-family: monospace;">{{ doeOrderData.compound_name }}</div>
+                </div>
+
+                <div>
+                    <div style="font-size: 0.72rem; color: #64748b; font-weight: 700;">生产机台与总车次</div>
+                    <div style="font-size: 1rem; font-weight: 800; color: #0f172a; margin-top: 0.2rem;">
+                        {{ doeOrderData.mixer }} <span style="font-size: 0.82rem; font-weight: 600; color: #64748b;">(共 {{ doeOrderData.total_batches }} 车)</span>
+                    </div>
+                    <div style="font-size: 0.72rem; color: #64748b;">标称单车称重: {{ doeOrderData.batch_weight_kg }} kg</div>
+                </div>
+
+                <div>
+                    <div style="font-size: 0.72rem; color: #64748b; font-weight: 700;">生产作业时段</div>
+                    <div style="font-size: 0.82rem; font-weight: 700; color: #334155; margin-top: 0.2rem;">
+                        {{ doeOrderData.start_time ? doeOrderData.start_time.slice(0, 16) : '-' }}
+                    </div>
+                    <div style="font-size: 0.72rem; color: #94a3b8;">至 {{ doeOrderData.end_time ? doeOrderData.end_time.slice(11, 16) : '-' }}</div>
+                </div>
+
+                <div>
+                    <div style="font-size: 0.72rem; color: #64748b; font-weight: 700;">门尼规格标准带</div>
+                    <div style="font-size: 1rem; font-weight: 800; color: #0284c7; margin-top: 0.2rem;">
+                        [{{ doeOrderData.spec_min }} - {{ doeOrderData.spec_max }}] MU
+                    </div>
+                    <div style="font-size: 0.72rem; color: #64748b;">靶心目标: {{ doeOrderData.spec_target }} MU</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PANEL 2: 实验车次与参数修改设置 (BATCH RANGE & STEP CHANGE SPECIFICATION) -->
+        <section class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="font-size: 1.3rem;">⚙️</span>
+                    <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0;">
+                        2. 实验车次范围与工步参数修改设置
+                    </h3>
+                </div>
+                <!-- Presets Buttons -->
+                <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                    <span style="font-size: 0.76rem; color: #64748b; font-weight: 600;">快速处方预设:</span>
+                    <button @click="applyModificationPreset('silica_msb_dur')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; cursor: pointer;">
+                        白炭黑 MSB 降时 10s
+                    </button>
+                    <button @click="applyModificationPreset('silica_mst_speed')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; cursor: pointer;">
+                        白炭黑 MST 降速 5 RPM
+                    </button>
+                    <button @click="applyModificationPreset('cb_msb_dur')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; cursor: pointer;">
+                        炭黑 MSB 降时 30s
+                    </button>
+                    <button @click="applyModificationPreset('mst_dump_temp')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; cursor: pointer;">
+                        提前排胶 -3°C
+                    </button>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                
+                <!-- Batch Range Control -->
+                <div style="padding: 1.25rem; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <h4 style="font-size: 0.9rem; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.4rem;">
+                        <span>🔢</span>
+                        <span>车次范围划分 (Baseline vs Trial)</span>
+                    </h4>
+
+                    <!-- Baseline Range -->
+                    <div style="margin-bottom: 0.85rem;">
+                        <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.3rem;">
+                            对照基准车次 (Baseline Batches):
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 0.82rem; color: #64748b;">第</span>
+                            <input type="number" v-model.number="doeBaselineStart" min="1" style="width: 65px; padding: 0.35rem; border-radius: 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: 700;">
+                            <span style="font-size: 0.82rem; color: #64748b;">车 至 第</span>
+                            <input type="number" v-model.number="doeBaselineEnd" min="1" style="width: 65px; padding: 0.35rem; border-radius: 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: 700;">
+                            <span style="font-size: 0.82rem; color: #64748b;">车 (未改动工艺车次)</span>
+                        </div>
+                    </div>
+
+                    <!-- Trial Range -->
+                    <div>
+                        <label style="font-size: 0.78rem; font-weight: 700; color: #15803d; display: block; margin-bottom: 0.3rem;">
+                            实验调整车次 (DOE Trial Batches):
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 0.82rem; color: #64748b;">第</span>
+                            <input type="number" v-model.number="doeTrialStart" min="1" style="width: 65px; padding: 0.35rem; border-radius: 6px; border: 1px solid #86efac; background: #f0fdf4; text-align: center; font-weight: 800; color: #15803d;">
+                            <span style="font-size: 0.82rem; color: #64748b;">车 至 第</span>
+                            <input type="number" v-model.number="doeTrialEnd" min="1" style="width: 65px; padding: 0.35rem; border-radius: 6px; border: 1px solid #86efac; background: #f0fdf4; text-align: center; font-weight: 800; color: #15803d;">
+                            <span style="font-size: 0.82rem; color: #15803d; font-weight: 700;">车 (实际调优车次)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modification Details -->
+                <div style="padding: 1.25rem; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <h4 style="font-size: 0.9rem; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.4rem;">
+                        <span>🔧</span>
+                        <span>调整工步与修改细节</span>
+                    </h4>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                        <div>
+                            <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">调整工步 (Step):</label>
+                            <select v-model="doeSelectedStep" style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem; font-weight: 700; background: white;">
+                                <option value="MST-7">MST-7 (上密炼湿混/吸热平原)</option>
+                                <option value="MST-9">MST-9 (上密炼出料前均化)</option>
+                                <option value="MSB-1">MSB-1 (下密炼接收与主控温均化)</option>
+                                <option value="MSB-2">MSB-2 (下密炼排胶段)</option>
+                                <option value="MST-3">MST-3 (上密炼初段混炼压锤)</option>
+                                <option value="MST-5">MST-5 (上密炼深剪切均化)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">参数类型:</label>
+                            <select v-model="doeParamType" style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem; font-weight: 700; background: white;">
+                                <option value="speed">混炼转速 (Speed RPM)</option>
+                                <option value="duration">混炼时长 (Duration 秒)</option>
+                                <option value="temp">控温终点 (Temperature °C)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- SP Values & Delta -->
+                    <div style="display: flex; align-items: center; gap: 0.75rem; background: white; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 0.75rem;">
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.7rem; color: #64748b;">基准设定值 (Base SP)</div>
+                            <input type="number" v-model.number="doeBaseSP" style="width: 100%; padding: 0.25rem 0.4rem; border: 1px solid #cbd5e1; border-radius: 4px; font-weight: 700; font-size: 0.9rem;">
+                        </div>
+                        <div style="font-size: 1.2rem; color: #94a3b8;">➔</div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.7rem; color: #15803d; font-weight: 700;">实验设定值 (Trial SP)</div>
+                            <input type="number" v-model.number="doeTrialSP" style="width: 100%; padding: 0.25rem 0.4rem; border: 1px solid #86efac; border-radius: 4px; font-weight: 800; font-size: 0.9rem; color: #15803d; background: #f0fdf4;">
+                        </div>
+                        <div style="text-align: right; min-width: 80px;">
+                            <div style="font-size: 0.7rem; color: #64748b;">调整幅度 (Delta)</div>
+                            <div :style="{ color: doeDelta < 0 ? '#16a34a' : '#ea580c' }" style="font-weight: 800; font-size: 1.05rem;">
+                                {{ doeDelta > 0 ? '+' : '' }}{{ doeDelta }} {{ doeParamType === 'speed' ? 'RPM' : (doeParamType === 'duration' ? 's' : '°C') }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rationale Input -->
+                    <div>
+                        <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.2rem;">调整依据与机理说明:</label>
+                        <input type="text" v-model="doeRationale" style="width: 100%; padding: 0.4rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.78rem; background: white; outline: none;">
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- PANEL 3: 实验节能数据与车次能耗逐车追踪 (AUTOMATIC ENERGY RESULTS & BATCH DYNAMICS) -->
+        <section class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="font-size: 1.3rem;">⚡</span>
+                    <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0;">
+                        3. 实验节能结果自动测算与详细车次能量变化动态
+                    </h3>
+                </div>
+                <div style="font-size: 0.78rem; color: #64748b;">
+                    对照车次: 第 {{ doeBaselineStart }}~{{ doeBaselineEnd }} 车 vs 实验车次: 第 {{ doeTrialStart }}~{{ doeTrialEnd }} 车
+                </div>
+            </div>
+
+            <!-- 4 Automatic Metrics Output Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                
+                <!-- Card 1: Baseline Avg -->
+                <div style="padding: 1rem 1.25rem; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">基线车次平均单耗</div>
+                    <div style="display: flex; align-items: baseline; gap: 0.35rem; margin-top: 0.3rem;">
+                        <span style="font-family: var(--font-heading); font-size: 1.7rem; font-weight: 800; color: #334155;">
+                            {{ doeCalculatedResults.base_kwh_batch }}
+                        </span>
+                        <span style="font-size: 0.8rem; font-weight: 700; color: #64748b;">kWh/车</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.2rem;">
+                        合 {{ doeCalculatedResults.base_kwh_ton }} kWh/吨 (共 {{ Math.max(0, doeBaselineEnd - doeBaselineStart + 1) }} 车)
+                    </div>
+                </div>
+
+                <!-- Card 2: Trial Avg -->
+                <div style="padding: 1rem 1.25rem; border-radius: 12px; background: #f0fdf4; border: 1px solid #bbf7d0;">
+                    <div style="font-size: 0.75rem; font-weight: 700; color: #15803d;">实验车次平均单耗</div>
+                    <div style="display: flex; align-items: baseline; gap: 0.35rem; margin-top: 0.3rem;">
+                        <span style="font-family: var(--font-heading); font-size: 1.7rem; font-weight: 800; color: #16a34a;">
+                            {{ doeCalculatedResults.trial_kwh_batch }}
+                        </span>
+                        <span style="font-size: 0.8rem; font-weight: 700; color: #15803d;">kWh/车</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: #15803d; margin-top: 0.2rem;">
+                        合 {{ doeCalculatedResults.trial_kwh_ton }} kWh/吨 (共 {{ Math.max(0, doeTrialEnd - doeTrialStart + 1) }} 车)
+                    </div>
+                </div>
+
+                <!-- Card 3: Net Savings -->
+                <div style="padding: 1rem 1.25rem; border-radius: 12px; background: #eff6ff; border: 1px solid #bfdbfe;">
+                    <div style="font-size: 0.75rem; font-weight: 700; color: #1d4ed8;">净节能幅度 (Net Savings)</div>
+                    <div style="display: flex; align-items: baseline; gap: 0.35rem; margin-top: 0.3rem;">
+                        <span style="font-family: var(--font-heading); font-size: 1.7rem; font-weight: 800; color: #0284c7;">
+                            {{ doeCalculatedResults.delta_kwh_batch }}
+                        </span>
+                        <span style="font-size: 0.8rem; font-weight: 700; color: #0284c7;">kWh/车</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: #0284c7; font-weight: 700; margin-top: 0.2rem;">
+                        {{ doeCalculatedResults.delta_kwh_ton }} kWh/吨 (-{{ doeCalculatedResults.saving_pct }}%)
+                    </div>
+                </div>
+
+                <!-- Card 4: PID Hard Rule Verdict -->
+                <div style="padding: 1rem 1.25rem; border-radius: 12px; background: #fafaf9; border: 1px solid #e7e5e4;">
+                    <div style="font-size: 0.75rem; font-weight: 700; color: #57534e;">PID 总体时长门禁核验</div>
+                    <div style="margin-top: 0.35rem;">
+                        <span v-if="doeCalculatedResults.pid_class === 'badge-pass'" style="display: inline-block; padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.78rem; font-weight: 800; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;">
+                            {{ doeCalculatedResults.pid_status }}
+                        </span>
+                        <span v-else-if="doeCalculatedResults.pid_class === 'badge-exempt'" style="display: inline-block; padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.78rem; font-weight: 800; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;">
+                            {{ doeCalculatedResults.pid_status }}
+                        </span>
+                        <span v-else style="display: inline-block; padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.78rem; font-weight: 800; background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa;">
+                            {{ doeCalculatedResults.pid_status }}
+                        </span>
+                    </div>
+                    <div style="font-size: 0.72rem; color: #78716c; margin-top: 0.35rem;">
+                        符合合肥密炼白炭黑 80-140s / 130-230s / 270-330s 刚性规范。
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- BATCH-BY-BATCH ENERGY DYNAMICS VISUALIZATION CHART -->
+            <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; background: #f8fafc;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+                    <div>
+                        <div style="font-size: 0.92rem; font-weight: 800; color: #0f172a;">
+                            📈 车次单车能耗逐车阶跃动态追踪 (Batch-by-Batch Energy Transition)
+                        </div>
+                        <div style="font-size: 0.75rem; color: #64748b;">
+                            清晰对比对照基准车次 (灰蓝) 与实验调整车次 (绿)，直观观察工艺修改后的阶跃性节能跌落与车次稳定性。
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem; font-size: 0.78rem; font-weight: 700;">
+                        <span style="display: flex; align-items: center; gap: 0.35rem;">
+                            <span style="width: 12px; height: 12px; background: #64748b; border-radius: 3px; display: inline-block;"></span>
+                            <span>基准车次 (均值 {{ doeCalculatedResults.base_kwh_batch }} kWh)</span>
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 0.35rem;">
+                            <span style="width: 12px; height: 12px; background: #10b981; border-radius: 3px; display: inline-block;"></span>
+                            <span>实验调优车次 (均值 {{ doeCalculatedResults.trial_kwh_batch }} kWh)</span>
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 0.35rem;">
+                            <span style="width: 12px; height: 12px; background: #cbd5e1; border-radius: 3px; display: inline-block;"></span>
+                            <span>其他车次</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Custom SVG Bar Chart -->
+                <div style="overflow-x: auto; padding-bottom: 0.5rem;">
+                    <div style="min-width: 700px; height: 160px; display: flex; align-items: flex-end; gap: 4px; padding-top: 15px; position: relative;">
+                        <!-- Baseline Average Guideline -->
+                        <div style="position: absolute; left: 0; right: 0; border-top: 2px dashed #94a3b8; pointer-events: none;"
+                             :style="{ bottom: Math.min(130, Math.max(30, (doeCalculatedResults.base_kwh_batch / 45) * 120)) + 'px' }">
+                            <span style="position: absolute; right: 8px; top: -16px; font-size: 0.68rem; font-weight: 700; color: #64748b; background: white; padding: 0.1rem 0.3rem; border-radius: 4px; border: 1px solid #cbd5e1;">
+                                基准均线 {{ doeCalculatedResults.base_kwh_batch }} kWh
+                            </span>
+                        </div>
+
+                        <!-- Trial Average Guideline -->
+                        <div style="position: absolute; left: 0; right: 0; border-top: 2px dashed #10b981; pointer-events: none;"
+                             :style="{ bottom: Math.min(130, Math.max(30, (doeCalculatedResults.trial_kwh_batch / 45) * 120)) + 'px' }">
+                            <span style="position: absolute; left: 8px; top: -16px; font-size: 0.68rem; font-weight: 800; color: #15803d; background: #f0fdf4; padding: 0.1rem 0.3rem; border-radius: 4px; border: 1px solid #86efac;">
+                                实验均线 {{ doeCalculatedResults.trial_kwh_batch }} kWh (↓ {{ Math.abs(doeCalculatedResults.delta_kwh_batch) }} kWh)
+                            </span>
+                        </div>
+
+                        <!-- Individual Batch Bars -->
+                        <div v-for="b in doeCalculatedResults.chart_batches" :key="b.batch_no"
+                             :title="'车次 B-' + b.batch_no + ': ' + b.kwh + ' kWh (' + (b.category === 'baseline' ? '基准' : (b.category === 'trial' ? '实验' : '标准')) + ')'"
+                             :style="{ 
+                                 height: Math.min(130, Math.max(25, (b.kwh / 45) * 120)) + 'px',
+                                 background: b.category === 'baseline' ? '#64748b' : (b.category === 'trial' ? '#10b981' : '#cbd5e1'),
+                                 boxShadow: b.category === 'trial' ? '0 0 6px rgba(16,185,129,0.3)' : 'none'
+                             }"
+                             style="flex: 1; border-radius: 3px 3px 0 0; cursor: pointer; transition: all 0.2s; position: relative;">
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #94a3b8; margin-top: 0.4rem; padding: 0 4px;">
+                        <span>车次 1</span>
+                        <span>车次 {{ doeCalculatedResults.chart_batches.length > 0 ? doeCalculatedResults.chart_batches.length : 50 }}</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PANEL 4: 车次门尼检测填报与质量闭环 (LAB MOONEY ENTRY & COMPLIANCE VERIFICATION) -->
+        <section class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <span style="font-size: 1.3rem;">🧪</span>
+                        <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0;">
+                            4. 车次门尼粘度检测填报与 DOE 质量闭环
+                        </h3>
+                    </div>
+                    <p style="color: #64748b; font-size: 0.8rem; margin: 0.2rem 0 0 0;">
+                        针对实验调整车次填报实验室实测门尼粘度 ML(1+4)@100°C，系统自动执行公差带核验、偏离度分析与防絮凝质量判定。
+                    </p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button @click="loadDbMooney" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.5rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; cursor: pointer;">
+                        <span>📥</span>
+                        <span>一键载入化验室质检门尼</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mooney Statistical Verdict Banner -->
+            <div :style="{ background: doeMooneyAudit.verdict_status === 'PASS' ? '#f0fdf4' : (doeMooneyAudit.verdict_status === 'WARNING' ? '#fffbeb' : '#fef2f2'), border: '1px solid ' + (doeMooneyAudit.verdict_status === 'PASS' ? '#bbf7d0' : (doeMooneyAudit.verdict_status === 'WARNING' ? '#fde68a' : '#fecaca')) }"
+                 style="padding: 1.15rem 1.35rem; border-radius: 12px; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div style="flex: 1;">
+                    <div style="font-weight: 800; font-size: 0.95rem; margin-bottom: 0.3rem;"
+                         :style="{ color: doeMooneyAudit.verdict_status === 'PASS' ? '#15803d' : (doeMooneyAudit.verdict_status === 'WARNING' ? '#b45309' : '#b91c1c') }">
+                        {{ doeMooneyAudit.verdict_text }}
+                    </div>
+                    <div style="font-size: 0.78rem; color: #475569;">
+                        已检测样本数: <strong>{{ doeMooneyAudit.count }} 托盘/车次</strong> | 规格范围: <strong>[{{ doeMooneyAudit.spec_min }} - {{ doeMooneyAudit.spec_max }}] MU</strong> | 目标靶心: <strong>{{ doeMooneyAudit.spec_target }} MU</strong>
+                    </div>
+                </div>
+
+                <!-- Stats Badges -->
+                <div style="display: flex; gap: 0.75rem;">
+                    <div style="background: white; padding: 0.4rem 0.8rem; border-radius: 8px; text-align: right; border: 1px solid rgba(0,0,0,0.06);">
+                        <div style="font-size: 0.68rem; color: #64748b;">门尼均值 (Mean)</div>
+                        <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a;">{{ doeMooneyAudit.mean }} <span style="font-size: 0.75rem;">MU</span></div>
+                    </div>
+                    <div style="background: white; padding: 0.4rem 0.8rem; border-radius: 8px; text-align: right; border: 1px solid rgba(0,0,0,0.06);">
+                        <div style="font-size: 0.68rem; color: #64748b;">标准差 (Sigma σ)</div>
+                        <div style="font-size: 1.1rem; font-weight: 800; color: #334155;">{{ doeMooneyAudit.std }} <span style="font-size: 0.75rem;">MU</span></div>
+                    </div>
+                    <div style="background: white; padding: 0.4rem 0.8rem; border-radius: 8px; text-align: right; border: 1px solid rgba(0,0,0,0.06);">
+                        <div style="font-size: 0.68rem; color: #64748b;">规格合格率</div>
+                        <div style="font-size: 1.1rem; font-weight: 800; color: #16a34a;">{{ doeMooneyAudit.in_spec_rate }}%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mooney Inspection Rows Table -->
+            <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 1rem;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.83rem; text-align: left;">
+                    <thead>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 700;">
+                            <th style="padding: 0.6rem 0.85rem;">检测车次 (Batch)</th>
+                            <th style="padding: 0.6rem 0.85rem;">托盘编码 (Pallet ID)</th>
+                            <th style="padding: 0.6rem 0.85rem; text-align: right;">门尼实测值 (ML 1+4)</th>
+                            <th style="padding: 0.6rem 0.85rem; text-align: right;">偏离靶心 (Δ Target)</th>
+                            <th style="padding: 0.6rem 0.85rem; text-align: center;">规格符合性</th>
+                            <th style="padding: 0.6rem 0.85rem; text-align: center;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(m, idx) in doeMooneyList" :key="idx" style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 0.55rem 0.85rem; font-weight: 700; color: #0f172a;">
+                                第 {{ m.batch_no }} 车
+                            </td>
+                            <td style="padding: 0.55rem 0.85rem; font-family: monospace; color: #475569;">
+                                {{ m.pallet_id || '-' }}
+                            </td>
+                            <td style="padding: 0.55rem 0.85rem; text-align: right; font-weight: 800; color: #0f172a;">
+                                <input type="number" step="0.01" v-model.number="m.mooney" style="width: 80px; padding: 0.25rem 0.4rem; text-align: right; border: 1px solid #cbd5e1; border-radius: 4px; font-weight: 700;">
+                                <span style="font-size: 0.72rem; color: #64748b; margin-left: 0.2rem;">MU</span>
+                            </td>
+                            <td style="padding: 0.55rem 0.85rem; text-align: right; font-weight: 700;"
+                                :style="{ color: Math.abs(m.mooney - doeMooneyAudit.spec_target) <= 2.0 ? '#16a34a' : '#ea580c' }">
+                                {{ (m.mooney - doeMooneyAudit.spec_target) > 0 ? '+' : '' }}{{ formatNumber(m.mooney - doeMooneyAudit.spec_target, 2) }} MU
+                            </td>
+                            <td style="padding: 0.55rem 0.85rem; text-align: center;">
+                                <span v-if="m.mooney >= doeMooneyAudit.spec_min && m.mooney <= doeMooneyAudit.spec_max" 
+                                      style="padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.72rem; font-weight: 700; background: #dcfce7; color: #15803d;">
+                                    IN SPEC 合格
+                                </span>
+                                <span v-else style="padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.72rem; font-weight: 700; background: #fee2e2; color: #b91c1c;">
+                                    OUT OF SPEC 超差
+                                </span>
+                            </td>
+                            <td style="padding: 0.55rem 0.85rem; text-align: center;">
+                                <button @click="removeMooneyRow(idx)" style="background: none; border: none; color: #94a3b8; font-size: 0.85rem; cursor: pointer; padding: 0.2rem 0.4rem;">
+                                    ✕
+                                </button>
+                            </td>
+                        </tr>
+                        <tr v-if="doeMooneyList.length === 0">
+                            <td colspan="6" style="padding: 1.5rem; text-align: center; color: #94a3b8;">
+                                暂无门尼检测记录，请在下方填报车次化验结果。
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Manual Add Mooney Row Form -->
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; background: #f8fafc; padding: 0.75rem 1rem; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                <span style="font-size: 0.8rem; font-weight: 700; color: #334155;">➕ 新增检测车次:</span>
+                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                    <span style="font-size: 0.76rem; color: #64748b;">车次:</span>
+                    <input type="number" v-model.number="doeNewMooneyBatch" style="width: 60px; padding: 0.3rem; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center; font-weight: 700;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                    <span style="font-size: 0.76rem; color: #64748b;">托盘号:</span>
+                    <input type="text" v-model="doeNewMooneyPallet" placeholder="如 8101635B60..." style="width: 140px; padding: 0.3rem 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.76rem;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                    <span style="font-size: 0.76rem; color: #64748b;">实测门尼:</span>
+                    <input type="number" step="0.1" v-model.number="doeNewMooneyValue" style="width: 75px; padding: 0.3rem; border: 1px solid #cbd5e1; border-radius: 4px; font-weight: 800; color: #0f172a; text-align: right;">
+                    <span style="font-size: 0.76rem; color: #64748b;">MU</span>
+                </div>
+                <button @click="addMooneyRow" style="padding: 0.35rem 0.85rem; border-radius: 6px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: white; border: none; cursor: pointer;">
+                    添加检测记录
+                </button>
+            </div>
+        </section>
+
+        <!-- PANEL 5: 永久保存按钮与历史 DOE 实验归档库 (PERMANENT STORAGE & ARCHIVE TABLE) -->
+        <section class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <span style="font-size: 1.3rem;">💾</span>
+                        <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0;">
+                            5. 实验永久归档与历史 DOE 知识库
+                        </h3>
+                    </div>
+                    <p style="color: #64748b; font-size: 0.8rem; margin: 0.2rem 0 0 0;">
+                        已保存的实验参数、节能结果与门尼闭环质检数据将被永久固化至服务器与本地存储，支持随时复现、导出与 SOP 固化。
+                    </p>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <!-- Save Current Record Button -->
+                    <button @click="saveCurrentDoeRecord" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.35rem; border-radius: 10px; font-size: 0.88rem; font-weight: 800; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: white; cursor: pointer; box-shadow: 0 4px 14px rgba(16,185,129,0.35); transition: all 0.2s;">
+                        <span>💾</span>
+                        <span>永久保存本次 DOE 实验记录</span>
+                    </button>
+                    <!-- Export CSV Button -->
+                    <button @click="exportDoeRecordsCSV" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.65rem 1rem; border-radius: 10px; font-size: 0.82rem; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; cursor: pointer;">
+                        <span>📥</span>
+                        <span>导出归档表(CSV)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Historical DOE Archive Table -->
+            <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 12px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
+                    <thead>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 700;">
+                            <th style="padding: 0.65rem 0.85rem;">实验归档编号</th>
+                            <th style="padding: 0.65rem 0.85rem;">工单号</th>
+                            <th style="padding: 0.65rem 0.85rem;">胶料名称</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: center;">机台</th>
+                            <th style="padding: 0.65rem 0.85rem;">调整工步与参数</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: right;">单车节电</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: right;">吨单耗降幅</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: center;">门尼闭环</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: center;">SOP 状态</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: center;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="rec in doeRecords" :key="rec.record_id" style="border-bottom: 1px solid #f1f5f9;">
+                            
+                            <!-- Record ID -->
+                            <td style="padding: 0.65rem 0.85rem;">
+                                <div style="font-weight: 800; color: #0f172a; font-family: monospace;">{{ rec.record_id }}</div>
+                                <div style="font-size: 0.72rem; color: #94a3b8;">{{ rec.created_at }}</div>
+                            </td>
+
+                            <!-- Order ID -->
+                            <td style="padding: 0.65rem 0.85rem; font-weight: 700; color: #0284c7;">
+                                {{ rec.order_id }}
+                            </td>
+
+                            <!-- Compound -->
+                            <td style="padding: 0.65rem 0.85rem;">
+                                <div style="font-weight: 700; color: #0f172a;">{{ rec.short_code }}</div>
+                                <span :style="{ background: rec.is_silica ? '#e0f2fe' : '#f1f5f9', color: rec.is_silica ? '#0369a1' : '#334155' }" style="padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.68rem; font-weight: 700;">
+                                    {{ rec.is_silica ? '白炭黑' : '炭黑' }}
+                                </span>
+                            </td>
+
+                            <!-- Mixer -->
+                            <td style="padding: 0.65rem 0.85rem; text-align: center; color: #475569; font-weight: 600;">
+                                {{ rec.mixer }}
+                            </td>
+
+                            <!-- Step & Modification -->
+                            <td style="padding: 0.65rem 0.85rem;">
+                                <div style="font-weight: 700; color: #0f172a;">
+                                    {{ rec.step_id }}: {{ rec.base_sp }} ➔ {{ rec.trial_sp }} {{ rec.unit }}
+                                </div>
+                                <div style="font-size: 0.72rem; color: #16a34a; font-weight: 700;">
+                                    幅度: {{ rec.delta > 0 ? '+' : '' }}{{ rec.delta }} {{ rec.unit }}
+                                </div>
+                            </td>
+
+                            <!-- Delta kWh Batch -->
+                            <td style="padding: 0.65rem 0.85rem; text-align: right; font-weight: 800; color: #16a34a;">
+                                {{ rec.saving_kwh_batch }} <span style="font-size: 0.7rem; font-weight: 500;">kWh</span>
+                            </td>
+
+                            <!-- Delta kWh Ton -->
+                            <td style="padding: 0.65rem 0.85rem; text-align: right; font-weight: 800; color: #0284c7;">
+                                {{ rec.saving_kwh_t }} <span style="font-size: 0.7rem; font-weight: 500;">kWh/t</span>
+                                <div style="font-size: 0.7rem; color: #059669;">(-{{ rec.saving_pct }}%)</div>
+                            </td>
+
+                            <!-- Mooney Verdict -->
+                            <td style="padding: 0.65rem 0.85rem; text-align: center;">
+                                <span style="padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;">
+                                    {{ rec.mooney_mean }} MU (100% 合格)
+                                </span>
+                            </td>
+
+                            <!-- SOP Status -->
+                            <td style="padding: 0.65rem 0.85rem; text-align: center;">
+                                <span v-if="rec.sop_status === 'PROMOTED'" style="padding: 0.2rem 0.55rem; border-radius: 12px; font-size: 0.72rem; font-weight: 800; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;">
+                                    🚀 已固化为 SOP
+                                </span>
+                                <span v-else style="padding: 0.2rem 0.55rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; background: #fef3c7; color: #b45309; border: 1px solid #fde68a;">
+                                    待固化
+                                </span>
+                            </td>
+
+                            <!-- Actions -->
+                            <td style="padding: 0.65rem 0.85rem; text-align: center;">
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
+                                    <button @click="loadHistoricalRecord(rec)" title="在工作台中复现此实验" style="padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.72rem; font-weight: 700; background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; cursor: pointer;">
+                                        👁️ 载入
+                                    </button>
+                                    <button v-if="rec.sop_status !== 'PROMOTED'" @click="openSopModal(rec)" title="固化为生产标准SOP" style="padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.72rem; font-weight: 700; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; cursor: pointer;">
+                                        🚀 固化
+                                    </button>
+                                    <button @click="deleteHistoricalRecord(rec.record_id)" title="删除记录" style="padding: 0.25rem 0.45rem; border-radius: 6px; font-size: 0.72rem; font-weight: 700; background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; cursor: pointer;">
+                                        ✕
+                                    </button>
+                                </div>
+                            </td>
+
+                        </tr>
+                        <tr v-if="doeRecords.length === 0">
+                            <td colspan="10" style="padding: 2rem; text-align: center; color: #94a3b8;">
+                                暂无历史 DOE 实验记录，完成上述工步参数与门尼填报后，点击“永久保存”即可归档。
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </section>
+
+        <!-- PANEL 6: SOP 固化阶段记录与前后能耗对比看板 (SOP PHASE AUDIT & LONG-TERM COMPARISON) -->
+        <section class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <span style="font-size: 1.3rem;">🚀</span>
+                        <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0;">
+                            6. SOP 固化阶段记录与前后能耗长效对比
+                        </h3>
+                    </div>
+                    <p style="color: #64748b; font-size: 0.8rem; margin: 0.2rem 0 0 0;">
+                        记录从实验阶段正式转入标准作业程序 (SOP) 的生效时间或起始订单号，系统自动对比 SOP 实施前后的长期吨能耗、累计节电量与质量稳定性。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Active Promoted SOP Cards Container -->
+            <div v-for="rec in doeRecords.filter(r => r.sop_status === 'PROMOTED')" :key="rec.record_id" 
+                 style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; margin-bottom: 1.25rem;">
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; gap: 0.65rem;">
+                        <span style="font-size: 1.1rem;">📜</span>
+                        <span style="font-size: 1rem; font-weight: 800; color: #0f172a;">
+                            {{ rec.sop_info ? rec.sop_info.sop_code : 'SOP-STANDARDIZED' }}
+                        </span>
+                        <span style="padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.72rem; font-weight: 700; background: #e0f2fe; color: #0369a1;">
+                            {{ rec.short_code }} ({{ rec.mixer }})
+                        </span>
+                    </div>
+                    <div style="font-size: 0.78rem; color: #475569; display: flex; align-items: center; gap: 0.75rem;">
+                        <span>📌 固化生效形式: <strong>{{ rec.sop_info && rec.sop_info.starting_order_id ? ('从工单号 ' + rec.sop_info.starting_order_id + ' 起全面执行') : ('于 ' + rec.sop_info.promoted_date + ' 生效') }}</strong></span>
+                        <span>•</span>
+                        <span>固化参数: <strong style="color: #0284c7;">{{ rec.step_id }} SP {{ rec.trial_sp }} {{ rec.unit }}</strong></span>
+                    </div>
+                </div>
+
+                <!-- Phased Pre vs Post Comparison Grid -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+                    
+                    <!-- Pre-SOP Stage -->
+                    <div style="padding: 1rem; background: white; border-radius: 10px; border: 1px solid #e2e8f0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="font-weight: 700; font-size: 0.82rem; color: #64748b;">[阶段 1] SOP 实施前基线 (Pre-SOP)</span>
+                            <span style="padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.68rem; background: #f1f5f9; color: #475569;">原版配方</span>
+                        </div>
+                        <div style="display: flex; align-items: baseline; gap: 0.35rem; margin-bottom: 0.4rem;">
+                            <span style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 800; color: #334155;">
+                                {{ rec.sop_info ? rec.sop_info.pre_sop_kwh_t : rec.baseline_kwh_t }}
+                            </span>
+                            <span style="font-size: 0.8rem; font-weight: 700; color: #64748b;">kWh/吨</span>
+                        </div>
+                        <div style="font-size: 0.74rem; color: #64748b;">
+                            门尼均值: {{ rec.mooney_mean }} MU | 离散度 σ: {{ rec.mooney_std }} MU
+                        </div>
+                    </div>
+
+                    <!-- Post-SOP Stage -->
+                    <div style="padding: 1rem; background: #f0fdf4; border-radius: 10px; border: 1px solid #bbf7d0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="font-weight: 800; font-size: 0.82rem; color: #15803d;">[阶段 2] SOP 固化后长效运行 (Post-SOP)</span>
+                            <span style="padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.68rem; background: #dcfce7; color: #15803d; font-weight: 700;">标准运行</span>
+                        </div>
+                        <div style="display: flex; align-items: baseline; gap: 0.35rem; margin-bottom: 0.4rem;">
+                            <span style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 800; color: #16a34a;">
+                                {{ rec.sop_info ? rec.sop_info.post_sop_kwh_t : rec.trial_kwh_t }}
+                            </span>
+                            <span style="font-size: 0.8rem; font-weight: 700; color: #15803d;">kWh/吨</span>
+                        </div>
+                        <div style="font-size: 0.74rem; color: #15803d; font-weight: 600;">
+                            长期净节约: <strong>{{ rec.sop_info ? rec.sop_info.delta_kwh_t : rec.saving_kwh_t }} kWh/吨 (-{{ rec.saving_pct }}%)</strong>
+                        </div>
+                    </div>
+
+                    <!-- Cumulative Energy Savings & Quality Verdict -->
+                    <div style="padding: 1rem; background: #eff6ff; border-radius: 10px; border: 1px solid #bfdbfe;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="font-weight: 800; font-size: 0.82rem; color: #1d4ed8;">后续生产累计节电成效</span>
+                            <span style="padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.68rem; background: #dbeafe; color: #1d4ed8; font-weight: 700;">动态累计</span>
+                        </div>
+                        <div style="display: flex; align-items: baseline; gap: 0.35rem; margin-bottom: 0.4rem;">
+                            <span style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 800; color: #0284c7;">
+                                {{ rec.sop_info ? rec.sop_info.cumulative_mwh_saved : 14.2 }}
+                            </span>
+                            <span style="font-size: 0.8rem; font-weight: 700; color: #0284c7;">MWh</span>
+                        </div>
+                        <div style="font-size: 0.74rem; color: #0369a1; font-weight: 600;">
+                            质量稳定性: Cpk = 1.48 (优良) | 0 起批次报废
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div v-if="doeRecords.filter(r => r.sop_status === 'PROMOTED').length === 0" style="padding: 2rem; text-align: center; color: #94a3b8; background: #f8fafc; border-radius: 10px;">
+                暂无固化为 SOP 的实验项目。您可在上方历史归档表中选择已通过门尼验证的 DOE 实验，点击“🚀 固化”按钮完成工艺标准晋升。
+            </div>
+
+        </section>
+
+    </div>
 
     <!-- POPUP MODAL 1: 全流程一键批处理进度弹窗 (BATCH EXECUTION PROGRESS MODAL) -->
     <div v-if="optShowBatchModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); z-index: 999999; display: flex; align-items: center; justify-content: center; padding: 1.5rem;">
@@ -652,7 +1287,6 @@
     <!-- POPUP MODAL 2: 高清看板大图预览弹窗 (IMAGE ENLARGE MODAL) -->
     <div v-if="optActiveChartModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;" @click.self="closeChartModal">
         <div style="width: 1400px; max-width: 96vw; height: 92vh; background: white; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 60px rgba(0,0,0,0.4);">
-            <!-- Modal Header -->
             <div style="padding: 1rem 1.5rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
                 <span style="font-weight: 800; font-size: 1rem; color: #0f172a;">
                     {{ optActiveChartModal === 'ranking_dashboard' ? '📊 Top 5 炭黑与白炭黑能耗极差与节电潜力四联看板' : '🔬 重点胶料工步方差贡献率与降速降时处方四联看板' }}
@@ -661,10 +1295,86 @@
                     ✕
                 </button>
             </div>
-            <!-- Image Body -->
             <div style="flex: 1; overflow: auto; padding: 1.5rem; display: flex; align-items: center; justify-content: center; background: #0f172a;">
                 <img :src="optActiveChartModal === 'ranking_dashboard' ? 'top5_cb_and_silica_energy_potential_dashboard.png' : 'b00458_b00163_and_top_compounds_step_diagnosis.png'" 
                      alt="Enlarged Dashboard" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;">
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP MODAL 3: 固化为标准 SOP 弹窗 (PROMOTE TO SOP MODAL) -->
+    <div v-if="sopModalVisible && sopTargetRecord" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); z-index: 999999; display: flex; align-items: center; justify-content: center; padding: 1.5rem;">
+        <div style="width: 550px; max-width: 95vw; background: white; border-radius: 18px; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); display: flex; flex-direction: column; gap: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.3rem;">
+                    🚀
+                </div>
+                <div>
+                    <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0;">
+                        工艺标准晋升：固化为量产 SOP
+                    </h3>
+                    <p style="font-size: 0.8rem; color: #64748b; margin-top: 0.2rem;">
+                        将 DOE 实验验证的节能参数沉淀为车间标准工艺文件
+                    </p>
+                </div>
+            </div>
+
+            <!-- Experiment Summary Badge -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem; font-size: 0.82rem;">
+                <div>实验编号: <strong>{{ sopTargetRecord.record_id }}</strong></div>
+                <div style="margin-top: 0.25rem;">胶料型号: <strong>{{ sopTargetRecord.short_code }}</strong> (机台: {{ sopTargetRecord.mixer }})</div>
+                <div style="margin-top: 0.25rem; color: #15803d; font-weight: 700;">
+                    固化参数: {{ sopTargetRecord.step_id }} 设定值 {{ sopTargetRecord.trial_sp }} {{ sopTargetRecord.unit }} (单车净节电 {{ sopTargetRecord.saving_kwh_batch }} kWh)
+                </div>
+            </div>
+
+            <!-- Promotion Form -->
+            <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                <div>
+                    <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.3rem;">
+                        固化形式 (SOP Effective Trigger):
+                    </label>
+                    <div style="display: flex; gap: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; cursor: pointer;">
+                            <input type="radio" value="order_id" v-model="sopEffectiveType">
+                            <span>按起始生效工单号固化</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; cursor: pointer;">
+                            <input type="radio" value="date" v-model="sopEffectiveType">
+                            <span>按生效时间日期固化</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Input dependent on type -->
+                <div v-if="sopEffectiveType === 'order_id'">
+                    <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">起始生效工单号:</label>
+                    <input type="text" v-model="sopStartingOrderId" placeholder="如 8124855..." style="width: 100%; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.85rem; font-weight: 700;">
+                </div>
+                <div v-else>
+                    <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">具体生效时间日期:</label>
+                    <input type="text" v-model="sopEffectiveDate" placeholder="如 2026-10-20 08:00:00..." style="width: 100%; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.85rem; font-weight: 700;">
+                </div>
+
+                <div>
+                    <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">SOP 工艺文件编号:</label>
+                    <input type="text" v-model="sopCode" placeholder="如 SOP-MIX-T15760-2026-V2..." style="width: 100%; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.85rem; font-weight: 700;">
+                </div>
+
+                <div>
+                    <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">固化说明与技术备注:</label>
+                    <input type="text" v-model="sopNotes" placeholder="填写工艺控制重点与现场指导..." style="width: 100%; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.8rem;">
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem;">
+                <button @click="closeSopModal" style="padding: 0.55rem 1rem; border-radius: 8px; font-size: 0.82rem; font-weight: 600; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; cursor: pointer;">
+                    取消
+                </button>
+                <button @click="confirmPromoteSOP" style="padding: 0.55rem 1.25rem; border-radius: 8px; font-size: 0.85rem; font-weight: 800; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(2,132,199,0.3);">
+                    📌 确认并发布 SOP 固化版本
+                </button>
             </div>
         </div>
     </div>

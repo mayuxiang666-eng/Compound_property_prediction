@@ -164,14 +164,10 @@ def main():
                     
                     power_kw = round((energy_act / (time_act / 3600.0)), 1) if time_act > 2 else 0.0
                     
-                    # Default description
-                    desc = step_descriptions.get(stage, {}).get(int(s_no), f'{stage} Step {s_no}')
-                    
                     steps_list.append({
                         'step_id': f"{stage}-{s_no}",
                         'stage': stage,
                         'step_no': int(s_no),
-                        'desc_zh': desc,
                         'time_sp': time_sp,
                         'time_act': time_act,
                         'rpm_sp': rpm_sp,
@@ -324,7 +320,17 @@ def main():
     
     with open(OUTPUT_JSON, 'w', encoding='utf-8') as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
+    with open('compound_energy_optimization_data.json', 'w', encoding='utf-8') as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
         
+    remote_path = r'\\10.246.97.159\D\HefeiEnergyDashboard_Release\run_server\compound_energy_optimization_data.json'
+    try:
+        with open(remote_path, 'w', encoding='utf-8') as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        print(f"Synced to remote server: {remote_path}")
+    except Exception as e:
+        print(f"Note: Could not write directly to remote: {e}")
+
     print(f"Successfully generated {OUTPUT_JSON} ({len(rankings_list)} rankings, {len(diagnostics_dict)} diagnostics)")
 
 
