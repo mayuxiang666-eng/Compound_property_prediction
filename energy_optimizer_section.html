@@ -18,46 +18,38 @@
                         {{ currentLang === 'zh' ? '白炭黑 PID 刚性门禁 | 炭黑豁免' : 'Silica Hard Rule Active | CB Exempt' }}
                     </span>
                 </div>
-                <p style="color: #64748b; font-size: 0.88rem; margin: 0; max-width: 950px; line-height: 1.5;">
-                    {{ currentLang === 'zh' ? '覆盖全厂 107 个在产胶料实测车次能耗极差诊断、工步级遥测方差贡献率分析，结合专用实测 DOE 实验闭环记录界面，支持工单级车次能耗对比、门尼粘度质检验真、永久归档与 SOP 阶段长效对比。' : 'Plant-wide compound energy spread ranking and step-level variance diagnosis with a dedicated empirical DOE recording workbench supporting order batch validation, lab Mooney compliance audit, permanent storage, and SOP phased tracking.' }}
+                <p style="color: #64748b; font-size: 0.84rem; margin: 0; max-width: 850px; line-height: 1.4;">
+                    {{ currentLang === 'zh' ? '全厂 107 个胶料能耗极差诊断、实测 DOE 闭环验证与 SOP 长效跟踪。' : 'Plant-wide compound energy spread diagnosis, empirical DOE closed-loop validation, and long-term SOP tracking.' }}
                 </p>
-                <div style="margin-top: 0.4rem; font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 0.75rem;">
-                    <span>📅 {{ optData.generated_at ? (currentLang === 'zh' ? '基准计算时间：' + optData.generated_at : 'Computed at: ' + optData.generated_at) : (currentLang === 'zh' ? '机理推演引擎在线' : 'Physics Engine Online') }}</span>
+                <div style="margin-top: 0.35rem; font-size: 0.76rem; color: #94a3b8; display: flex; align-items: center; gap: 0.75rem;">
+                    <span>📅 {{ optData.generated_at ? (currentLang === 'zh' ? '基准计算：' + optData.generated_at : 'Computed: ' + optData.generated_at) : (currentLang === 'zh' ? '机理推演引擎在线' : 'Physics Engine Online') }}</span>
                     <span>•</span>
                     <span>🏢 {{ currentLang === 'zh' ? '合肥工厂密炼车间 (ML01-ML10)' : 'Hefei Mixing Shop (ML01-ML10)' }}</span>
                 </div>
             </div>
 
-            <!-- Top Action Buttons -->
-            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                <button @click="openChartModal('ranking_dashboard')" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem; border-radius: 10px; font-size: 0.82rem; font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; cursor: pointer; transition: all 0.2s;">
-                    <span>📊</span>
-                    <span>{{ currentLang === 'zh' ? '潜力排行四联看板' : 'Potential Dashboard' }}</span>
-                </button>
-                <button @click="openChartModal('diagnosis_dashboard')" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem; border-radius: 10px; font-size: 0.82rem; font-weight: 700; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; cursor: pointer; transition: all 0.2s;">
-                    <span>🔬</span>
-                    <span>{{ currentLang === 'zh' ? '分步诊断四联看板' : 'Step Diagnosis Dashboard' }}</span>
-                </button>
-                <button @click="triggerBatchOptimization" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.35rem; border-radius: 10px; font-size: 0.88rem; font-weight: 800; background: linear-gradient(135deg, #ff9f00 0%, #ea580c 100%); border: none; color: white; cursor: pointer; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35); transition: all 0.2s;">
-                    <span style="font-size: 1rem;">🚀</span>
-                    <span>{{ currentLang === 'zh' ? '全流程一键批处理重算' : 'Run Batch Optimization' }}</span>
+            <!-- Top Action Buttons (Streamlined: Keep Essential Primary Action Only) -->
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <button @click="triggerBatchOptimization" style="display: flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.25rem; border-radius: 10px; font-size: 0.86rem; font-weight: 800; background: linear-gradient(135deg, #ff9f00 0%, #ea580c 100%); border: none; color: white; cursor: pointer; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35); transition: all 0.2s;">
+                    <span style="font-size: 0.95rem;">🚀</span>
+                    <span>{{ currentLang === 'zh' ? '全流程批处理重算' : 'Run Batch Recomputation' }}</span>
                 </button>
             </div>
         </div>
 
         <!-- SUB-NAVIGATION TABS: Ranking vs DOE Logger -->
-        <div style="display: flex; gap: 0.75rem; border-top: 1px solid #e2e8f0; padding-top: 1.25rem; margin-top: 1.25rem;">
+        <div style="display: flex; gap: 0.75rem; border-top: 1px solid #e2e8f0; padding-top: 1.1rem; margin-top: 1.1rem;">
             <button @click="optSubTab = 'ranking'" 
                     :style="{ background: optSubTab === 'ranking' ? '#0f172a' : '#f1f5f9', color: optSubTab === 'ranking' ? '#ffffff' : '#475569', boxShadow: optSubTab === 'ranking' ? '0 2px 8px rgba(15,23,42,0.25)' : 'none' }"
-                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.25rem; border-radius: 10px; font-size: 0.88rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s;">
+                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.2rem; border-radius: 10px; font-size: 0.86rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s;">
                 <span>📊</span>
-                <span>{{ currentLang === 'zh' ? '全厂潜力排行与机理推荐' : 'Plant Potential Ranking & Prescriptions' }}</span>
+                <span>{{ currentLang === 'zh' ? '节能潜力排行与诊断' : 'Potential Ranking & Step Diagnosis' }}</span>
             </button>
             <button @click="optSubTab = 'doe_logger'" 
                     :style="{ background: optSubTab === 'doe_logger' ? 'linear-gradient(135deg, #ff9f00 0%, #ea580c 100%)' : '#f1f5f9', color: optSubTab === 'doe_logger' ? '#ffffff' : '#475569', boxShadow: optSubTab === 'doe_logger' ? '0 4px 14px rgba(234,88,12,0.35)' : 'none' }"
-                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.25rem; border-radius: 10px; font-size: 0.88rem; font-weight: 800; border: none; cursor: pointer; transition: all 0.2s;">
+                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.2rem; border-radius: 10px; font-size: 0.86rem; font-weight: 800; border: none; cursor: pointer; transition: all 0.2s;">
                 <span>📝</span>
-                <span>{{ currentLang === 'zh' ? '实测 DOE 实验记录与 SOP 追踪' : 'Empirical DOE Trial Logger & SOP Tracker' }}</span>
+                <span>{{ currentLang === 'zh' ? '实测 DOE 工作台' : 'Empirical DOE Workbench' }}</span>
                 <span v-if="doeRecords.length > 0" style="padding: 0.1rem 0.45rem; border-radius: 10px; font-size: 0.72rem; background: rgba(255,255,255,0.25); color: white;">
                     {{ doeRecords.length }}
                 </span>
@@ -78,8 +70,8 @@
                         <span>🏆</span>
                         <span>{{ currentLang === 'zh' ? '全厂胶料能耗优化潜力排行榜' : 'Plant-Wide Energy Saving Potential Ranking' }}</span>
                     </h3>
-                    <p style="color: #64748b; font-size: 0.82rem; margin-top: 0.25rem;">
-                        {{ currentLang === 'zh' ? '以实测车次单耗极差 (P85 - P15) 衡量工艺离散度，结合年化混炼产量测算总节电潜力 MWh。点击胶料行可一键联动下方分步诊断。' : 'Evaluated by batch energy spread (P85-P15) weighted with annual tons. Click any row to load step diagnosis.' }}
+                    <p style="color: #64748b; font-size: 0.8rem; margin: 0.2rem 0 0 0;">
+                        {{ currentLang === 'zh' ? '按车次单耗极差 (P85 - P15) 与产量评估节电潜力，点击胶料行联动下方诊断。' : 'Ranked by batch energy spread (P85 - P15) and production tons. Click any row to load diagnosis.' }}
                     </p>
                 </div>
 
@@ -526,8 +518,8 @@
                         待输入工单号核验
                     </span>
                 </div>
-                <div style="font-size: 0.78rem; color: #64748b;">
-                    支持检索全厂 360 个生产工单 21,040 真实车次高频遥测库
+                <div style="font-size: 0.75rem; color: #64748b;">
+                    SFE 生产遥测库在线
                 </div>
             </div>
 
@@ -536,8 +528,8 @@
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <label style="font-size: 0.85rem; font-weight: 700; color: #334155;">生产工单号:</label>
                     <input type="text" v-model="doeOrderIdInput" @keyup.enter="verifyOrder(doeOrderIdInput)" 
-                           placeholder="输入工单号，如 1593306..." 
-                           style="padding: 0.55rem 0.9rem; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem; font-weight: 700; width: 180px; background: #f8fafc; outline: none;">
+                           placeholder="输入工单号，如 8176375..." 
+                           style="padding: 0.55rem 0.9rem; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem; font-weight: 700; width: 170px; background: #f8fafc; outline: none;">
                     <button @click="verifyOrder(doeOrderIdInput)" :disabled="doeQueryLoading"
                             style="padding: 0.55rem 1.15rem; border-radius: 8px; font-size: 0.85rem; font-weight: 700; background: #0f172a; color: white; border: none; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem;">
                         <span v-if="doeQueryLoading">⏳ 查询中...</span>
@@ -545,26 +537,20 @@
                     </button>
                 </div>
 
-                <!-- Quick Recommendation Chips -->
-                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                    <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">推荐在库工单:</span>
-                    <button @click="quickLoadOrder('1593306')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #fdf4ff; color: #9333ea; border: 1px solid #f0abfc; cursor: pointer;">
-                        1593306 (T15760 白炭黑 55车)
+                <!-- Quick Recommendation Chips (Streamlined to 4 compact pills) -->
+                <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                    <span style="font-size: 0.76rem; color: #64748b; font-weight: 600;">推荐在库工单:</span>
+                    <button @click="quickLoadOrder('8176375')" style="padding: 0.22rem 0.55rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; cursor: pointer;">
+                        8176375 (T15760)
                     </button>
-                    <button @click="quickLoadOrder('8101635')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; cursor: pointer;">
-                        8101635 (T15760 白炭黑 60车)
+                    <button @click="quickLoadOrder('8181612')" style="padding: 0.22rem 0.55rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; cursor: pointer;">
+                        8181612 (T15760)
                     </button>
-                    <button @click="quickLoadOrder('8113482')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; cursor: pointer;">
-                        8113482 (T15760 白炭黑 73车)
+                    <button @click="quickLoadOrder('8181298')" style="padding: 0.22rem 0.55rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; cursor: pointer;">
+                        8181298 (B15563)
                     </button>
-                    <button @click="quickLoadOrder('8110496')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; cursor: pointer;">
-                        8110496 (B00163 炭黑 61车)
-                    </button>
-                    <button @click="quickLoadOrder('8098831')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; cursor: pointer;">
-                        8098831 (B00458 炭黑 111车)
-                    </button>
-                    <button @click="quickLoadOrder('8098313')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; cursor: pointer;">
-                        8098313 (B00460B 炭黑 196车)
+                    <button @click="quickLoadOrder('8181602')" style="padding: 0.22rem 0.55rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; cursor: pointer;">
+                        8181602 (B00458)
                     </button>
                 </div>
             </div>
@@ -617,8 +603,8 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
                 <div style="display: flex; align-items: center; gap: 0.6rem;">
                     <span style="font-size: 1.3rem;">📊</span>
-                    <h3 style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0;">
-                        当前工单车次能耗分布走势与分位标杆 (共 {{ doeOrderData.total_batches }} 车)
+                    <h3 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0;">
+                        工单车次能耗分布走势 (共 {{ doeOrderData.total_batches }} 车)
                     </h3>
                     <span style="padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;">
                         单车比能耗 kWh/t
@@ -626,21 +612,21 @@
                 </div>
 
                 <!-- Quantile summary stats badges -->
-                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; border-radius: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; font-size: 0.74rem;">
-                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #16a34a;"></span>
-                        <span style="color: #15803d; font-weight: 700;">P15 黄金低耗: {{ doeOrderData.p15_kwh_t }} kWh/t</span>
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.55rem; border-radius: 6px; background: #f0fdf4; border: 1px solid #bbf7d0; font-size: 0.74rem;">
+                        <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #16a34a;"></span>
+                        <span style="color: #15803d; font-weight: 700;">P15: {{ doeOrderData.p15_kwh_t }} kWh/t</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 0.74rem;">
-                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #0284c7;"></span>
-                        <span style="color: #0369a1; font-weight: 700;">P50 中位基线: {{ doeOrderData.p50_kwh_t }} kWh/t</span>
+                    <div style="display: flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.55rem; border-radius: 6px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 0.74rem;">
+                        <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #0284c7;"></span>
+                        <span style="color: #0369a1; font-weight: 700;">P50: {{ doeOrderData.p50_kwh_t }} kWh/t</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; border-radius: 8px; background: #fff1f2; border: 1px solid #fecdd3; font-size: 0.74rem;">
-                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #e11d48;"></span>
-                        <span style="color: #be123c; font-weight: 700;">P85 偏高能耗: {{ doeOrderData.p85_kwh_t }} kWh/t</span>
+                    <div style="display: flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.55rem; border-radius: 6px; background: #fff1f2; border: 1px solid #fecdd3; font-size: 0.74rem;">
+                        <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #e11d48;"></span>
+                        <span style="color: #be123c; font-weight: 700;">P85: {{ doeOrderData.p85_kwh_t }} kWh/t</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; border-radius: 8px; background: #fff7ed; border: 1px solid #fed7aa; font-size: 0.74rem;">
-                        <span style="color: #ea580c; font-weight: 800;">ΔE 极差: {{ doeOrderData.spread_kwh_t }} kWh/t</span>
+                    <div style="display: flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.55rem; border-radius: 6px; background: #fff7ed; border: 1px solid #fed7aa; font-size: 0.74rem;">
+                        <span style="color: #ea580c; font-weight: 800;">极差: {{ doeOrderData.spread_kwh_t }} kWh/t</span>
                     </div>
                 </div>
             </div>
@@ -933,20 +919,17 @@
                         2. 实验车次范围与工步参数修改设置
                     </h3>
                 </div>
-                <!-- Presets Buttons -->
+                <!-- Presets Buttons (Streamlined to 3 core presets) -->
                 <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
-                    <span style="font-size: 0.76rem; color: #64748b; font-weight: 600;">快速处方预设:</span>
-                    <button @click="applyModificationPreset('silica_msb_dur')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; cursor: pointer;">
-                        白炭黑 MSB 降时 10s
+                    <span style="font-size: 0.76rem; color: #64748b; font-weight: 600;">快速预设:</span>
+                    <button @click="applyModificationPreset('silica_msb_dur')" style="padding: 0.22rem 0.55rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; cursor: pointer;">
+                        白炭黑均化 -10s
                     </button>
-                    <button @click="applyModificationPreset('silica_mst_speed')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; cursor: pointer;">
-                        白炭黑 MST 降速 5 RPM
+                    <button @click="applyModificationPreset('cb_msb_dur')" style="padding: 0.22rem 0.55rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; cursor: pointer;">
+                        炭黑下密炼 -30s
                     </button>
-                    <button @click="applyModificationPreset('cb_msb_dur')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; cursor: pointer;">
-                        炭黑 MSB 降时 30s
-                    </button>
-                    <button @click="applyModificationPreset('mst_dump_temp')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; cursor: pointer;">
-                        提前排胶 -3°C
+                    <button @click="applyModificationPreset('silica_mst_speed')" style="padding: 0.22rem 0.55rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; cursor: pointer;">
+                        上密炼转速 -5 RPM
                     </button>
                 </div>
             </div>
@@ -1053,8 +1036,8 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
                 <div style="display: flex; align-items: center; gap: 0.6rem;">
                     <span style="font-size: 1.3rem;">⚡</span>
-                    <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0;">
-                        3. 实验节能结果自动测算与详细车次能量变化动态
+                    <h3 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0;">
+                        3. 实验节能测算与车次动态追踪
                     </h3>
                 </div>
                 <div style="font-size: 0.78rem; color: #64748b;">
@@ -1134,12 +1117,12 @@
                     <div>
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                             <span style="font-size: 1.15rem;">📈</span>
-                            <span style="font-size: 0.98rem; font-weight: 800; color: #0f172a;">
-                                车次单车多阶段折线走势图与阶跃降耗追踪 (Batch Multi-Stage Dynamic Polyline)
+                            <span style="font-size: 0.95rem; font-weight: 800; color: #0f172a;">
+                                车次多阶段走势与阶跃降耗追踪
                             </span>
                         </div>
-                        <div style="font-size: 0.76rem; color: #64748b; margin-top: 0.25rem;">
-                            按工序阶段查看逐车能耗/时长/温度走势折线图，自适应 Y 轴动态高精度缩放，彻底消除平铺效应，清晰展现阶跃降耗与车次稳定性。
+                        <div style="font-size: 0.76rem; color: #64748b; margin-top: 0.2rem;">
+                            按工序阶段自适应缩放，直观展现阶跃降耗与车次稳定性。
                         </div>
                     </div>
 
@@ -1346,18 +1329,18 @@
                 <div>
                     <div style="display: flex; align-items: center; gap: 0.6rem;">
                         <span style="font-size: 1.3rem;">🧪</span>
-                        <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0;">
-                            4. 车次门尼粘度检测填报与 DOE 质量闭环
+                        <h3 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0;">
+                            4. 车次门尼检测与质检核验
                         </h3>
                     </div>
-                    <p style="color: #64748b; font-size: 0.8rem; margin: 0.2rem 0 0 0;">
-                        针对实验调整车次填报实验室实测门尼粘度 ML(1+4)@100°C，系统自动执行公差带核验、偏离度分析与防絮凝质量判定。
+                    <p style="color: #64748b; font-size: 0.78rem; margin: 0.2rem 0 0 0;">
+                        录入实测门尼 ML(1+4)@100°C，核验规格符合性与工艺稳定性。
                     </p>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button @click="loadDbMooney" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.5rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; cursor: pointer;">
+                    <button @click="loadDbMooney" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.8rem; border-radius: 8px; font-size: 0.78rem; font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; cursor: pointer;">
                         <span>📥</span>
-                        <span>一键载入化验室质检门尼</span>
+                        <span>一键载入质检门尼</span>
                     </button>
                 </div>
             </div>
@@ -1474,25 +1457,25 @@
                 <div>
                     <div style="display: flex; align-items: center; gap: 0.6rem;">
                         <span style="font-size: 1.3rem;">💾</span>
-                        <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0;">
+                        <h3 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0;">
                             5. 实验永久归档与历史 DOE 知识库
                         </h3>
                     </div>
-                    <p style="color: #64748b; font-size: 0.8rem; margin: 0.2rem 0 0 0;">
-                        已保存的实验参数、节能结果与门尼闭环质检数据将被永久固化至服务器与本地存储，支持随时复现、导出与 SOP 固化。
+                    <p style="color: #64748b; font-size: 0.78rem; margin: 0.2rem 0 0 0;">
+                        实验数据永久固化至服务器与本地存储，支持复现、导出与 SOP 长效跟踪。
                     </p>
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                     <!-- Save Current Record Button -->
-                    <button @click="saveCurrentDoeRecord" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.35rem; border-radius: 10px; font-size: 0.88rem; font-weight: 800; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: white; cursor: pointer; box-shadow: 0 4px 14px rgba(16,185,129,0.35); transition: all 0.2s;">
+                    <button @click="saveCurrentDoeRecord" style="display: flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.25rem; border-radius: 10px; font-size: 0.86rem; font-weight: 800; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: white; cursor: pointer; box-shadow: 0 4px 14px rgba(16,185,129,0.35); transition: all 0.2s;">
                         <span>💾</span>
-                        <span>永久保存本次 DOE 实验记录</span>
+                        <span>保存本次记录</span>
                     </button>
                     <!-- Export CSV Button -->
-                    <button @click="exportDoeRecordsCSV" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.65rem 1rem; border-radius: 10px; font-size: 0.82rem; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; cursor: pointer;">
+                    <button @click="exportDoeRecordsCSV" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.6rem 0.95rem; border-radius: 10px; font-size: 0.8rem; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; cursor: pointer;">
                         <span>📥</span>
-                        <span>导出归档表(CSV)</span>
+                        <span>导出归档(CSV)</span>
                     </button>
                 </div>
             </div>

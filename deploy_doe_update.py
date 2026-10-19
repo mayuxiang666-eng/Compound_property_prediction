@@ -40,7 +40,7 @@ def deploy():
     # Bump cache-busting version for energy_optimizer_module.js
     new_index_content = re.sub(
         r'src="energy_optimizer_module\.js\?v=[^"]*"',
-        'src="energy_optimizer_module.js?v=20261019-doe-v3"',
+        'src="energy_optimizer_module.js?v=20261019-doe-v4"',
         new_index_content
     )
 
