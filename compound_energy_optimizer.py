@@ -480,50 +480,56 @@ class CompoundEnergyOptimizer:
             e_sec2_kwh, e_sec2_kwh_t, delta_t_msb2 = 0, 0, 0
 
         # =====================================================================
-        # 3. ENFORCE PID TOTAL DURATION HARD RULE GATE ON MSB TIME ADJUSTMENTS
+        # 3. ENFORCE PID TOTAL DURATION HARD RULE GATE (SILICA COMPOUNDS ONLY)
         # =====================================================================
-        # Check if compound is a 2-step Non-PID fast-MSB Carbon Black recipe (B00458 / B00163)
-        # where current duration (80.2s / 92.3s) is below the 130s Target-155°C floor
+        is_silica = str(compound_name).startswith('M1-T')
         raw_total_msb_cut = delta_t_msb1 + delta_t_msb2
         effective_curr_total_s = min(curr_pid_total_s, curr_pid_total_med_s)
         hard_rule_note = ""
 
-        if effective_curr_total_s < pid_min_s:
-            # Compound's current 2-step MSB duration is already below the Target 155°C [130, 230]s lower bound
-            # (e.g., B00458 at 80.2s and B00163 at 92.3s). Under the Hard Rule, NO MSB time cut is allowed
-            # on the 50.6s/60.6s recipe; only MST Step 7 (-5 RPM, which adds +3.0s/+3.5s) is permitted!
-            delta_t_msb1 = 0
-            delta_t_msb1_p2 = 0
-            delta_t_msb2 = 0
-            hard_rule_status = f"CLAMPED_BY_HARD_RULE (Curr {effective_curr_total_s:.1f}s < {pid_min_s:.0f}s: Hold MSB 0s, MST -5RPM adds +{mst_pid_delta_s:.1f}s)"
+        if not is_silica:
+            # Carbon Black compounds are exempt from the Silica PID Total Duration Hard Rule
+            hard_rule_tier_str = "Exempt (Carbon Black)"
+            pid_min_s = np.nan
+            pid_max_s = np.nan
+            hard_rule_status = "EXEMPT (CarbonBlack - Not Subject to Silica PID Rule)"
             hard_rule_note = (
-                f"Hard Rule [{pid_min_s:.0f}-{pid_max_s:.0f}s] Active: Current 2-step MSB recipe total ({effective_curr_total_s:.1f}s) "
-                f"is already below {pid_min_s:.0f}s (and B00458 is at the 80.2s absolute floor). "
-                f"MSB time cut is clamped to 0s; only MST S{int(best_mst['StepNo'])} {delta_rpm} RPM (+{mst_pid_delta_s:.1f}s) is executed."
+                f"Carbon Black compound ({compound_name}): Exempt from Silica PID Total Duration Hard Rule. "
+                f"Full MST S{int(best_mst['StepNo'])} ({delta_rpm} RPM) + MSB S1 ({delta_t_msb1}s)"
+                f"{f' + MSB S2 ({delta_t_msb2}s)' if delta_t_msb2 != 0 else ''} energy optimization applied."
             )
         else:
-            # Ensure Post-DOE Total PID Duration stays strictly >= pid_min_s + 2.0s safety margin
-            projected_total_s = effective_curr_total_s + mst_pid_delta_s + raw_total_msb_cut
-            if projected_total_s < pid_min_s + 2.0:
-                max_allowed_cut = max(0.0, (effective_curr_total_s + mst_pid_delta_s) - (pid_min_s + 2.0))
-                scale = max_allowed_cut / max(abs(raw_total_msb_cut), 1.0)
-                delta_t_msb1 = -int(round(abs(delta_t_msb1) * scale))
-                delta_t_msb2 = -int(round(abs(delta_t_msb2) * scale))
-                delta_t_msb1_p2 = delta_t_msb1
-                hard_rule_status = f"PASS_CLAMPED ({pid_min_s:.0f}-{pid_max_s:.0f}s)"
+            hard_rule_tier_str = pid_rule['tier_label']
+            if effective_curr_total_s < pid_min_s:
+                delta_t_msb1 = 0
+                delta_t_msb1_p2 = 0
+                delta_t_msb2 = 0
+                hard_rule_status = f"CLAMPED_BY_HARD_RULE (Curr {effective_curr_total_s:.1f}s < {pid_min_s:.0f}s: Hold MSB 0s)"
+                hard_rule_note = (
+                    f"Silica PID Hard Rule [{pid_min_s:.0f}-{pid_max_s:.0f}s] Active: Current PID duration ({effective_curr_total_s:.1f}s) "
+                    f"is below {pid_min_s:.0f}s. MSB time cut clamped to 0s."
+                )
             else:
-                # Also clamp Phase 2 (delta_t_msb1_p2) so Phase 2 never breaches pid_min_s + 2.0s
-                proj_p2 = effective_curr_total_s + mst_pid_delta_s + delta_t_msb1_p2 + delta_t_msb2
-                if proj_p2 < pid_min_s + 2.0:
+                projected_total_s = effective_curr_total_s + mst_pid_delta_s + raw_total_msb_cut
+                if projected_total_s < pid_min_s + 2.0:
+                    max_allowed_cut = max(0.0, (effective_curr_total_s + mst_pid_delta_s) - (pid_min_s + 2.0))
+                    scale = max_allowed_cut / max(abs(raw_total_msb_cut), 1.0)
+                    delta_t_msb1 = -int(round(abs(delta_t_msb1) * scale))
+                    delta_t_msb2 = -int(round(abs(delta_t_msb2) * scale))
                     delta_t_msb1_p2 = delta_t_msb1
-                hard_rule_status = f"PASS ({pid_min_s:.0f}-{pid_max_s:.0f}s)"
+                    hard_rule_status = f"PASS_CLAMPED ({pid_min_s:.0f}-{pid_max_s:.0f}s)"
+                else:
+                    proj_p2 = effective_curr_total_s + mst_pid_delta_s + delta_t_msb1_p2 + delta_t_msb2
+                    if proj_p2 < pid_min_s + 2.0:
+                        delta_t_msb1_p2 = delta_t_msb1
+                    hard_rule_status = f"PASS ({pid_min_s:.0f}-{pid_max_s:.0f}s)"
 
-            post_doe_check = curr_pid_total_s + mst_pid_delta_s + delta_t_msb1 + delta_t_msb2
-            hard_rule_note = (
-                f"Hard Rule {pid_rule['tier_label']} [{pid_min_s:.0f}-{pid_max_s:.0f}s]: "
-                f"Curr={curr_pid_total_s:.1f}s (MST {curr_pid_top_s:.1f}s + MSB {curr_pid_bottom_s:.1f}s) -> "
-                f"Post-DOE={post_doe_check:.1f}s [PASS]"
-            )
+                post_doe_check = curr_pid_total_s + mst_pid_delta_s + delta_t_msb1 + delta_t_msb2
+                hard_rule_note = (
+                    f"Silica PID Hard Rule {pid_rule['tier_label']} [{pid_min_s:.0f}-{pid_max_s:.0f}s]: "
+                    f"Curr={curr_pid_total_s:.1f}s (MST {curr_pid_top_s:.1f}s + MSB {curr_pid_bottom_s:.1f}s) -> "
+                    f"Post-DOE={post_doe_check:.1f}s [PASS]"
+                )
 
         post_doe_pid_top_s = curr_pid_top_s + mst_pid_delta_s
         post_doe_pid_bottom_s = curr_pid_bottom_s + delta_t_msb1 + delta_t_msb2
@@ -536,6 +542,7 @@ class CompoundEnergyOptimizer:
 
         return {
             'CompoundName': compound_name,
+            'IsSilica': is_silica,
             'EquipmentID': valid_batches['equip_id'].iloc[0],
             'SampleBatches': len(valid_batches),
             'Weight_kg': valid_batches['weight_kg'].mean(),
@@ -543,18 +550,18 @@ class CompoundEnergyOptimizer:
             'SpecEnergy_Mean_kWh_t': valid_batches['spec_energy_kwh_t'].mean(),
             'SpecEnergy_Low_kWh_t': valid_batches[valid_batches['EnergyTier']=='Golden_Low (P15)']['spec_energy_kwh_t'].mean(),
             'SpecEnergy_High_kWh_t': valid_batches[valid_batches['EnergyTier']=='High_Energy (P85)']['spec_energy_kwh_t'].mean(),
-            'PID_Target_Temp_C': pid_ref_temp,
-            'PID_HardRule_Tier': pid_rule['tier_label'],
+            'PID_Target_Temp_C': pid_ref_temp if is_silica else np.nan,
+            'PID_HardRule_Tier': hard_rule_tier_str,
             'PID_Band_Min_s': pid_min_s,
             'PID_Band_Max_s': pid_max_s,
-            'PID_Start_MST_Step': pid_start_step,
-            'Curr_PID_Top_MST_s': curr_pid_top_s,
+            'PID_Start_MST_Step': pid_start_step if is_silica else np.nan,
+            'Curr_PID_Top_MST_s': curr_pid_top_s if is_silica else np.nan,
             'Curr_PID_Bottom_MSB_s': curr_pid_bottom_s,
-            'Curr_PID_Total_s': curr_pid_total_s,
-            'Curr_PID_Total_LatestMed_s': curr_pid_total_med_s,
-            'PostDOE_PID_Top_MST_s': post_doe_pid_top_s,
+            'Curr_PID_Total_s': curr_pid_total_s if is_silica else np.nan,
+            'Curr_PID_Total_LatestMed_s': curr_pid_total_med_s if is_silica else np.nan,
+            'PostDOE_PID_Top_MST_s': post_doe_pid_top_s if is_silica else np.nan,
             'PostDOE_PID_Bottom_MSB_s': post_doe_pid_bottom_s,
-            'PostDOE_PID_Total_s': post_doe_pid_total_s,
+            'PostDOE_PID_Total_s': post_doe_pid_total_s if is_silica else np.nan,
             'PID_HardRule_Status': hard_rule_status,
             'PID_HardRule_Note': hard_rule_note,
             'StepProfile': step_df,
@@ -725,23 +732,23 @@ class CompoundEnergyOptimizer:
         for i, n in enumerate(all_10_names):
             d = diag_map[n]
             tot = d['Combined_EstSaving_kWh_t']
-            if d['MSB1_DeltaTime_s'] == 0 and d['MSB2_DeltaTime_s'] == 0:
-                msb_txt = f"MSB Hold 0s [PID Rule]"
+            msb_txt = f"MSB1 {d['MSB1_DeltaTime_s']}s" + (f"+MSB2 {d['MSB2_DeltaTime_s']}s" if d['MSB2_DeltaTime_s'] != 0 else "")
+            if d['IsSilica']:
+                pid_txt = f"PID:{d['Curr_PID_Total_s']:.0f}→{d['PostDOE_PID_Total_s']:.0f}s [{d['PID_Band_Min_s']:.0f}-{d['PID_Band_Max_s']:.0f}s PASS]"
             else:
-                msb_txt = f"MSB1 {d['MSB1_DeltaTime_s']}s" + (f"+MSB2 {d['MSB2_DeltaTime_s']}s" if d['MSB2_DeltaTime_s'] != 0 else "")
-            pid_txt = f"PID:{d['Curr_PID_Total_s']:.0f}→{d['PostDOE_PID_Total_s']:.0f}s [{d['PID_Band_Min_s']:.0f}-{d['PID_Band_Max_s']:.0f}s]"
+                pid_txt = "CB: Exempt from PID Rule"
             ax.text(tot + 0.12, i,
                     f"-{tot:.2f} kWh/t (MST S{d['PrimaryMST_StepNo']} {d['PrimaryMST_DeltaRPM']}RPM + {msb_txt} | {pid_txt})",
                     va='center', fontsize=7.8, fontweight='bold', color='#0F172A')
 
-        ax.set_xlim(0, 14.2)
+        ax.set_xlim(0, 16.2)
         ax.set_ylim(-0.6, len(all_10_names) + 0.8)
-        ax.set_xlabel('Expected Specific Energy Reduction Under PID Duration Hard Rule (kWh/t)', fontsize=10, fontweight='bold')
-        ax.set_title('D. Step-Level DOE Energy Reduction & PID Total Duration Hard Rule Gate', fontsize=11.5, fontweight='bold', color='#0F172A', pad=10)
+        ax.set_xlabel('Expected Specific Energy Reduction (kWh/t) [Silica PID Hard Rule Enforced; CB Exempt]', fontsize=10, fontweight='bold')
+        ax.set_title('D. Step-Level DOE Energy Reduction & Silica PID Total Duration Hard Rule Gate', fontsize=11.5, fontweight='bold', color='#0F172A', pad=10)
         ax.grid(axis='x', linestyle='--', alpha=0.4)
         ax.legend(loc='upper right', ncol=1, fontsize=8.2, frameon=True, facecolor='#FFFFFF', framealpha=0.95)
 
-        plt.suptitle('Plant-Wide Top 5 Carbon Black & Top 5 Silica Compounds: Energy Potential & PID Hard-Rule Compliant DOE Matrix',
+        plt.suptitle('Plant-Wide Top 5 Carbon Black & Top 5 Silica Compounds: Energy Potential & Step-Level DOE Matrix',
                      fontsize=13.5, fontweight='bold', color='#0F172A', y=0.98)
         plt.tight_layout(rect=[0, 0, 1, 0.95])
 
@@ -752,16 +759,16 @@ class CompoundEnergyOptimizer:
         plt.close(fig)
 
         # =====================================================================
-        # CHART 2: Deep Step-By-Step Telemetry & PID Hard Rule Basis (B00458, B00163, B00460B, T20153W)
+        # CHART 2: Deep Step-By-Step Telemetry & Optimization Basis (B00458, B00163, B00460B, T20153W)
         # =====================================================================
         fig, axes = plt.subplots(2, 2, figsize=(18.5, 12.8), dpi=160)
         fig.patch.set_facecolor('#F8FAFC')
 
         focus_compounds = [
-            ('M1-B00458---- 12 012', 'A. M1-B00458 (92-1020, 264.4 kg): Step Energy & PID Hard Rule Clamp'),
-            ('M1-B00163---- 08 010', 'B. M1-B00163 (92-1020, 267.2 kg): Step Energy & PID Hard Rule Clamp'),
-            ('M1-B00460B--- 04 010', 'C. M1-B00460B (92-1100, 407.3 kg): Step Energy & Target 155°C PID Gate'),
-            ('M1-T20153W--- 01 001', 'D. M1-T20153W (92-1090, 267.9 kg): Step Energy & Target 165°C PID Gate')
+            ('M1-B00458---- 12 012', 'A. M1-B00458 (92-1020, 264.4 kg, CB Exempt): Step Energy & DOE Target'),
+            ('M1-B00163---- 08 010', 'B. M1-B00163 (92-1020, 267.2 kg, CB Exempt): Step Energy & DOE Target'),
+            ('M1-B00460B--- 04 010', 'C. M1-B00460B (92-1100, 407.3 kg, CB Exempt): Step Energy & DOE Target'),
+            ('M1-T20153W--- 01 001', 'D. M1-T20153W (92-1090, 267.9 kg, Silica): Step Energy & 165°C PID Gate [80-140s]')
         ]
 
         legend_handles = []
@@ -800,18 +807,22 @@ class CompoundEnergyOptimizer:
             ax.set_title(title, fontsize=11, fontweight='bold', color='#0F172A', pad=10)
             ax.grid(axis='y', linestyle='--', alpha=0.35)
 
-            if d['MSB1_DeltaTime_s'] == 0 and d['MSB2_DeltaTime_s'] == 0:
-                msb_action_str = f"MSB S1/S2: Hold 0s (Clamped by PID Hard Rule: Curr {d['Curr_PID_Total_LatestMed_s']:.1f}s < {d['PID_Band_Min_s']:.0f}s)"
+            msb2_str = f" + MSB S2 {d['MSB2_DeltaTime_s']}s" if d['MSB2_DeltaTime_s'] != 0 else ""
+            msb_action_str = f"MSB S1: {d['MSB1_CurrTime_s']:.0f}→{d['MSB1_CurrTime_s']+d['MSB1_DeltaTime_s']:.0f}s ({d['MSB1_DeltaTime_s']}s){msb2_str}"
+
+            if d['IsSilica']:
+                rule_line = (
+                    f"Silica PID Hard Rule ({d['PID_HardRule_Tier']}: {d['PID_Band_Min_s']:.0f}-{d['PID_Band_Max_s']:.0f}s): "
+                    f"MST_PID({d['Curr_PID_Top_MST_s']:.1f}s)+MSB({d['Curr_PID_Bottom_MSB_s']:.1f}s)={d['Curr_PID_Total_s']:.1f}s → Post-DOE={d['PostDOE_PID_Total_s']:.1f}s [PASS]"
+                )
             else:
-                msb2_str = f" + MSB S2 {d['MSB2_DeltaTime_s']}s" if d['MSB2_DeltaTime_s'] != 0 else ""
-                msb_action_str = f"MSB S1: {d['MSB1_CurrTime_s']:.0f}→{d['MSB1_CurrTime_s']+d['MSB1_DeltaTime_s']:.0f}s ({d['MSB1_DeltaTime_s']}s){msb2_str}"
+                rule_line = "Filler System: Carbon Black (Exempt from Silica PID Duration Hard Rule; Full MST+MSB DOE Applied)"
 
             box_txt = (
                 f"DOE Action: MST S{d['PrimaryMST_StepNo']}: {d['PrimaryMST_CurrRPM']}→{d['PrimaryMST_TargetRPM']} RPM ({d['PrimaryMST_DeltaRPM']} RPM) | {msb_action_str}\n"
-                f"PID Hard Rule ({d['PID_HardRule_Tier']}: {d['PID_Band_Min_s']:.0f}-{d['PID_Band_Max_s']:.0f}s): "
-                f"MST_PID({d['Curr_PID_Top_MST_s']:.1f}s)+MSB({d['Curr_PID_Bottom_MSB_s']:.1f}s)={d['Curr_PID_Total_s']:.1f}s → Post-DOE={d['PostDOE_PID_Total_s']:.1f}s\n"
+                f"{rule_line}\n"
                 f"Basis: MST S{d['PrimaryMST_StepNo']} P={d['PrimaryMST_Power_kW']:.0f}kW (W={d['PrimaryMST_VarContrib_pct']:.1f}%, ΔP≈-{d['PrimaryMST_EstPowerDrop_kW']:.0f}kW) "
-                f"→ Compliant Saving: -{d['Combined_EstSaving_kWh_t']:.2f} kWh/t"
+                f"+ MSB Rate={d['MSB1_MarginalRate_kWh_t_s']:.3f}kWh/t/s → Est. Saving: -{d['Combined_EstSaving_kWh_t']:.2f} kWh/t"
             )
             ax.text(0.02, 0.96, box_txt, transform=ax.transAxes, va='top', ha='left', fontsize=7.7, fontweight='bold',
                     color='#0F172A', bbox=dict(boxstyle='round,pad=0.35', facecolor='#FEF3C7', edgecolor='#F59E0B', alpha=0.94))
@@ -820,7 +831,7 @@ class CompoundEnergyOptimizer:
             fig.legend(legend_handles, ['Golden Low Batch ($P_{15}$ Step Energy kWh)', 'High Energy Batch ($P_{85}$ Step Energy kWh)', 'Step Variance Contribution $W_i$ (%)'],
                        loc='upper center', bbox_to_anchor=(0.5, 0.955), ncol=3, fontsize=9.5, frameon=True, facecolor='#FFFFFF')
 
-        plt.suptitle('Step-Level Telemetry Diagnosis & PID Total Duration Hard Rule (165°C: 80-140s | 155°C: 130-230s | 142°C: 270-330s)',
+        plt.suptitle('Step-Level Telemetry Diagnosis & Calculation Basis (Silica PID Hard Rule: 80-140s | Carbon Black: Exempt)',
                      fontsize=13.5, fontweight='bold', color='#0F172A', y=0.985)
         plt.tight_layout(rect=[0, 0, 1, 0.93])
 
@@ -833,7 +844,7 @@ class CompoundEnergyOptimizer:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Automated Compound Energy Optimizer with PID Hard Rule')
+    parser = argparse.ArgumentParser(description='Automated Compound Energy Optimizer with Silica PID Hard Rule')
     parser.add_argument('--mode', choices=['rank', 'diagnose', 'all'], default='all')
     parser.add_argument('--top', type=int, default=5)
     parser.add_argument('--compounds', nargs='*', default=None)
@@ -868,9 +879,12 @@ if __name__ == '__main__':
             print(f"\n======================================================================")
             print(f"COMPOUND: {res['CompoundName']} | Line: {res['EquipmentID']} | Sample Batches: {res['SampleBatches']} | Weight: {res['Weight_kg']:.1f} kg")
             print(f"Specific Energy: Mean={res['SpecEnergy_Mean_kWh_t']:.2f} kWh/t | Golden_Low(P15)={res['SpecEnergy_Low_kWh_t']:.2f} | High(P85)={res['SpecEnergy_High_kWh_t']:.2f}")
-            print(f"PID Hard Rule ({res['PID_HardRule_Tier']}, Band [{res['PID_Band_Min_s']:.0f}-{res['PID_Band_Max_s']:.0f}s]):")
-            print(f"  Curr PID Total = {res['Curr_PID_Total_s']:.1f}s (MST S{res['PID_Start_MST_Step']}+: {res['Curr_PID_Top_MST_s']:.1f}s + MSB: {res['Curr_PID_Bottom_MSB_s']:.1f}s) | LatestMed = {res['Curr_PID_Total_LatestMed_s']:.1f}s")
-            print(f"  Post-DOE PID Total = {res['PostDOE_PID_Total_s']:.1f}s (MST: {res['PostDOE_PID_Top_MST_s']:.1f}s + MSB: {res['PostDOE_PID_Bottom_MSB_s']:.1f}s) -> Status: {res['PID_HardRule_Status']}")
+            if res['IsSilica']:
+                print(f"Silica PID Hard Rule ({res['PID_HardRule_Tier']}, Band [{res['PID_Band_Min_s']:.0f}-{res['PID_Band_Max_s']:.0f}s]):")
+                print(f"  Curr PID Total = {res['Curr_PID_Total_s']:.1f}s (MST S{int(res['PID_Start_MST_Step'])}+: {res['Curr_PID_Top_MST_s']:.1f}s + MSB: {res['Curr_PID_Bottom_MSB_s']:.1f}s)")
+                print(f"  Post-DOE PID Total = {res['PostDOE_PID_Total_s']:.1f}s (MST: {res['PostDOE_PID_Top_MST_s']:.1f}s + MSB: {res['PostDOE_PID_Bottom_MSB_s']:.1f}s) -> Status: {res['PID_HardRule_Status']}")
+            else:
+                print(f"PID Hard Rule Status: {res['PID_HardRule_Status']}")
             print(f"----------------------------------------------------------------------")
             sp = res['StepProfile']
             print(sp[['StepLabel', 'Speed_RPM_Mean', 'Time_s_Mean', 'Energy_kWh_Mean', 'Power_kW_Mean', 'Temp_C_Mean', 'E_Low_kWh', 'E_High_kWh', 'Delta_E_High_Low_kWh', 'VarianceContribution_pct']].to_string(index=False))
@@ -889,7 +903,7 @@ if __name__ == '__main__':
                     print(f"          contributing {res['MSB2_VarContrib_pct']:.1f}% of energy variance. Cutting {abs(res['MSB2_DeltaTime_s'])}s saves -{res['MSB2_EstSaving_kWh']:.2f} kWh/batch (-{res['MSB2_EstSaving_kWh_t']:.2f} kWh/t).")
             else:
                 print(f"[Recommendation 2 - MSB] HOLD MSB Duration (0s change): {res['PID_HardRule_Note']}")
-            print(f"[Combined Expected Saving (Hard-Rule Compliant)] -{res['Combined_EstSaving_kWh_t']:.2f} kWh/t")
+            print(f"[Combined Expected Saving] -{res['Combined_EstSaving_kWh_t']:.2f} kWh/t")
 
             row_copy = {k: v for k, v in res.items() if k != 'StepProfile'}
             diag_summaries.append(row_copy)
