@@ -1,0 +1,2189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Continental 混炼工艺 DOE 决策工作台与实测评估系统 | Continental Mixing DOE System</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .conti-orange { color: #FFA500; }
+    .bg-conti-orange { background-color: #FFA500; }
+    .border-conti-orange { border-color: #FFA500; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Left: Logo & Title -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 font-bold text-xl shadow-inner">
+            <i class="fa-solid fa-industry"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="font-extrabold text-lg tracking-wider text-white">CONTINENTAL</span>
+              <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">MIXING DOE 2.0</span>
+            </div>
+            <p class="text-xs text-slate-400" id="header-subtitle">橡胶混炼能耗优化实验工作台与工单评估器 (转速以 5 RPM 起调)</p>
+          </div>
+        </div>
+
+        <!-- Center: Navigation Tabs -->
+        <nav class="flex space-x-1.5 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
+          <button id="nav-tab-profiler" onclick="switchTab('profiler')" class="px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all duration-200 flex items-center space-x-2 bg-amber-500 text-slate-950 shadow-md">
+            <i class="fa-solid fa-sliders"></i>
+            <span id="nav-text-profiler">配方优化与能耗工作台</span>
+          </button>
+          <button id="nav-tab-evaluator" onclick="switchTab('evaluator')" class="px-3.5 py-2 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 flex items-center space-x-2 text-slate-300 hover:text-white hover:bg-slate-800">
+            <i class="fa-solid fa-vial-circle-check"></i>
+            <span id="nav-text-evaluator">实验工单实测评估器</span>
+          </button>
+          <button id="nav-tab-rules" onclick="switchTab('rules')" class="px-3.5 py-2 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 flex items-center space-x-2 text-slate-300 hover:text-white hover:bg-slate-800">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span id="nav-text-rules">工艺约束规则集</span>
+          </button>
+        </nav>
+
+        <!-- Right: Language Switcher Button & Engine Status -->
+        <div class="flex items-center space-x-3">
+          <button id="btn-lang-toggle" onclick="toggleLanguage()" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-amber-400 border border-amber-500/40 transition duration-150 flex items-center space-x-1.5 shadow-sm">
+            <i class="fa-solid fa-globe"></i>
+            <span id="lang-btn-text">English (全英文版)</span>
+          </button>
+
+          <div class="hidden lg:flex items-center space-x-2 text-xs text-slate-400 border-l border-slate-800 pl-3">
+            <span class="flex h-2 w-2 relative">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span id="engine-status-text">机理引擎在线</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- ========================================== -->
+    <!-- TAB 2: 实验工单实测评估器 (TRIAL EVALUATOR) -->
+    <!-- ========================================== -->
+    <section id="section-evaluator" class="hidden space-y-6">
+      
+      <!-- Input Panel & Structured Modification Table -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        
+        <!-- Header & Quick Select -->
+        <div class="space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                <i class="fa-solid fa-flask-vial text-amber-400"></i>
+                <span id="eval-header-title">实验工单实测数据闭环评估</span>
+              </h2>
+              <p class="text-xs md:text-sm text-slate-400 mt-1" id="eval-header-desc">
+                输入实验工单号，以结构化表格精确登记各工步的修改设定；系统将深入批次数据库遍历各车次实际传感器信号与 QC 门尼粘度，多维度比对保真度与节能成效。
+              </p>
+            </div>
+            
+            <!-- Target Order ID Input -->
+            <div class="w-full sm:w-64">
+              <label class="block text-xs font-semibold text-slate-300 mb-1" id="label-order-id">实验工单号 (Order ID) <span class="text-rose-400">*</span></label>
+              <div class="relative">
+                <input type="text" id="input-order-id" placeholder="8113482" value="8113482" 
+                       class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 font-mono text-base focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
+                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-500">
+                  <i class="fa-solid fa-barcode"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Select Order Chips -->
+          <div>
+            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2" id="quick-order-label">
+              快速选择已知实验单 / 对照单进行一键体验：
+            </label>
+            <div class="flex flex-wrap gap-2" id="quick-order-chips">
+              <!-- Injected by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- STRUCTURED MODIFICATIONS MATRIX TABLE (REPLACES TEXTAREA) -->
+        <!-- ======================================================== -->
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-inner space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+            <div>
+              <div class="flex items-center space-x-2">
+                <span class="w-2 h-4 bg-amber-500 rounded-full"></span>
+                <h3 class="font-bold text-sm text-white" id="mod-table-title">📋 实验修改内容登记矩阵 (Structured Trial Modification Matrix)</h3>
+              </div>
+              <p class="text-xs text-slate-400 mt-0.5" id="mod-table-subtitle">
+                按工步独立指定实验修改的时长、转速 (必须以 5 RPM 步进) 与目标温度；支持添加多道工步。
+              </p>
+            </div>
+
+            <!-- Table Action Buttons -->
+            <div class="flex items-center space-x-2">
+              <button onclick="loadPrescriptiveToTrialTable()" type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/40 transition flex items-center space-x-1.5">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span id="btn-load-prescriptive">✨ 载入当前胶料推荐方案</span>
+              </button>
+              <button onclick="addTrialModRow()" type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center space-x-1.5">
+                <i class="fa-solid fa-plus"></i>
+                <span id="btn-add-step">➕ 添加修改工步</span>
+              </button>
+              <button onclick="clearTrialModRows()" type="button" class="px-2.5 py-1.5 rounded-lg text-xs text-slate-500 hover:text-rose-400 hover:bg-slate-900 border border-slate-800 transition" title="清空所有修改行">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Modification Rows Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-900/90 text-slate-400 border-b border-slate-800 uppercase font-semibold">
+                  <th class="py-2.5 px-3 w-64" id="th-mod-step">修改工序 / 阶段 (Stage / Step)</th>
+                  <th class="py-2.5 px-3 w-48 text-slate-500" id="th-mod-base">原配方基准设定 (Base SP)</th>
+                  <th class="py-2.5 px-3 w-36" id="th-mod-dur">实验设定时长 (Duration SP, s)</th>
+                  <th class="py-2.5 px-3 w-36 text-blue-300" id="th-mod-rpm">实验设定转速 (Speed SP, RPM)</th>
+                  <th class="py-2.5 px-3 w-36 text-rose-300" id="th-mod-temp">实验设定温度 (Temp SP, °C)</th>
+                  <th class="py-2.5 px-3 text-amber-300" id="th-mod-delta">设定调幅核算 (Calculated ΔSP)</th>
+                  <th class="py-2.5 px-2 text-center w-12" id="th-mod-action">操作</th>
+                </tr>
+              </thead>
+              <tbody id="trial-mods-tbody" class="divide-y divide-slate-800/60 font-sans">
+                <!-- Dynamically Populated Rows -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Context Notes & Submit Button -->
+          <div class="flex flex-col md:flex-row items-center justify-between gap-4 pt-3 border-t border-slate-800/80">
+            <div class="w-full md:w-2/3">
+              <input type="text" id="input-notes" placeholder="可选: 输入实验背景、测试目的或现场备注 (例如: MSB -10s DOE 验证批次)"
+                     class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-500">
+            </div>
+            
+            <div class="w-full md:w-auto">
+              <button onclick="runTrialEvaluation()" id="btn-run-eval" class="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold rounded-xl shadow-lg transition duration-200 flex items-center justify-center space-x-2 text-sm">
+                <i class="fa-solid fa-database"></i>
+                <span id="btn-eval-text">🚀 提交实验设定并执行数据库全景检索分析</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Loading State -->
+      <div id="eval-loading" class="hidden text-center py-12">
+        <i class="fa-solid fa-circle-notch fa-spin text-4xl text-amber-500"></i>
+        <p class="text-slate-400 mt-3 text-sm" id="eval-loading-text">正在检索批次遥测数据与 QC 门尼报告...</p>
+      </div>
+
+      <!-- Evaluation Result Section -->
+      <div id="eval-result-container" class="hidden space-y-6">
+
+        <!-- Verdict Banner -->
+        <div id="verdict-banner" class="border rounded-2xl p-6 shadow-xl transition-all">
+          <!-- Injected via JS -->
+        </div>
+
+        <!-- NEW: Step-by-Step Trial Modification vs. Execution Fidelity Audit Matrix -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+            <div class="flex items-center space-x-2.5">
+              <span class="w-2 h-4 bg-emerald-500 rounded-full"></span>
+              <h4 class="font-bold text-sm text-white" id="audit-matrix-title">工步实验修改与实测执行保真度比对矩阵 (Fidelity Audit Matrix)</h4>
+            </div>
+            <span class="text-xs text-slate-400" id="audit-matrix-sub">逐工步检验设定目标 SP 与机台实测 AV 的偏离度与单步节电贡献</span>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-950 text-slate-400 border-b border-slate-800 uppercase font-semibold">
+                  <th class="py-2.5 px-3">修改工步名称</th>
+                  <th class="py-2.5 px-3">实验设定目标 (Trial SP)</th>
+                  <th class="py-2.5 px-3 bg-slate-900/60 text-amber-300">数据库实测执行均值 (Actual AV)</th>
+                  <th class="py-2.5 px-3 text-right">执行偏差 (Offset)</th>
+                  <th class="py-2.5 px-3 text-right">保真度 (Fidelity)</th>
+                  <th class="py-2.5 px-3 text-right">阶段节电贡献</th>
+                  <th class="py-2.5 px-3 text-center">状态评级</th>
+                </tr>
+              </thead>
+              <tbody id="eval-fidelity-tbody" class="divide-y divide-slate-800/60 font-sans">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 4 Diagnostic KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="eval-kpi-cards">
+          <!-- Injected via JS -->
+        </div>
+
+        <!-- Telemetry Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Chart 1: Energy Trend -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <div class="flex items-center justify-between mb-4">
+              <h4 class="font-bold text-white text-base flex items-center space-x-2">
+                <i class="fa-solid fa-chart-line text-emerald-400"></i>
+                <span id="chart1-title">连续批次下密炼实测能耗波动 (kWh)</span>
+              </h4>
+              <span class="text-xs text-slate-400" id="chart1-sub">对比基准水平线</span>
+            </div>
+            <div class="h-64">
+              <canvas id="chart-batch-energy"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 2: Step Duration Execution Fidelity -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <div class="flex items-center justify-between mb-4">
+              <h4 class="font-bold text-white text-base flex items-center space-x-2">
+                <i class="fa-solid fa-stopwatch text-amber-400"></i>
+                <span id="chart2-title">下密炼执行时长 SP vs AV 跟踪散点 (秒)</span>
+              </h4>
+              <span class="text-xs text-slate-400" id="chart2-sub">判定机械时序离散度</span>
+            </div>
+            <div class="h-64">
+              <canvas id="chart-batch-duration"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mooney Quality & Chemistry Audit Box -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+          <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+            <div class="flex items-center space-x-2">
+              <i class="fa-solid fa-microscope text-purple-400 text-lg"></i>
+              <h4 class="font-bold text-white text-base" id="mooney-box-title">门尼粘度质控与非单调机理深度审计</h4>
+            </div>
+            <span id="eval-mooney-badge" class="px-3 py-1 rounded-full text-xs font-semibold"></span>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="space-y-3">
+              <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                <div class="text-xs text-slate-400" id="mooney-samples-label">实测门尼测试样点</div>
+                <div id="eval-mooney-values-list" class="text-lg font-mono font-bold text-white mt-1">--</div>
+              </div>
+              <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                <div class="text-xs text-slate-400" id="mooney-stats-label">统计指标 (均值 / 标准差 / 极差)</div>
+                <div id="eval-mooney-stats" class="text-sm font-mono text-slate-200 mt-1">--</div>
+              </div>
+            </div>
+
+            <div class="lg:col-span-2 bg-slate-950/60 p-5 rounded-xl border border-slate-800/80 flex flex-col justify-between">
+              <div>
+                <h5 class="text-sm font-semibold text-amber-300 mb-2 flex items-center space-x-1.5">
+                  <i class="fa-solid fa-shield-virus"></i>
+                  <span id="mooney-audit-head">机理审查结论 (非单调性 / 絮凝风险检验)</span>
+                </h5>
+                <p id="eval-non-monotonicity-text" class="text-sm text-slate-300 leading-relaxed"></p>
+              </div>
+              <div class="mt-4 pt-3 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+                <span id="mooney-audit-footer">检验规程: DOE Phase II 判定准则</span>
+                <span class="text-emerald-400 font-medium"><i class="fa-solid fa-check"></i> <span id="mooney-audit-status">离散度与极差均受控</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 1: 配方优化与能耗工作台 (ENERGY PROFILER & DOE WORKBENCH) -->
+    <!-- ========================================== -->
+    <section id="section-profiler" class="space-y-6">
+
+      <!-- EXECUTIVE ROI & BUSINESS IMPACT BANNER (面向总经理的高管成果大盘) -->
+      <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-amber-500/30 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-800">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                <i class="fa-solid fa-award mr-1"></i> CONTINENTAL MIXING DOE 2.0
+              </span>
+              <span class="text-xs text-slate-400 font-mono">EXECUTIVE SUMMARY</span>
+            </div>
+            <h2 class="text-xl md:text-2xl font-bold text-white mt-1.5 flex items-center space-x-2">
+              <i class="fa-solid fa-chart-line text-amber-400"></i>
+              <span id="exec-title">混炼配方能耗优化与产能提升成果总览</span>
+            </h2>
+            <p class="text-xs md:text-sm text-slate-400 mt-1" id="exec-subtitle">
+              基于全厂 6 大主力配方与 SCADA 实机遥测数据，量化优化设定值 (SP) 节能空间与质量公差闭环。
+            </p>
+          </div>
+
+          <!-- Quick Filter Buttons for Ranking -->
+          <div class="flex items-center space-x-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800 self-start lg:self-auto">
+            <span class="text-xs text-slate-400 px-2" id="profiler-filter-label">过滤:</span>
+            <button onclick="filterProfilerRanking('ALL')" id="btn-rank-all" class="px-3 py-1 rounded-lg text-xs font-semibold bg-amber-500 text-slate-950">全部 (All)</button>
+            <button onclick="filterProfilerRanking('Silica')" id="btn-rank-silica" class="px-3 py-1 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800">白炭黑 (Silica)</button>
+            <button onclick="filterProfilerRanking('CarbonBlack')" id="btn-rank-cb" class="px-3 py-1 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800">炭黑 (Carbon Black)</button>
+          </div>
+        </div>
+
+        <!-- 4 Key Executive Impact Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
+          <!-- Card 1: Annual Savings -->
+          <div class="bg-slate-950/70 border border-amber-500/20 rounded-xl p-4 shadow-sm hover:border-amber-500/40 transition">
+            <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+              <span id="exec-card1-label">全厂年化节电总潜能</span>
+              <i class="fa-solid fa-bolt-lightning text-amber-400 text-sm"></i>
+            </div>
+            <div class="text-2xl font-mono font-black text-white">128.5 <span class="text-xs font-normal text-slate-400">万 kWh/年</span></div>
+            <div class="mt-2 text-xs text-emerald-400 font-semibold flex items-center space-x-1">
+              <i class="fa-solid fa-yen-sign text-[10px]"></i>
+              <span id="exec-card1-sub">预计年电费节省 ~¥85.0 万元</span>
+            </div>
+          </div>
+
+          <!-- Card 2: Max Specific Energy Cut -->
+          <div class="bg-slate-950/70 border border-emerald-500/20 rounded-xl p-4 shadow-sm hover:border-emerald-500/40 transition">
+            <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+              <span id="exec-card2-label">标杆胶料比能耗降幅</span>
+              <i class="fa-solid fa-chart-line-down text-emerald-400 text-sm"></i>
+            </div>
+            <div class="text-2xl font-mono font-black text-emerald-400">-9.52 <span class="text-xs font-normal text-slate-400">kWh/t (-8.3%)</span></div>
+            <div class="mt-2 text-xs text-slate-400 flex items-center space-x-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              <span id="exec-card2-sub">标杆配方 M1-T15192R (白炭黑)</span>
+            </div>
+          </div>
+
+          <!-- Card 3: OEE & Line Capacity -->
+          <div class="bg-slate-950/70 border border-blue-500/20 rounded-xl p-4 shadow-sm hover:border-blue-500/40 transition">
+            <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+              <span id="exec-card3-label">密炼周期与产能释放</span>
+              <i class="fa-solid fa-stopwatch text-blue-400 text-sm"></i>
+            </div>
+            <div class="text-2xl font-mono font-black text-white">-10 ~ -28 <span class="text-xs font-normal text-slate-400">秒/车</span></div>
+            <div class="mt-2 text-xs text-blue-300 font-semibold flex items-center space-x-1">
+              <i class="fa-solid fa-arrow-up-right-dots text-[10px]"></i>
+              <span id="exec-card3-sub">下密炼压缩，等效产能提升 +4.2%</span>
+            </div>
+          </div>
+
+          <!-- Card 4: Quality & Closed-Loop -->
+          <div class="bg-slate-950/70 border border-purple-500/20 rounded-xl p-4 shadow-sm hover:border-purple-500/40 transition">
+            <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+              <span id="exec-card4-label">质量合规与闭环验证</span>
+              <i class="fa-solid fa-shield-check text-purple-400 text-sm"></i>
+            </div>
+            <div class="text-2xl font-mono font-black text-purple-300">100% <span class="text-xs font-normal text-slate-400">门尼受控</span></div>
+            <div class="mt-2 text-xs text-emerald-400 font-semibold flex items-center space-x-1">
+              <i class="fa-solid fa-circle-check text-[10px]"></i>
+              <span id="exec-card4-sub">实机工单 8113482 闭环通过 (PASS)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION A: 胶料能耗排行总表 -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-list-ol text-amber-400"></i>
+            <h3 class="text-lg font-bold text-white" id="rank-table-title">全厂主力胶料比能耗与优化潜力排行榜 (Cross-Compound Energy Rankings)</h3>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-800">
+          <table class="min-w-full text-xs text-left divide-y divide-slate-800">
+            <thead class="bg-slate-950 text-slate-400 font-semibold uppercase tracking-wider">
+              <tr>
+                <th class="py-3 px-3 w-14 text-center" id="th-rank-num">排名</th>
+                <th class="py-3 px-4" id="th-rank-id">胶料代号 / 配方</th>
+                <th class="py-3 px-3" id="th-rank-sys">体系类别</th>
+                <th class="py-3 px-3 text-right" id="th-rank-base">基准能耗 (kWh/t | 车)</th>
+                <th class="py-3 px-3 text-right" id="th-rank-opt">推荐优化后 (kWh/t)</th>
+                <th class="py-3 px-3 text-right" id="th-rank-save">优化节电潜力</th>
+                <th class="py-3 px-3 text-center" id="th-rank-msb">下密炼占比</th>
+                <th class="py-3 px-3 text-center" id="th-rank-act">配方与工步穿透</th>
+              </tr>
+            </thead>
+            <tbody id="energy-ranking-tbody" class="divide-y divide-slate-800/80 font-mono">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECTION B: 原材料份数 (phr) 与对能耗影响微观剖析 -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center space-x-2">
+                <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  FORMULATION & SENSITIVITY
+                </span>
+                <span class="text-xs text-slate-500 font-mono">RAW MATERIAL PHR SENSITIVITY</span>
+              </div>
+              <h3 class="text-lg md:text-xl font-bold text-white mt-1 flex items-center space-x-2">
+                <i class="fa-solid fa-flask-vial text-emerald-400"></i>
+                <span id="mat-section-title">原材料配方份数 (phr) 与对混炼能量影响分析</span>
+                <span class="ml-2 px-2 py-0.5 rounded text-xs font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40" id="mat-active-compound-name">M1-T15760</span>
+              </h3>
+            </div>
+
+            <!-- Compound Selector Pills for Material Analysis -->
+            <div class="flex items-center space-x-2 overflow-x-auto pb-1" id="mat-compound-chips">
+              <!-- Injected dynamically -->
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 mt-1" id="mat-section-desc">
+            穿透原材料组分精准份数 (phr) 与单位能耗敏感度系数 (∂E/∂phr)。
+          </p>
+        </div>
+
+        <!-- Material Formulation Content: 2 Columns -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Left: Raw Material phr Breakdown Table & Stacked Representation -->
+          <div class="lg:col-span-5 bg-slate-950/70 border border-slate-800 rounded-xl p-4 space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center space-x-1.5">
+                <i class="fa-solid fa-chart-pie text-emerald-400"></i>
+                <span id="mat-table-title">原材料组成份数矩阵 (phr)</span>
+              </span>
+              <span class="text-xs font-mono text-emerald-400 font-bold" id="mat-total-phr">总份数: 195.8 phr</span>
+            </div>
+
+            <!-- Visual phr Stacked Bar -->
+            <div class="space-y-1">
+              <div class="h-3 rounded-full flex overflow-hidden bg-slate-800" id="mat-stacked-bar">
+                <!-- Stack segments injected dynamically -->
+              </div>
+              <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                <span>0 phr</span>
+                <span id="mat-stacked-bar-mid">~100 phr</span>
+                <span id="mat-stacked-bar-end">Total phr</span>
+              </div>
+            </div>
+
+            <!-- Material Table -->
+            <div class="overflow-x-auto rounded-lg border border-slate-800/80 max-h-96 overflow-y-auto">
+              <table class="min-w-full text-xs text-left divide-y divide-slate-800">
+                <thead class="bg-slate-900 text-slate-400 font-semibold uppercase sticky top-0">
+                  <tr>
+                    <th class="py-2 px-3" id="th-mat-name">材料代号</th>
+                    <th class="py-2 px-3 text-right" id="th-mat-phr">份数 (phr)</th>
+                    <th class="py-2 px-3 text-center" id="th-mat-cat">类别</th>
+                    <th class="py-2 px-2 text-right" id="th-mat-pct">占比</th>
+                  </tr>
+                </thead>
+                <tbody id="material-list-tbody" class="divide-y divide-slate-800/60 font-mono">
+                  <!-- Injected rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Right: Quantitative Energy Sensitivities & Mechanisms Cards -->
+          <div class="lg:col-span-7 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center space-x-1.5">
+                <i class="fa-solid fa-atom text-amber-400"></i>
+                <span id="mat-sens-title">关键原材料对能耗敏感度系数与微观机理 (∂E / ∂phr)</span>
+              </span>
+              <span class="text-[11px] text-slate-400 font-mono" id="mat-sens-count">4 项核心影响因子</span>
+            </div>
+
+            <div class="space-y-3 max-h-[460px] overflow-y-auto pr-1" id="mat-sensitivities-container">
+              <!-- Dynamically populated cards -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION C: 混炼各工步能耗表现、峰值负荷与推荐优化实验清单 -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6" id="step-section-container">
+        <div>
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center space-x-2">
+                <span class="px-2.5 py-0.5 rounded text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                  STEP-BY-STEP RECIPE OPTIMIZATION & PEAK LOAD
+                </span>
+                <span class="text-xs font-normal px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/30" id="workbench-tag-rpm">⚡ 转速以 5 RPM 起调</span>
+              </div>
+              <h3 class="text-lg md:text-xl font-bold text-white mt-1.5 flex items-center space-x-2" id="step-section-heading">
+                <i class="fa-solid fa-wave-square text-blue-400"></i>
+                <span id="step-section-title">混炼各工步能耗表现、峰值负荷与推荐优化实验清单 (时长 / 转速 / 温度独立细分)</span>
+              </h3>
+              <p class="text-xs text-slate-400 mt-1" id="step-section-desc">
+                逐步骤剖析电机峰值功率 (kW)、阶段基准能耗 (kWh)、SP设定值及推荐调整矩阵。严格按照转速（以 5 RPM 起调）、时长与温度终点规程，明确写出每一个工步的具体优化建议。
+              </p>
+            </div>
+
+            <!-- Compound Selector Chips for Section C -->
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <span class="text-xs text-slate-400 whitespace-nowrap">切换胶料:</span>
+              <div class="flex flex-wrap items-center gap-2" id="step-compound-chips">
+                <!-- Injected dynamically via JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Compound Metadata Banner -->
+          <div id="compound-meta-banner" class="mt-5 pt-4 border-t border-slate-800/80 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- 4 Summary KPI Cards for Selected Compound -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="workbench-kpi-cards">
+          <!-- Injected via JS -->
+        </div>
+
+        <!-- Legend Pills -->
+        <div class="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 text-xs">
+          <div class="flex items-center space-x-2 text-slate-300 font-medium">
+            <i class="fa-solid fa-filter text-amber-400"></i>
+            <span id="table-heading-compound">逐步骤工艺设定值 (SP) 及推荐调整矩阵 (时长 / 转速 / 温度独立细分)</span>
+            <span class="ml-2 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">Recipe SP · 5 RPM Step</span>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-600 inline-block"></span><span class="text-slate-400" id="legend-frozen">投料锁定 (不可调)</span></span>
+            <span class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span><span class="text-slate-400" id="legend-dual">干混联合条件</span></span>
+            <span class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block"></span><span class="text-slate-400" id="legend-coupled">湿混耦合控温</span></span>
+            <span class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span><span class="text-slate-400" id="legend-pid">PID 离散步进</span></span>
+          </div>
+        </div>
+
+        <!-- Merged Step Table -->
+        <div class="overflow-x-auto rounded-xl border border-slate-800 shadow-xl">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-950/90 text-slate-400 border-b border-slate-800 uppercase font-semibold">
+                <th class="py-3 px-3 w-24 text-center font-semibold" id="th-step">工序号 / 区域</th>
+                <th class="py-3 px-3.5 w-44 font-semibold" id="th-desc">工序功能描述</th>
+                <th class="py-3 px-3 text-right w-24 text-amber-300 font-semibold" id="th-step-peak">电机峰值功率</th>
+                <th class="py-3 px-3 text-right w-28 font-semibold" id="th-step-kwh">阶段基准能耗</th>
+                <th class="py-3 px-3 bg-slate-950/50 w-36 font-semibold" id="th-dur">混炼时长 SP (s)</th>
+                <th class="py-3 px-3 bg-slate-950/50 text-blue-300 w-32 font-semibold" id="th-rpm">转速 SP (RPM)</th>
+                <th class="py-3 px-3 bg-slate-950/50 text-rose-300 w-32 font-semibold" id="th-temp">终点温度 SP (°C)</th>
+                <th class="py-3 px-3 w-36 font-semibold" id="th-rule">工艺规程分类</th>
+                <th class="py-3 px-3.5 bg-amber-950/15 text-amber-300 font-semibold min-w-[280px]" id="th-actions">工序推荐优化动作分解 (Action Breakdown)</th>
+                <th class="py-3 px-3 text-right w-24 text-emerald-400 font-semibold" id="th-savings">预测节电</th>
+                <th class="py-3 px-2 text-center w-20 font-semibold" id="th-calc">计算依据</th>
+              </tr>
+            </thead>
+            <tbody id="recipe-steps-tbody" class="divide-y divide-slate-800/60 font-sans">
+              <!-- Dynamically populated via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Calculation Rationale Modal / Card Area (Expandable) -->
+        <div id="calc-detail-card" class="hidden bg-slate-900 border-2 border-amber-500/50 rounded-2xl p-6 shadow-2xl relative">
+          <button onclick="closeCalcDetail()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-2">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+          <div id="calc-detail-content"></div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: 工艺约束规则集 (RULEBOOK) -->
+    <!-- ========================================== -->
+    <section id="rules-section" class="hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+            <i class="fa-solid fa-book-bookmark text-amber-400"></i>
+            <span id="rulebook-title">Continental 混炼工艺优化核心约束与系统行为映射</span>
+          </h2>
+          <p class="text-sm text-slate-400 mt-1" id="rulebook-desc">
+            本系统严格按照 Continental 厂级安全与工艺规程构建动作空间，任何推荐或实验评估均基于以下系统刚性定义：
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="rulebook-cards-container">
+          <!-- Dynamic Rule Cards injected via JS -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-slate-950 border-t border-slate-800/80 py-4 mt-8">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+      Continental Mixing Engineering Group &copy; 2026 | DOE Decision Support System v2.3 (Structured Modification Table & 5 RPM Step)
+    </div>
+  </footer>
+
+  <!-- Application Logic JavaScript -->
+  <script>
+    let currentLang = 'zh'; // 'zh' or 'en'
+    let currentCompoundId = 'M1-T15760';
+    let compoundsList = [];
+    let currentRecipeData = null;
+    let quickOrdersList = [];
+    let lastEvalResult = null;
+    let energyChart = null;
+    let durationChart = null;
+
+    // Structured Trial Modifications State
+    let trialModifications = [
+      {
+        step_id: 'MSB_1',
+        step_name_zh: 'AVR_MSB Step 1 (下密炼主控温均化)',
+        step_name_en: 'AVR_MSB Step 1 (Lower Mixer PID)',
+        base_dur: 75.0,
+        trial_dur: 65.0,
+        base_rpm: 15.0,
+        trial_rpm: 15.0,
+        base_temp: 160.0,
+        trial_temp: 160.0
+      }
+    ];
+
+    // Standard Preset Steps Catalog (All Recipe Setpoints SP)
+    const PRESET_STEPS = [
+      { step_id: 'MSB_1', zh: 'AVR_MSB Step 1 (下密炼主控温均化 / PID)', en: 'AVR_MSB Step 1 (Lower Mixer PID Homogenization)', base_dur: 75.0, base_rpm: 15.0, base_temp: 160.0, def_dur: 65.0, def_rpm: 15.0, def_temp: 160.0 },
+      { step_id: 'MST_3', zh: 'AVR_MST Step 3 (干混吃料与初剪切)', en: 'AVR_MST Step 3 (Dry Mixing Incorporation)', base_dur: 35.0, base_rpm: 40.0, base_temp: 95.0, def_dur: 30.0, def_rpm: 45.0, def_temp: 100.0 },
+      { step_id: 'MST_7', zh: 'AVR_MST Step 7 (湿混主升温 / 硅烷化预热)', en: 'AVR_MST Step 7 (Wet Mixing Silanization Ramp)', base_dur: 45.0, base_rpm: 40.0, base_temp: 152.0, def_dur: 40.0, def_rpm: 45.0, def_temp: 152.0 },
+      { step_id: 'MST_8_9', zh: 'AVR_MST Step 8–9 (高温硅烷化恒温反应段)', en: 'AVR_MST Step 8–9 (Silanization Reaction Hold)', base_dur: 15.0, base_rpm: 40.0, base_temp: 160.0, def_dur: 15.0, def_rpm: 35.0, def_temp: 160.0 },
+      { step_id: 'MSB_1_3', zh: 'AVR_MSB Total (炭黑下密炼捏合总段)', en: 'AVR_MSB Total (Carbon Black Homogenization)', base_dur: 90.0, base_rpm: 25.0, base_temp: 150.0, def_dur: 60.0, def_rpm: 25.0, def_temp: 150.0 },
+      { step_id: 'MSB_2_3', zh: 'AVR_MSB Step 2–3 (下密炼终排胶出料缓冲)', en: 'AVR_MSB Step 2–3 (Final Discharge Buffer)', base_dur: 30.0, base_rpm: 15.0, base_temp: 165.0, def_dur: 30.0, def_rpm: 15.0, def_temp: 165.0 },
+      { step_id: 'CUSTOM', zh: '自定义工艺步骤 (Custom Step)', en: 'Custom Mixing Step', base_dur: 60.0, base_rpm: 40.0, base_temp: 140.0, def_dur: 50.0, def_rpm: 45.0, def_temp: 140.0 }
+    ];
+
+    // Translations Dictionary
+    const I18N = {
+      zh: {
+        headerSubtitle: '橡胶混炼能耗优化实验工作台与工单评估器 (转速以 5 RPM 起调)',
+        navProfiler: '配方优化与能耗工作台',
+        navEvaluator: '实验工单实测评估器',
+        navRules: '工艺约束规则集',
+        langBtn: 'English (全英文版)',
+        engineStatus: '机理引擎在线',
+        execTitle: '混炼配方能耗优化与产能提升成果总览',
+        execSubtitle: '基于全厂 6 大主力配方与 SCADA 实机遥测数据，量化优化设定值 (SP) 节能空间与质量公差闭环。',
+        execCard1Label: '全厂年化节电总潜能',
+        execCard1Sub: '预计年电费节省 ~¥85.0 万元',
+        execCard2Label: '标杆胶料比能耗降幅',
+        execCard2Sub: '标杆配方 M1-T15192R (白炭黑)',
+        execCard3Label: '密炼周期与产能释放',
+        execCard3Sub: '下密炼压缩，等效产能提升 +4.2%',
+        execCard4Label: '质量合规与闭环验证',
+        execCard4Sub: '实机工单 8113482 闭环通过 (PASS)',
+        workbenchRpmTag: '⚡ 转速以 5 RPM 起调',
+        stepSectionTitle: '混炼各工步能耗表现、峰值负荷与推荐优化实验清单 (时长 / 转速 / 温度独立细分)',
+        stepSectionDesc: '逐步骤剖析电机峰值功率 (kW)、阶段基准能耗 (kWh)、SP设定值及推荐调整矩阵。严格按照转速（以 5 RPM 起调）、时长与温度终点规程，明确写出每一个工步的具体优化建议。',
+        legendFrozen: '投料锁定 (不可调)',
+        legendDual: '干混联合条件',
+        legendCoupled: '湿混耦合控温',
+        legendPid: 'PID 离散步进',
+        thStep: '工序号 / 区域',
+        thDesc: '工序功能描述',
+        thStepPeak: '电机峰值功率',
+        thStepKwh: '阶段基准能耗',
+        thDur: '混炼时长 SP (s)',
+        thRpm: '转速 SP (RPM)',
+        thTemp: '终点温度 SP (°C)',
+        thRule: '工艺规程分类',
+        thActions: '工序推荐优化动作分解 (Action Breakdown)',
+        thSavings: '预测节电',
+        thCalc: '计算依据',
+        evalHeaderTitle: '实验工单实测数据闭环评估',
+        evalHeaderDesc: '输入实验工单号，以结构化表格精确登记各工步的修改设定 SP；系统将深入批次数据库遍历各车次实际传感器信号 AV 与 QC 门尼粘度，多维度比对保真度与节能成效。',
+        quickOrderLabel: '快速选择已知实验单 / 对照单进行一键体验：',
+        labelOrderId: '实验工单号 (Order ID) *',
+        modTableTitle: '📋 实验修改内容登记矩阵 (Structured Trial Modification Matrix)',
+        modTableSubtitle: '按工步独立指定实验修改的时长 SP、转速 SP (必须以 5 RPM 步进) 与目标温度 SP；支持添加多道工步。',
+        btnLoadPrescriptive: '✨ 载入当前胶料推荐方案',
+        btnAddStep: '➕ 添加修改工步',
+        thModStep: '修改工序 / 阶段 (Stage / Step)',
+        thModBase: '原配方基准设定 (Base SP)',
+        thModDur: '实验设定时长 (Duration SP, s)',
+        thModRpm: '实验设定转速 (Speed SP, RPM)',
+        thModTemp: '实验设定温度 (Temp SP, °C)',
+        thModDelta: '设定调幅核算 (Calculated ΔSP)',
+        thModAction: '操作',
+        btnEvalText: '🚀 提交实验设定并执行数据库全景检索分析',
+        evalLoadingText: '正在检索批次遥测数据与 QC 门尼报告...',
+        auditMatrixTitle: '工步实验修改与实测执行保真度比对矩阵 (Fidelity Audit Matrix)',
+        auditMatrixSub: '逐工步检验设定目标 SP 与机台实测 AV 的偏离度与单步节电贡献',
+        chart1Title: '连续批次下密炼实测能耗波动 (kWh)',
+        chart1Sub: '对比基准水平线',
+        chart2Title: '下密炼执行时长 SP vs AV 跟踪散点 (秒)',
+        chart2Sub: '判定机械时序离散度',
+        mooneyBoxTitle: '门尼粘度质控与非单调机理深度审计',
+        mooneySamplesLabel: '实测门尼测试样点',
+        mooneyStatsLabel: '统计指标 (均值 / 标准差 / 极差)',
+        mooneyAuditHead: '机理审查结论 (非单调性 / 絮凝风险检验)',
+        mooneyAuditFooter: '检验规程: Continental DOE Phase II 判定准则',
+        mooneyAuditStatus: '离散度与极差均受控',
+        rulebookTitle: 'Continental 混炼工艺优化核心约束与系统行为映射',
+        rulebookDesc: '本系统严格按照 Continental 厂级安全与工艺规程构建动作空间，任何推荐或实验评估均基于以下系统刚性定义：',
+        profilerTitle: '全厂主力胶料比能耗排行、原材料 (phr) 敏感度与工步优化矩阵',
+        profilerSubtitle: '系统对比白炭黑与炭黑胶料比能耗差异，穿透每种原材料份数 (phr) 对电机能耗的微观机理，深度揭示各工步峰值功率与节电杠杆。',
+        profilerFilterLabel: '过滤:',
+        rankTableTitle: '全厂主力胶料比能耗与优化潜力排行榜 (Cross-Compound Energy Rankings)',
+        thRankNum: '排名',
+        thRankId: '胶料代号 / 配方',
+        thRankSys: '体系类别',
+        thRankBase: '基准能耗 (kWh/t | 车)',
+        thRankOpt: '推荐优化后 (kWh/t)',
+        thRankSave: '优化节电潜力',
+        thRankMsb: '下密炼占比',
+        thRankAct: '配方与工步穿透',
+        matSectionTitle: '原材料配方份数 (phr) 与对混炼能量影响分析',
+        matSectionDesc: '原材料组分精准份数 (phr) 及单位能耗敏感度系数 (∂E/∂phr)。',
+        matTableTitle: '原材料组成份数矩阵 (phr)',
+        thMatName: '材料代号',
+        thMatPhr: '份数 (phr)',
+        thMatCat: '类别',
+        thMatPct: '占比',
+        matSensTitle: '关键原材料对能耗敏感度系数与微观机理 (∂E / ∂phr)'
+      },
+      en: {
+        headerSubtitle: 'Rubber Mixing DOE Energy Optimization Workbench & Order Evaluator (Rotor Speed 5 RPM Step)',
+        navProfiler: 'Recipe Optimization & Energy Workbench',
+        navEvaluator: 'Trial Order Auto-Evaluator',
+        navRules: 'Engineering Rulebook',
+        langBtn: '中文版 (Chinese)',
+        engineStatus: 'Rule Engine Online',
+        execTitle: 'Mixing Energy Optimization & Capacity Release Executive Overview',
+        execSubtitle: 'Quantifying recipe setpoint (SP) energy savings and quality tolerance closed-loop across 6 flagship compounds.',
+        execCard1Label: 'Plant-Wide Annual Energy Savings',
+        execCard1Sub: 'Estimated ~¥850,000 / year cost reduction',
+        execCard2Label: 'Flagship Specific Energy Cut',
+        execCard2Sub: 'Benchmark M1-T15192R (Silica)',
+        execCard3Label: 'Cycle Time & Capacity Release',
+        execCard3Sub: 'MSB optimized, +4.2% line throughput',
+        execCard4Label: 'Quality Compliance & Closed Loop',
+        execCard4Sub: 'Live Order 8113482 Verified (PASS)',
+        workbenchRpmTag: '⚡ Rotor Speed: 5 RPM Steps',
+        stepSectionTitle: 'Step-by-Step Prescriptive Trial Recommendations & Peak Load (Duration / Speed / Temp Separated)',
+        stepSectionDesc: 'Step-by-step breakdown of motor peak power (kW), baseline energy (kWh), recipe setpoints (SP), and prescriptive adjustments. Explicit optimization directives provided for every single stage.',
+        legendFrozen: 'Frozen Feeding Zone',
+        legendDual: 'Dual-Trigger Dry Mix',
+        legendCoupled: 'Coupled Wet Mixing',
+        legendPid: 'Discrete PID Tuning',
+        thStep: 'Stage / Step',
+        thDesc: 'Process Function',
+        thStepPeak: 'Peak Motor Power',
+        thStepKwh: 'Baseline Energy',
+        thDur: 'Duration SP (s)',
+        thRpm: 'Rotor Speed SP (RPM)',
+        thTemp: 'Target Temp SP (°C)',
+        thRule: 'Process Rule Category',
+        thActions: 'Prescriptive Action Breakdown (Explicit Directives)',
+        thSavings: 'Pred Energy Saving',
+        thCalc: 'Rationale',
+        evalHeaderTitle: 'Trial Order Closed-Loop Empirical Evaluation',
+        evalHeaderDesc: 'Enter experimental order ID and register step modifications via structured matrix. The engine traverses empirical batch telemetries (AV) and QC Mooney records to audit fidelity and energy savings.',
+        quickOrderLabel: 'Quick-Select Representative Trial Orders / Baselines:',
+        labelOrderId: 'Order ID *',
+        modTableTitle: '📋 Structured Trial Modification Matrix',
+        modTableSubtitle: 'Specify target duration SP, rotor speed SP (5 RPM increments), and target temp SP per step. Supports multi-step experiments.',
+        btnLoadPrescriptive: '✨ Load Prescriptive DOE Steps',
+        btnAddStep: '➕ Add Step Modification',
+        thModStep: 'Process Stage / Step',
+        thModBase: 'Original Recipe Baseline (Base SP)',
+        thModDur: 'Trial Duration SP (s)',
+        thModRpm: 'Trial Speed SP (RPM)',
+        thModTemp: 'Trial Target Temp SP (°C)',
+        thModDelta: 'Calculated Setpoint Delta (ΔSP)',
+        thModAction: 'Action',
+        btnEvalText: '🚀 Submit Trial Plan & Traverse Database',
+        evalLoadingText: 'Querying batch telemetries and QC Mooney records...',
+        auditMatrixTitle: 'Step-by-Step Trial Modification vs. Execution Fidelity Audit Matrix',
+        auditMatrixSub: 'Row-by-row verification of target SP vs empirical measured AV and step energy savings',
+        chart1Title: 'Batch-by-Batch Lower Mixer Energy Telemetry (kWh)',
+        chart1Sub: 'Compared against baseline benchmark',
+        chart2Title: 'Lower Mixer Step 1 Duration: SP vs AV Tracking (s)',
+        chart2Sub: 'Audit mechanical execution jitter',
+        mooneyBoxTitle: 'Mooney Viscosity QC & Non-Monotonicity Chemistry Audit',
+        mooneySamplesLabel: 'QC Lab Mooney Test Specimens',
+        mooneyStatsLabel: 'Statistical Metrics (Mean / Std Dev / Range)',
+        mooneyAuditHead: 'Chemistry Review (Non-monotonicity / Flocculation Risk)',
+        mooneyAuditFooter: 'Inspection Protocol: Continental DOE Phase II Spec',
+        mooneyAuditStatus: 'Variance and range strictly controlled',
+        rulebookTitle: 'Continental Mixing DOE Core Constraints & System Mappings',
+        rulebookDesc: 'The optimization action space rigidly enforces Continental plant safety specifications as defined below:',
+        profilerTitle: 'Cross-Compound Energy Ranking, Ingredient (phr) Sensitivity & Step Dynamics',
+        profilerSubtitle: 'Comparative specific energy profiling between Silica and Carbon Black compounds, partial derivative phr sensitivities (∂E/∂phr), and step-by-step peak power and optimization levers.',
+        profilerFilterLabel: 'Filter:',
+        rankTableTitle: 'Plant-Wide Energy Benchmarks & Optimization Potential Rankings',
+        thRankNum: 'Rank',
+        thRankId: 'Compound ID / Recipe',
+        thRankSys: 'System',
+        thRankBase: 'Baseline (kWh/t | batch)',
+        thRankOpt: 'Optimized (kWh/t)',
+        thRankSave: 'Savings Potential',
+        thRankMsb: 'MSB Share',
+        thRankAct: 'Formulation & Steps',
+        matSectionTitle: 'Raw Material phr Formulation Breakdown & Energy Impact Analysis',
+        matSectionDesc: 'Raw material loading (phr) and partial derivative energy sensitivity coefficients (∂E/∂phr).',
+        matTableTitle: 'Raw Material phr Formulation Matrix',
+        thMatName: 'Material Code',
+        thMatPhr: 'Loading (phr)',
+        thMatCat: 'Category',
+        thMatPct: 'Share %',
+        matSensTitle: 'Quantitative Energy Sensitivities & Micro-Mechanisms (∂E / ∂phr)'
+      }
+    };
+
+    // Initialize application
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchCompounds();
+      fetchQuickOrders();
+      renderTrialModificationsTable();
+      renderRulebook();
+      fetchEnergyRankings();
+      selectCompound(currentCompoundId);
+    });
+
+    // Toggle Language
+    function toggleLanguage() {
+      currentLang = (currentLang === 'zh') ? 'en' : 'zh';
+      applyLanguageTexts();
+      renderCompoundChips();
+      if (currentRecipeData) {
+        renderWorkbench(currentRecipeData);
+      }
+      renderQuickOrders();
+      renderTrialModificationsTable();
+      renderRulebook();
+      if (lastEvalResult) {
+        renderEvaluationResults(lastEvalResult);
+      }
+      renderEnergyRankings();
+      if (profilerMaterialData) renderMaterialImpact(profilerMaterialData);
+    }
+
+    function applyLanguageTexts() {
+      const t = I18N[currentLang];
+      const safeText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = text;
+      };
+      const safeHtml = (id, html) => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = html;
+      };
+
+      safeText('header-subtitle', t.headerSubtitle);
+      safeText('nav-text-profiler', t.navProfiler);
+      safeText('nav-text-evaluator', t.navEvaluator);
+      safeText('nav-text-rules', t.navRules);
+      safeText('lang-btn-text', t.langBtn);
+      safeText('engine-status-text', t.engineStatus);
+
+      // Executive Banner
+      safeText('exec-title', t.execTitle);
+      safeText('exec-subtitle', t.execSubtitle);
+      safeText('exec-card1-label', t.execCard1Label);
+      safeText('exec-card1-sub', t.execCard1Sub);
+      safeText('exec-card2-label', t.execCard2Label);
+      safeText('exec-card2-sub', t.execCard2Sub);
+      safeText('exec-card3-label', t.execCard3Label);
+      safeText('exec-card3-sub', t.execCard3Sub);
+      safeText('exec-card4-label', t.execCard4Label);
+      safeText('exec-card4-sub', t.execCard4Sub);
+
+      // Section C tags and legend
+      safeText('workbench-tag-rpm', t.workbenchRpmTag);
+      safeText('step-section-title', t.stepSectionTitle);
+      safeText('step-section-desc', t.stepSectionDesc);
+      safeText('legend-frozen', t.legendFrozen);
+      safeText('legend-dual', t.legendDual);
+      safeText('legend-coupled', t.legendCoupled);
+      safeText('legend-pid', t.legendPid);
+
+      // Section C table headers (11 columns)
+      safeHtml('th-step', t.thStep);
+      safeHtml('th-desc', t.thDesc);
+      safeHtml('th-step-peak', t.thStepPeak);
+      safeHtml('th-step-kwh', t.thStepKwh);
+      safeHtml('th-dur', t.thDur);
+      safeHtml('th-rpm', t.thRpm);
+      safeHtml('th-temp', t.thTemp);
+      safeHtml('th-rule', t.thRule);
+      safeHtml('th-actions', t.thActions);
+      safeHtml('th-savings', t.thSavings);
+      safeHtml('th-calc', t.thCalc);
+
+      // Evaluator Tab
+      safeText('eval-header-title', t.evalHeaderTitle);
+      safeText('eval-header-desc', t.evalHeaderDesc);
+      safeText('quick-order-label', t.quickOrderLabel);
+      safeHtml('label-order-id', t.labelOrderId);
+      safeText('mod-table-title', t.modTableTitle);
+      safeText('mod-table-subtitle', t.modTableSubtitle);
+      safeText('btn-load-prescriptive', t.btnLoadPrescriptive);
+      safeText('btn-add-step', t.btnAddStep);
+      safeHtml('th-mod-step', t.thModStep);
+      safeHtml('th-mod-base', t.thModBase);
+      safeHtml('th-mod-dur', t.thModDur);
+      safeHtml('th-mod-rpm', t.thModRpm);
+      safeHtml('th-mod-temp', t.thModTemp);
+      safeHtml('th-mod-delta', t.thModDelta);
+      safeHtml('th-mod-action', t.thModAction);
+      safeText('btn-eval-text', t.btnEvalText);
+      safeText('eval-loading-text', t.evalLoadingText);
+      safeText('audit-matrix-title', t.auditMatrixTitle);
+      safeText('audit-matrix-sub', t.auditMatrixSub);
+      safeText('chart1-title', t.chart1Title);
+      safeText('chart1-sub', t.chart1Sub);
+      safeText('chart2-title', t.chart2Title);
+      safeText('chart2-sub', t.chart2Sub);
+      safeText('mooney-box-title', t.mooneyBoxTitle);
+      safeText('mooney-samples-label', t.mooneySamplesLabel);
+      safeText('mooney-stats-label', t.mooneyStatsLabel);
+      safeText('mooney-audit-head', t.mooneyAuditHead);
+      safeText('mooney-audit-footer', t.mooneyAuditFooter);
+      safeText('mooney-audit-status', t.mooneyAuditStatus);
+      safeText('rulebook-title', t.rulebookTitle);
+      safeText('rulebook-desc', t.rulebookDesc);
+
+      // Section A rankings table headers
+      safeText('profiler-title', t.profilerTitle);
+      safeText('profiler-subtitle', t.profilerSubtitle);
+      safeText('profiler-filter-label', t.profilerFilterLabel);
+      safeText('rank-table-title', t.rankTableTitle);
+      safeText('th-rank-num', t.thRankNum);
+      safeText('th-rank-id', t.thRankId);
+      safeText('th-rank-sys', t.thRankSys);
+      safeText('th-rank-base', t.thRankBase);
+      safeText('th-rank-opt', t.thRankOpt);
+      safeText('th-rank-save', t.thRankSave);
+      safeText('th-rank-msb', t.thRankMsb);
+      safeText('th-rank-act', t.thRankAct);
+
+      // Section B Material
+      safeText('mat-section-title', t.matSectionTitle);
+      safeText('mat-section-desc', t.matSectionDesc);
+      safeText('mat-table-title', t.matTableTitle);
+      safeText('th-mat-name', t.thMatName);
+      safeText('th-mat-phr', t.thMatPhr);
+      safeText('th-mat-cat', t.thMatCat);
+      safeText('th-mat-pct', t.thMatPct);
+      safeText('mat-sens-title', t.matSensTitle);
+    }
+
+    // Switch Top Navigation Tabs
+    function switchTab(tab) {
+      const sections = {
+        'profiler': document.getElementById('section-profiler'),
+        'evaluator': document.getElementById('section-evaluator'),
+        'rules': document.getElementById('rules-section')
+      };
+
+      Object.values(sections).forEach(sec => {
+        if (sec) sec.classList.add('hidden');
+      });
+
+      const tabs = ['profiler', 'evaluator', 'rules'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`nav-tab-${t}`);
+        if (!btn) return;
+        if (t === tab) {
+          btn.className = 'px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all duration-200 flex items-center space-x-2 bg-amber-500 text-slate-950 shadow-md';
+        } else {
+          btn.className = 'px-3.5 py-2 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 flex items-center space-x-2 text-slate-300 hover:text-white hover:bg-slate-800';
+        }
+      });
+
+      if (sections[tab]) {
+        sections[tab].classList.remove('hidden');
+      }
+    }
+
+    // Fetch Compounds list
+    async function fetchCompounds() {
+      try {
+        const res = await fetch('/api/compounds');
+        const data = await res.json();
+        compoundsList = data.compounds;
+        renderCompoundChips();
+      } catch (err) {
+        console.error("Failed to load compounds:", err);
+      }
+    }
+
+    // Render Compound Select Chips for both Section B and Section C
+    function renderCompoundChips() {
+      const compounds = ['M1-T09170', 'M1-T15192R', 'M1-T15760', 'M1-R00218', 'M1-B00458', 'M1-B00163'];
+      const renderChipsFor = (containerId) => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = compounds.map(cid => {
+          const isSelected = (cid === currentCompoundId);
+          const isSilica = cid.startsWith('M1-T');
+          return `
+            <button onclick="selectCompound('${cid}')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 whitespace-nowrap ${isSelected ? 'bg-amber-500 text-slate-950 shadow-md' : 'bg-slate-950 text-slate-300 border border-slate-800 hover:border-slate-600'}">
+              <span class="w-2 h-2 rounded-full ${isSilica ? 'bg-emerald-400' : 'bg-amber-400'}"></span>
+              <span>${cid}</span>
+            </button>
+          `;
+        }).join('');
+      };
+
+      renderChipsFor('mat-compound-chips');
+      renderChipsFor('step-compound-chips');
+    }
+
+    // Select and load recipe + material data for a compound
+    async function selectCompound(cid) {
+      currentCompoundId = cid;
+      renderCompoundChips();
+      
+      const matBadge = document.getElementById('mat-active-compound-name');
+      if (matBadge) matBadge.innerText = cid;
+
+      try {
+        const [recRes, matRes] = await Promise.all([
+          fetch(`/api/recipe/${cid}`),
+          fetch(`/api/material_impact/${cid}`)
+        ]);
+        const recJson = await recRes.json();
+        const matJson = await matRes.json();
+
+        if (recJson.status === 'success') {
+          currentRecipeData = recJson.data;
+          renderWorkbench(recJson.data);
+        }
+        if (matJson.status === 'success') {
+          profilerMaterialData = matJson.data;
+          renderMaterialImpact(matJson.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch compound data:", err);
+      }
+    }
+
+    // Render Workbench with recipe details
+    function renderWorkbench(data) {
+      const meta = data.meta;
+      const sum = data.summary;
+      const isSilica = meta.system === 'Silica';
+      const isEn = (currentLang === 'en');
+
+      // 1. Meta Banner
+      document.getElementById('compound-meta-banner').innerHTML = `
+        <div>
+          <span class="text-xs text-slate-500 block">${isEn ? 'Standard Recipe Code' : '全称规范配方'}</span>
+          <span class="font-mono text-xs md:text-sm font-semibold text-white truncate block" title="${meta.full_name}">${meta.full_name}</span>
+        </div>
+        <div>
+          <span class="text-xs text-slate-500 block">${isEn ? 'Polymer Category' : '胶料体系类别'}</span>
+          <span class="inline-flex items-center space-x-1 text-xs md:text-sm font-semibold ${isSilica ? 'text-emerald-400' : 'text-amber-400'}">
+            <i class="fa-solid ${isSilica ? 'fa-leaf' : 'fa-gem'}"></i>
+            <span>${isEn ? (meta.category_en || meta.system) : (meta.category_zh || meta.category)}</span>
+          </span>
+        </div>
+        <div>
+          <span class="text-xs text-slate-500 block">${isEn ? 'Primary Mixer Line' : '主生产密炼机'}</span>
+          <span class="font-mono text-xs md:text-sm font-bold text-amber-300">${meta.mixer} ${meta.mixer_alt ? '/ ' + meta.mixer_alt : ''}</span>
+        </div>
+        <div>
+          <span class="text-xs text-slate-500 block">${isEn ? 'Standard Batch Weight' : '单车标准重量'}</span>
+          <span class="text-xs md:text-sm font-semibold text-white font-mono">${meta.batch_weight} kg</span>
+        </div>
+        <div>
+          <span class="text-xs text-slate-500 block">${isEn ? 'Mooney Spec [Min, Max]' : '门尼规格公差 [Min, Max]'}</span>
+          <span class="text-xs md:text-sm font-mono font-bold text-white">[${meta.mooney_spec[0]}, ${meta.mooney_spec[1]}] MU (${isEn ? 'Target' : '目标'}: ${meta.mooney_target})</span>
+        </div>
+        <div>
+          <span class="text-xs text-slate-500 block">${isEn ? 'Formula Application' : '配方用途描述'}</span>
+          <span class="text-xs text-slate-300 truncate block" title="${isEn ? meta.description_en : meta.description_zh}">${isEn ? meta.description_en : meta.description_zh}</span>
+        </div>
+      `;
+
+      // 2. Summary KPI Cards
+      document.getElementById('workbench-kpi-cards').innerHTML = `
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+            <span>${isEn ? 'Baseline vs Predicted Energy' : '基准总电耗 vs 预测优化'}</span>
+            <i class="fa-solid fa-bolt text-amber-400"></i>
+          </div>
+          <div class="text-2xl font-mono font-black text-white">${sum.pred_total_kwh_batch} <span class="text-xs font-normal text-slate-400">${isEn ? 'kWh/batch' : 'kWh/车'}</span></div>
+          <div class="mt-2 text-xs text-emerald-400 flex items-center space-x-1">
+            <i class="fa-solid fa-arrow-down"></i>
+            <span>${isEn ? 'Saved' : '节电'} ${sum.total_saved_kwh_batch} kWh (-${sum.pct_saved}%)</span>
+            <span class="text-slate-500 ml-1">(${isEn ? 'Base' : '原'} ${sum.baseline_kwh_batch})</span>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+            <span>${isEn ? 'Specific Energy (kWh/t)' : '吨胶比能耗 (kWh/t)'}</span>
+            <i class="fa-solid fa-weight-scale text-blue-400"></i>
+          </div>
+          <div class="text-2xl font-mono font-black text-white">${sum.pred_kwh_ton} <span class="text-xs font-normal text-slate-400">kWh/t</span></div>
+          <div class="mt-2 text-xs text-emerald-400 flex items-center space-x-1">
+            <i class="fa-solid fa-arrow-down"></i>
+            <span>${isEn ? 'Specific Drop' : '比能耗下降'} -${(sum.baseline_kwh_ton - sum.pred_kwh_ton).toFixed(2)} kWh/t</span>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+            <span>${isEn ? 'Effective Mixing Cycle Delta' : '有效混炼周期优化'}</span>
+            <i class="fa-solid fa-stopwatch text-purple-400"></i>
+          </div>
+          <div class="text-2xl font-mono font-black text-white">${sum.total_delta_duration_s > 0 ? '+' : ''}${sum.total_delta_duration_s} <span class="text-xs font-normal text-slate-400">${isEn ? 'sec' : '秒'}</span></div>
+          <div class="mt-2 text-xs text-slate-400">
+            <span>${isEn ? 'Secures mechanical shear work' : '兼顾生产节拍与剪切比做功'}</span>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+            <span>${isEn ? 'Predicted Mooney Viscosity' : '门尼粘度预测'}</span>
+            <i class="fa-solid fa-gauge text-emerald-400"></i>
+          </div>
+          <div class="text-2xl font-mono font-black text-emerald-300">${sum.pred_mooney} <span class="text-xs font-normal text-slate-400">MU</span></div>
+          <div class="mt-2 text-xs text-emerald-400">
+            <span>${isEn ? sum.mooney_status_en : sum.mooney_status_zh}</span>
+          </div>
+        </div>
+      `;
+
+      // 3. Step Table with Separated Parameters (11 COLUMNS)
+      const tableHeading = document.getElementById('table-heading-compound');
+      if (tableHeading) {
+        tableHeading.innerText = isEn ? 
+          `[${meta.id}] Step-by-Step Prescriptive Trial Recommendations (Duration / Speed / Temp Separated)` : 
+          `【${meta.id}】逐步骤基准设定与推荐修改实验清单 (时长 / 转速 / 温度独立细分)`;
+      }
+      
+      const tbody = document.getElementById('recipe-steps-tbody');
+      if (!tbody) return;
+
+      tbody.innerHTML = data.steps.map((s, idx) => {
+        const canMod = s.can_modify;
+        const durModified = Math.abs(s.delta_duration) > 0.01;
+        const rpmModified = Math.abs(s.delta_rpm) >= 1.0;
+        const tempModified = Math.abs(s.delta_temp) > 0.01;
+        const isMsb = (s.area && s.area.includes('MSB')) || (s.step_id && s.step_id.includes('MSB'));
+
+        // Peak power badge
+        const peakPowerVal = s.peak_power_kw || (isMsb ? 168 : 850);
+        let peakColor = 'bg-slate-800 text-slate-300';
+        if (peakPowerVal >= 1200) {
+          peakColor = 'bg-rose-500/20 text-rose-300 border border-rose-500/40';
+        } else if (peakPowerVal >= 600) {
+          peakColor = 'bg-amber-500/20 text-amber-300 border border-amber-500/40';
+        } else {
+          peakColor = 'bg-blue-500/20 text-blue-300 border border-blue-500/40';
+        }
+
+        // Base kWh and share
+        const baseKwhVal = s.base_kwh !== undefined ? s.base_kwh : 3.0;
+        const sharePctVal = s.share_pct !== undefined ? s.share_pct : 15.0;
+
+        // Duration cell (All Setpoint SP)
+        const durCell = `
+          <div class="font-mono text-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">SP ${Math.round(s.base_dur)}s</span>
+              <span class="text-slate-500 mx-1">➔</span>
+              <span class="${durModified ? 'text-amber-300 font-bold' : 'text-slate-300'}">SP ${Math.round(s.prop_dur)}s</span>
+            </div>
+            <div class="mt-0.5">
+              ${durModified ? `<span class="px-1.5 py-0.2 rounded text-[11px] font-bold ${s.delta_duration < 0 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300'}">ΔSP ${(s.delta_duration > 0 ? '+' : '') + Math.round(s.delta_duration)}s</span>` : '<span class="text-slate-600 text-[11px]">—</span>'}
+            </div>
+          </div>
+        `;
+
+        // Rotor speed cell (strictly 5 RPM step Setpoint SP)
+        const rpmCell = `
+          <div class="font-mono text-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">SP ${Math.round(s.base_rpm)}</span>
+              <span class="text-slate-500 mx-1">➔</span>
+              <span class="${rpmModified ? 'text-blue-300 font-bold' : 'text-slate-300'}">SP ${Math.round(s.prop_rpm)}</span>
+            </div>
+            <div class="mt-0.5">
+              ${rpmModified ? `<span class="px-1.5 py-0.2 rounded text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">ΔSP ${s.delta_rpm > 0 ? '+' : ''}${Math.round(s.delta_rpm)} RPM</span>` : '<span class="text-slate-600 text-[11px]">—</span>'}
+            </div>
+          </div>
+        `;
+
+        // Temperature cell (Setpoint SP)
+        const tempCell = `
+          <div class="font-mono text-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">SP ${Math.round(s.base_temp)}°C</span>
+              <span class="text-slate-500 mx-1">➔</span>
+              <span class="${tempModified ? 'text-rose-300 font-bold' : 'text-slate-300'}">SP ${Math.round(s.prop_temp)}°C</span>
+            </div>
+            <div class="mt-0.5">
+              ${tempModified ? `<span class="px-1.5 py-0.2 rounded text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">ΔSP ${s.delta_temp > 0 ? '+' : ''}${Math.round(s.delta_temp)}°C</span>` : '<span class="text-slate-600 text-[11px]">—</span>'}
+            </div>
+          </div>
+        `;
+
+        // Actions pills (Separated Breakdown)
+        const actionPills = (isEn ? s.actions_en : s.actions_zh).map(act => {
+          let badgeColor = 'bg-slate-800 text-slate-400 border-slate-700';
+          if (act.includes('Duration') || act.includes('时长')) badgeColor = 'bg-amber-500/20 text-amber-300 border border-amber-500/40';
+          if (act.includes('Speed') || act.includes('转速')) badgeColor = 'bg-blue-500/20 text-blue-300 border border-blue-500/40';
+          if (act.includes('Temp') || act.includes('温度')) badgeColor = 'bg-rose-500/20 text-rose-300 border border-rose-500/40';
+          return `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${badgeColor} whitespace-nowrap">${act}</span>`;
+        }).join(' ');
+
+        // Detailed Instruction Text ("每个步骤工序应该如何优化，需要写的清清楚楚")
+        const instructionText = isEn ? (s.action_instruction_en || '') : (s.action_instruction_zh || '');
+
+        return `
+          <tr class="${isMsb ? 'bg-blue-950/10 hover:bg-blue-900/20' : 'hover:bg-slate-800/40'} transition">
+            <!-- 1. 工序号 / 区域 -->
+            <td class="py-3 px-3 text-center font-mono font-bold text-slate-200">
+              <span class="px-2 py-1 rounded text-xs font-mono font-bold ${isMsb ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' : 'bg-slate-800 text-slate-300'}">
+                ${s.area}
+              </span>
+            </td>
+
+            <!-- 2. 工序功能描述 -->
+            <td class="py-3 px-3.5 text-slate-300 max-w-[180px]">
+              <div class="font-medium text-white text-xs">${isEn ? s.desc_en : s.desc_zh}</div>
+            </td>
+
+            <!-- 3. 电机峰值功率 -->
+            <td class="py-3 px-3 text-right">
+              <span class="px-2 py-0.5 rounded text-xs font-bold font-mono ${peakColor}">
+                ${peakPowerVal} kW
+              </span>
+            </td>
+
+            <!-- 4. 阶段基准能耗 -->
+            <td class="py-3 px-3 text-right">
+              <div class="text-white font-mono font-bold text-xs">${baseKwhVal.toFixed(2)} kWh</div>
+              <div class="text-[10px] ${sharePctVal > 20 ? 'text-amber-400 font-semibold' : 'text-slate-400'}">(${sharePctVal}%)</div>
+            </td>
+
+            <!-- 5. 混炼时长 SP (s) -->
+            <td class="py-3 px-3 bg-slate-950/30">
+              ${durCell}
+            </td>
+
+            <!-- 6. 转速 SP (RPM) 【以 5 起调】 -->
+            <td class="py-3 px-3 bg-slate-950/30">
+              ${rpmCell}
+            </td>
+
+            <!-- 7. 终点温度 SP (°C) -->
+            <td class="py-3 px-3 bg-slate-950/30">
+              ${tempCell}
+            </td>
+
+            <!-- 8. 工艺规程分类 -->
+            <td class="py-3 px-3">
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${getRuleCategoryBadgeClass(s.rule_category)}">
+                ${isEn ? s.rule_label_en : s.rule_label_zh}
+              </span>
+            </td>
+
+            <!-- 9. 工序推荐优化动作分解 (Action Breakdown) -->
+            <td class="py-3 px-3.5 bg-amber-950/10 max-w-[260px]">
+              <div class="flex flex-wrap gap-1.5 items-center">
+                ${actionPills}
+              </div>
+              ${instructionText ? `
+                <div class="text-[11px] text-slate-400 font-sans mt-1 truncate" title="${instructionText}">
+                  <i class="fa-solid fa-angle-right text-[9px] text-amber-400 mr-1"></i>${instructionText}
+                </div>
+              ` : ''}
+            </td>
+
+            <!-- 10. 预测节电 -->
+            <td class="py-3 px-3.5 text-right font-mono font-bold ${s.pred_kwh_saving > 0 ? 'text-emerald-400' : 'text-slate-500'}">
+              ${s.pred_kwh_saving > 0 ? `-${s.pred_kwh_saving.toFixed(2)} kWh` : '0.00 kWh'}
+            </td>
+
+            <!-- 11. 计算依据 -->
+            <td class="py-3 px-2 text-center">
+              <button onclick="showCalcDetail(${idx})" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-slate-300 border border-slate-700 transition duration-150 whitespace-nowrap">
+                <i class="fa-solid fa-circle-info mr-1"></i> ${isEn ? 'Rationale' : '计算依据'}
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Helper for rule badge style
+    function getRuleCategoryBadgeClass(cat) {
+      if (cat.includes('FROZEN')) return 'bg-slate-800 text-slate-400 border border-slate-700';
+      if (cat.includes('DRY_MIXING')) return 'bg-blue-500/20 text-blue-300 border border-blue-500/30';
+      if (cat.includes('WET_MIXING')) return 'bg-purple-500/20 text-purple-300 border border-purple-500/30';
+      if (cat.includes('SILICA')) return 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+      if (cat.includes('CB_PID')) return 'bg-amber-500/20 text-amber-300 border border-amber-500/30';
+      return 'bg-slate-800 text-slate-300';
+    }
+
+    // Show Calculation Rationale Modal
+    function showCalcDetail(stepIndex) {
+      if (!currentRecipeData) return;
+      const step = currentRecipeData.steps[stepIndex];
+      const exp = step.calc_explanation;
+      const isEn = (currentLang === 'en');
+
+      const container = document.getElementById('calc-detail-card');
+      const content = document.getElementById('calc-detail-content');
+
+      content.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+            <h4 class="text-lg font-bold text-white">${step.area}: ${isEn ? step.desc_en : step.desc_zh}</h4>
+          </div>
+
+          <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-amber-300 text-sm font-semibold">
+            ${isEn ? exp.title_en : exp.title_zh}
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+              <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                ${isEn ? '📜 1. Process Rule & Rigid Constraints' : '📜 1. 工艺约束与规则规定'}
+              </div>
+              <p class="text-slate-200 leading-relaxed text-xs">${isEn ? exp.rule_text_en : exp.rule_text_zh}</p>
+            </div>
+
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+              <div class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+                ${isEn ? '⚡ 2. Marginal Energy Formula (kWh/batch)' : '⚡ 2. 边际节电公式与计算依据'}
+              </div>
+              <p class="text-emerald-300 font-mono text-xs leading-relaxed bg-slate-900 p-2.5 rounded-lg border border-emerald-500/20">${exp.formula}</p>
+            </div>
+
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+              <div class="text-xs font-semibold text-blue-400 uppercase tracking-wider">
+                ${isEn ? '🔬 3. Physical Kinetics & Rotor Shear Mechanism' : '🔬 3. 混炼物理机理与动力学解释'}
+              </div>
+              <p class="text-slate-300 leading-relaxed text-xs">${isEn ? exp.physics_en : exp.physics_zh}</p>
+            </div>
+
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+              <div class="text-xs font-semibold text-purple-400 uppercase tracking-wider">
+                ${isEn ? '🛡️ 4. Mooney Non-monotonicity & Safe Tolerance' : '🛡️ 4. 门尼粘度非单调性与安全公差带'}
+              </div>
+              <p class="text-purple-300 leading-relaxed text-xs">${isEn ? exp.mooney_risk_en : exp.mooney_risk_zh}</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.classList.remove('hidden');
+      container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function closeCalcDetail() {
+      document.getElementById('calc-detail-card').classList.add('hidden');
+    }
+
+    // ==========================================
+    // TAB 2: STRUCTURED TRIAL MODIFICATIONS TABLE
+    // ==========================================
+
+    function renderTrialModificationsTable() {
+      const tbody = document.getElementById('trial-mods-tbody');
+      const isEn = (currentLang === 'en');
+
+      if (!trialModifications || trialModifications.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="py-6 text-center text-slate-500 text-xs italic">
+              ${isEn ? 'No step modifications added yet. Click "✨ Load Prescriptive DOE Steps" or "➕ Add Step Modification".' : '暂无工步修改项。请点击上方【✨ 载入当前胶料推荐方案】或【➕ 添加修改工步】开始登记。'}
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = trialModifications.map((row, idx) => {
+        const deltaDur = Number(row.trial_dur) - Number(row.base_dur);
+        const deltaRpm = Number(row.trial_rpm) - Number(row.base_rpm);
+        const deltaTemp = Number(row.trial_temp) - Number(row.base_temp);
+
+        // Delta pills
+        const deltaPills = [];
+        if (Math.abs(deltaDur) > 0.01) {
+          deltaPills.push(`<span class="px-1.5 py-0.5 rounded text-[11px] font-bold ${deltaDur < 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'} font-mono">ΔSP_t ${deltaDur > 0 ? '+' : ''}${Math.round(deltaDur)}s</span>`);
+        }
+        if (Math.abs(deltaRpm) >= 1.0) {
+          deltaPills.push(`<span class="px-1.5 py-0.5 rounded text-[11px] font-bold bg-blue-500/20 text-blue-300 font-mono">ΔSP_RPM ${deltaRpm > 0 ? '+' : ''}${Math.round(deltaRpm)} ${isEn ? '(5-step)' : '(5步进)'}</span>`);
+        }
+        if (Math.abs(deltaTemp) > 0.01) {
+          deltaPills.push(`<span class="px-1.5 py-0.5 rounded text-[11px] font-bold bg-rose-500/20 text-rose-300 font-mono">ΔSP_T ${deltaTemp > 0 ? '+' : ''}${Math.round(deltaTemp)}°C</span>`);
+        }
+        if (deltaPills.length === 0) {
+          deltaPills.push(`<span class="text-slate-600 text-[11px] italic">${isEn ? 'Unchanged (Base SP)' : '无变动 (保持原SP)'}</span>`);
+        }
+
+        return `
+          <tr class="hover:bg-slate-900/40 transition">
+            <td class="py-2.5 px-3">
+              <select onchange="onModStepSelectChange(${idx}, this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500">
+                ${PRESET_STEPS.map(p => `
+                  <option value="${p.step_id}" ${p.step_id === row.step_id ? 'selected' : ''}>
+                    ${isEn ? p.en : p.zh}
+                  </option>
+                `).join('')}
+              </select>
+            </td>
+            <td class="py-2.5 px-3 font-mono text-[11px] text-slate-400">
+              <div>${isEn ? 'Duration SP' : '时长设定 SP'}: <span class="text-slate-200 font-bold">${Math.round(row.base_dur)}s</span></div>
+              <div>${isEn ? 'Speed SP' : '转速 SP'}: <span class="text-slate-200 font-bold">${Math.round(row.base_rpm)} RPM</span> | ${isEn ? 'Temp SP' : '温控 SP'}: <span class="text-slate-200 font-bold">${Math.round(row.base_temp)}°C</span></div>
+            </td>
+            <td class="py-2.5 px-3">
+              <input type="number" step="0.5" value="${row.trial_dur}" oninput="updateTrialModValue(${idx}, 'trial_dur', this.value)"
+                     class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-amber-300 focus:outline-none focus:border-amber-500">
+            </td>
+            <td class="py-2.5 px-3">
+              <input type="number" step="5" value="${row.trial_rpm}" oninput="updateTrialModValue(${idx}, 'trial_rpm', this.value)"
+                     class="w-full bg-slate-900 border border-blue-500/40 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-blue-300 focus:outline-none focus:border-blue-400">
+            </td>
+            <td class="py-2.5 px-3">
+              <input type="number" step="1" value="${row.trial_temp}" oninput="updateTrialModValue(${idx}, 'trial_temp', this.value)"
+                     class="w-full bg-slate-900 border border-rose-500/40 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-rose-300 focus:outline-none focus:border-rose-400">
+            </td>
+            <td class="py-2.5 px-3">
+              <div class="flex flex-wrap gap-1">
+                ${deltaPills.join(' ')}
+              </div>
+            </td>
+            <td class="py-2.5 px-2 text-center">
+              <button onclick="removeTrialModRow(${idx})" class="text-slate-500 hover:text-rose-400 p-1 rounded hover:bg-slate-800 transition" title="删除此行">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function onModStepSelectChange(idx, stepId) {
+      const preset = PRESET_STEPS.find(p => p.step_id === stepId) || PRESET_STEPS[0];
+      trialModifications[idx].step_id = preset.step_id;
+      trialModifications[idx].step_name_zh = preset.zh;
+      trialModifications[idx].step_name_en = preset.en;
+      trialModifications[idx].base_dur = preset.base_dur;
+      trialModifications[idx].trial_dur = preset.def_dur;
+      trialModifications[idx].base_rpm = preset.base_rpm;
+      trialModifications[idx].trial_rpm = preset.def_rpm;
+      trialModifications[idx].base_temp = preset.base_temp;
+      trialModifications[idx].trial_temp = preset.def_temp;
+      renderTrialModificationsTable();
+    }
+
+    function updateTrialModValue(idx, field, value) {
+      trialModifications[idx][field] = Number(value);
+      renderTrialModificationsTable();
+    }
+
+    function addTrialModRow(preset) {
+      const p = preset || PRESET_STEPS[0];
+      trialModifications.push({
+        step_id: p.step_id,
+        step_name_zh: p.zh,
+        step_name_en: p.en,
+        base_dur: p.base_dur,
+        trial_dur: p.def_dur,
+        base_rpm: p.base_rpm,
+        trial_rpm: p.def_rpm,
+        base_temp: p.base_temp,
+        trial_temp: p.def_temp
+      });
+      renderTrialModificationsTable();
+    }
+
+    function removeTrialModRow(idx) {
+      trialModifications.splice(idx, 1);
+      renderTrialModificationsTable();
+    }
+
+    function clearTrialModRows() {
+      trialModifications = [];
+      renderTrialModificationsTable();
+    }
+
+    // Load prescriptive DOE recommendations into trial table
+    function loadPrescriptiveToTrialTable() {
+      if (!currentRecipeData) return;
+      const modSteps = currentRecipeData.steps.filter(s => s.can_modify && (Math.abs(s.delta_duration) > 0.01 || Math.abs(s.delta_rpm) >= 1.0 || Math.abs(s.delta_temp) > 0.01));
+      
+      if (modSteps.length === 0) {
+        alert(currentLang === 'en' ? "Current recipe has no proposed modifications." : "当前配方无推荐修改项。");
+        return;
+      }
+
+      trialModifications = modSteps.map(s => {
+        return {
+          step_id: s.step_id,
+          step_name_zh: `${s.area} (${s.desc_zh})`,
+          step_name_en: `${s.area} (${s.desc_en})`,
+          base_dur: s.base_dur,
+          trial_dur: s.prop_dur,
+          base_rpm: s.base_rpm,
+          trial_rpm: s.prop_rpm,
+          base_temp: s.base_temp,
+          trial_temp: s.prop_temp
+        };
+      });
+
+      renderTrialModificationsTable();
+    }
+
+    async function fetchQuickOrders() {
+      try {
+        const res = await fetch('/api/quick_trial_orders');
+        const data = await res.json();
+        quickOrdersList = data.orders;
+        renderQuickOrders();
+      } catch (err) {
+        console.error("Failed to load quick orders:", err);
+      }
+    }
+
+    function renderQuickOrders() {
+      const chipsContainer = document.getElementById('quick-order-chips');
+      const isEn = (currentLang === 'en');
+      chipsContainer.innerHTML = quickOrdersList.map(o => {
+        return `
+          <button onclick="fillOrderAndTemplate('${o.order_id}')"
+                  class="px-3 py-1.5 rounded-lg text-xs bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-amber-500 text-slate-300 transition flex items-center space-x-1.5 shadow-sm">
+            <span class="font-mono font-bold text-amber-300">${o.order_id}</span>
+            <span class="text-slate-400">(${isEn ? (o.tag === 'MSB -10s 首发单' ? 'MSB -10s First Trial' : o.tag) : o.tag})</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function fillOrderAndTemplate(orderId) {
+      document.getElementById('input-order-id').value = orderId;
+      const match = quickOrdersList.find(o => o.order_id === orderId);
+      if (match) {
+        document.getElementById('input-notes').value = match.default_notes;
+        if (match.modifications && match.modifications.length > 0) {
+          trialModifications = JSON.parse(JSON.stringify(match.modifications));
+        }
+      }
+      renderTrialModificationsTable();
+      runTrialEvaluation();
+    }
+
+    async function runTrialEvaluation() {
+      const orderId = document.getElementById('input-order-id').value.trim();
+      const notes = document.getElementById('input-notes').value.trim();
+
+      if (!orderId) {
+        alert(currentLang === 'en' ? "Please enter an Order ID!" : "请输入工单号 (Order ID)！");
+        return;
+      }
+
+      document.getElementById('eval-loading').classList.remove('hidden');
+      document.getElementById('eval-result-container').classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/evaluate_trial', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            order_id: orderId, 
+            notes: notes,
+            modifications: trialModifications 
+          })
+        });
+        const result = await res.json();
+        document.getElementById('eval-loading').classList.add('hidden');
+
+        if (result.status === 'not_found') {
+          alert(currentLang === 'en' ? 
+            `Order ID [${orderId}] was not found in the batch database. Please select from suggested samples above.` : 
+            `数据库中未找到工单号 [${orderId}]。建议尝试上方推荐的已知实验单如 8113482, 8110496 等。`);
+          return;
+        }
+
+        if (result.status === 'error') {
+          alert(result.message);
+          return;
+        }
+
+        lastEvalResult = result;
+        renderEvaluationResults(result);
+      } catch (err) {
+        document.getElementById('eval-loading').classList.add('hidden');
+        alert("Evaluation request failed: " + err);
+      }
+    }
+
+    function renderEvaluationResults(res) {
+      const container = document.getElementById('eval-result-container');
+      container.classList.remove('hidden');
+      const isEn = (currentLang === 'en');
+
+      // 1. Verdict Banner
+      const v = res.verdict;
+      const banner = document.getElementById('verdict-banner');
+      banner.className = `border rounded-2xl p-6 shadow-xl ${v.class}`;
+      banner.innerHTML = `
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex items-center space-x-2">
+              <span class="px-2.5 py-1 rounded text-xs font-bold text-white ${v.badge}">STATUS: ${v.status}</span>
+              <h3 class="text-xl font-black">${isEn ? (v.status === 'PASS' ? 'Trial Evaluation Passed' : v.title) : v.title}</h3>
+            </div>
+            <p class="text-sm font-medium mt-1">
+              ${isEn ? 'Order' : '工单'}: <span class="font-mono font-bold">${res.order_id}</span> | 
+              ${isEn ? 'Compound' : '胶料'}: <span class="font-bold">${res.compound.name}</span> (${res.compound.mixer}) | 
+              ${isEn ? 'Batches' : '包含批次'}: ${res.production.batch_count} ${isEn ? 'batches' : '车'}
+            </p>
+            <p class="text-xs text-slate-600 mt-0.5">${isEn ? 'Trial Notes' : '实验备注'}: ${res.user_notes}</p>
+          </div>
+          <div class="bg-white/90 p-4 rounded-xl border border-current/20 max-w-md">
+            <div class="text-xs font-bold uppercase tracking-wider mb-1">${isEn ? 'Next Step Engineering Action' : '工程决策建议 (Next Step Action)'}</div>
+            <div class="text-xs leading-relaxed font-semibold text-slate-800">${isEn ? (v.status === 'PASS' ? 'Ready for production scale-up and standard recipe lock-in. Lower mixer duration and temp controls verified safe.' : v.recommendation_action) : v.recommendation_action}</div>
+          </div>
+        </div>
+      `;
+
+      // 2. Step-by-Step Modification Fidelity Audit Matrix
+      const stepAudits = res.fidelity_audit.step_audits || [];
+      const fidelityTbody = document.getElementById('eval-fidelity-tbody');
+      
+      if (stepAudits.length === 0) {
+        fidelityTbody.innerHTML = `<tr><td colspan="7" class="py-4 text-center text-slate-500">无结构化对比项</td></tr>`;
+      } else {
+        fidelityTbody.innerHTML = stepAudits.map(sa => {
+          const isHigh = (sa.fidelity_score >= 95.0);
+          return `
+            <tr class="hover:bg-slate-900/60 transition">
+              <td class="py-2.5 px-3 font-semibold text-white">
+                ${isEn ? sa.step_name_en : sa.step_name_zh}
+              </td>
+              <td class="py-2.5 px-3 font-mono text-slate-300">
+                <div>${isEn ? 'Trial SP' : '实验设定 (SP)'}: <span class="text-amber-300 font-bold">${Math.round(sa.param_target_dur)}s</span></div>
+                <div class="text-[11px] text-slate-500">${isEn ? 'Speed SP' : '转速 SP'}: ${Math.round(sa.param_target_rpm)} RPM | ${isEn ? 'Temp SP' : '温控 SP'}: ${Math.round(sa.param_target_temp)}°C</div>
+              </td>
+              <td class="py-2.5 px-3 font-mono bg-slate-900/40 text-amber-300">
+                <div>${isEn ? 'Actual (AV)' : '实测执行 (AV)'}: <span class="font-bold text-white">${sa.actual_dur}s</span> (σ=${sa.actual_dur_std}s)</div>
+                <div class="text-[11px] text-slate-400">${isEn ? 'Actual Temp AV' : '实测出胶温度 AV'}: ${sa.actual_temp}°C</div>
+              </td>
+              <td class="py-2.5 px-3 text-right font-mono font-bold ${Math.abs(sa.dur_offset) <= 1.0 ? 'text-emerald-400' : 'text-amber-400'}">
+                ${sa.dur_offset > 0 ? '+' : ''}${sa.dur_offset}s
+                <span class="text-[10px] text-slate-500 font-normal block">[AV - SP]</span>
+              </td>
+              <td class="py-2.5 px-3 text-right font-mono font-bold ${isHigh ? 'text-emerald-400' : 'text-amber-300'}">
+                ${sa.fidelity_score}%
+              </td>
+              <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-400">
+                -${sa.energy_saved_kwh} kWh/车
+              </td>
+              <td class="py-2.5 px-3 text-center">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isHigh ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}">
+                  ${isEn ? sa.status_grade_en : sa.status_grade_zh}
+                </span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // 3. 4 Diagnostic KPI Cards
+      const e = res.energy_audit;
+      const f = res.fidelity_audit;
+      const q = res.quality_audit;
+      const isSaving = e.is_saving;
+
+      document.getElementById('eval-kpi-cards').innerHTML = `
+        <!-- Card 1: Fidelity -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+            <span>${isEn ? 'Overall Fidelity (SP-AV)' : '综合执行保真度 (SP-AV Fidelity)'}</span>
+            <i class="fa-solid fa-bullseye text-amber-400"></i>
+          </div>
+          <div class="text-2xl font-mono font-black text-white">${f.fidelity_pct}%</div>
+          <div class="mt-2 text-xs text-slate-300">
+            <div>${isEn ? 'Primary Step' : '首要工步'}: <span class="font-mono font-bold text-white">${f.expected_step_target_s}s</span> ➔ <span class="font-mono font-bold text-amber-300">${f.actual_step_duration_s}s</span></div>
+            <div class="text-slate-400 mt-0.5">${isEn ? 'Grade' : '评级'}: <span class="text-emerald-400 font-semibold">${isEn ? 'High Fidelity' : f.execution_grade}</span> (${isEn ? 'Offset' : '偏离'} ${f.offset_s}s)</div>
+          </div>
+        </div>
+
+        <!-- Card 2: Energy Savings -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+            <span>${isEn ? 'Specific Energy (kWh/t)' : '实测吨胶比能耗 (kWh/t)'}</span>
+            <i class="fa-solid fa-bolt text-emerald-400"></i>
+          </div>
+          <div class="text-2xl font-mono font-black ${isSaving ? 'text-emerald-400' : 'text-slate-200'}">${e.order_kwh_ton} <span class="text-xs font-normal text-slate-400">kWh/t</span></div>
+          <div class="mt-2 text-xs ${isSaving ? 'text-emerald-400' : 'text-amber-400'}">
+            <div>${isSaving ? '▼' : '▲'} ${isEn ? 'Saving' : '节约'} <span class="font-bold font-mono">${Math.abs(e.delta_kwh_ton)} kWh/t</span> (${e.pct_savings}%)</div>
+            <div class="text-slate-400 mt-0.5">${isEn ? 'Batch Energy' : '单车电耗'}: ${e.order_kwh_batch} (${isEn ? 'Base' : '基准'}: ${e.baseline_kwh_batch} kWh)</div>
+          </div>
+        </div>
+
+        <!-- Card 3: Mooney Quality -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+            <span>${isEn ? 'QC Lab Mooney Mean' : 'QC 门尼粘度实测均值'}</span>
+            <i class="fa-solid fa-vial text-purple-400"></i>
+          </div>
+          <div class="text-2xl font-mono font-black ${q.is_in_spec ? 'text-purple-300' : 'text-rose-400'}">${q.mooney_mean} <span class="text-xs font-normal text-slate-400">MU</span></div>
+          <div class="mt-2 text-xs text-slate-300">
+            <div>${isEn ? 'In-Spec Rate' : '合格率'}: <span class="font-bold text-emerald-400">${q.in_spec_rate}%</span> ([${res.compound.spec_min}, ${res.compound.spec_max}])</div>
+            <div class="text-slate-400 mt-0.5">${isEn ? 'Shift from Target' : '偏离 Target'}: <span class="font-mono text-white">${q.shift_from_target > 0 ? '+' : ''}${q.shift_from_target} MU</span></div>
+          </div>
+        </div>
+
+        <!-- Card 4: Production Batches -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+            <span>${isEn ? 'Lower Mixer Step 1 Mean Duration' : '下密炼 Step 1 实测时长'}</span>
+            <i class="fa-solid fa-stopwatch text-blue-400"></i>
+          </div>
+          <div class="text-2xl font-mono font-black text-white">${res.production.msb_s1_dur_mean_s} <span class="text-xs font-normal text-slate-400">s</span></div>
+          <div class="mt-2 text-xs text-slate-400">
+            <div>${isEn ? 'Batches' : '总车次'}: <span class="font-bold text-white">${res.production.batch_count}</span></div>
+            <div class="mt-0.5">${isEn ? 'Std Dev' : '标准差'} σ = <span class="font-mono text-slate-300">${res.production.msb_s1_dur_std_s}s</span></div>
+          </div>
+        </div>
+      `;
+
+      // 4. Mooney Section
+      const mooneyBadge = document.getElementById('eval-mooney-badge');
+      if (q.is_in_spec) {
+        mooneyBadge.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        mooneyBadge.innerText = isEn ? 'QC PASSED (IN-SPEC)' : 'QC 判定合格 (IN-SPEC)';
+      } else {
+        mooneyBadge.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30';
+        mooneyBadge.innerText = isEn ? 'QC WARNING (OUT-OF-SPEC)' : '质控预警 (OUT-OF-SPEC)';
+      }
+
+      document.getElementById('eval-mooney-values-list').innerText = q.lab_values.map(v => `${v} MU`).join(', ');
+      document.getElementById('eval-mooney-stats').innerText = isEn ? 
+        `Mean: ${q.mooney_mean} MU | Std Dev σ: ${q.mooney_std} MU | Range: [${q.mooney_min} ~ ${q.mooney_max}] MU` : 
+        `均值: ${q.mooney_mean} MU | 标准差 σ: ${q.mooney_std} MU | 极差: [${q.mooney_min} ~ ${q.mooney_max}] MU`;
+      
+      document.getElementById('eval-non-monotonicity-text').innerText = q.non_monotonicity_audit;
+
+      // 5. Charts
+      renderEvaluationCharts(res.chart_data);
+    }
+
+    function renderEvaluationCharts(chartData) {
+      const isEn = (currentLang === 'en');
+
+      // Energy Chart
+      const ctxEnergy = document.getElementById('chart-batch-energy').getContext('2d');
+      if (energyChart) energyChart.destroy();
+
+      energyChart = new Chart(ctxEnergy, {
+        type: 'line',
+        data: {
+          labels: chartData.batch_labels,
+          datasets: [
+            {
+              label: isEn ? 'Actual Batch MSB Energy (kWh)' : '实际每车下密炼电耗 (kWh)',
+              data: chartData.batch_energy_series,
+              borderColor: '#10B981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.2,
+              pointRadius: 2
+            },
+            {
+              label: isEn ? 'Baseline Energy Benchmark' : '基准能耗水平线',
+              data: Array(chartData.batch_labels.length).fill(chartData.baseline_energy_line),
+              borderColor: '#F59E0B',
+              borderDash: [5, 5],
+              borderWidth: 1.5,
+              pointRadius: 0,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#94A3B8', font: { size: 11 } } }
+          },
+          scales: {
+            x: { ticks: { color: '#64748B', maxTicksLimit: 12 }, grid: { color: '#1E293B' } },
+            y: { ticks: { color: '#64748B' }, grid: { color: '#1E293B' } }
+          }
+        }
+      });
+
+      // Duration Chart
+      const ctxDur = document.getElementById('chart-batch-duration').getContext('2d');
+      if (durationChart) durationChart.destroy();
+
+      durationChart = new Chart(ctxDur, {
+        type: 'bar',
+        data: {
+          labels: chartData.batch_labels,
+          datasets: [
+            {
+              label: isEn ? 'Lower Mixer Step 1 Duration (s)' : '下密炼 Step 1 执行时长 (s)',
+              data: chartData.batch_dur_series,
+              backgroundColor: 'rgba(245, 158, 11, 0.7)',
+              borderColor: '#F59E0B',
+              borderWidth: 1,
+              borderRadius: 3
+            },
+            {
+              type: 'line',
+              label: isEn ? 'Baseline Duration Benchmark' : '基准时长基线',
+              data: Array(chartData.batch_labels.length).fill(chartData.baseline_dur_line),
+              borderColor: '#EF4444',
+              borderDash: [4, 4],
+              borderWidth: 1.5,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#94A3B8', font: { size: 11 } } }
+          },
+          scales: {
+            x: { ticks: { color: '#64748B', maxTicksLimit: 12 }, grid: { color: '#1E293B' } },
+            y: { ticks: { color: '#64748B' }, grid: { color: '#1E293B' } }
+          }
+        }
+      });
+    }
+
+    // Render Rulebook in chosen language
+    function renderRulebook() {
+      const container = document.getElementById('rulebook-cards-container');
+      const isEn = (currentLang === 'en');
+
+      const rulesData = isEn ? [
+        {
+          num: '01',
+          name: 'Step 1–2 (Material Loading)',
+          badge: 'Frozen Zone',
+          badgeClass: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+          desc: 'Rubber and filler loading phase. Target duration and RPM are completely excluded from the modification action space to prevent powder spillage, vacuum starvation, or ram jams.'
+        },
+        {
+          num: '02',
+          name: 'Ram Cylinder Travel',
+          badge: 'Excluded from Action Space',
+          badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+          desc: 'Mechanical pneumatic travel cannot be compressed as a DOE parameter. The system strictly executes SP vs AV tracking and detects mechanical stick/slip anomalies.'
+        },
+        {
+          num: '03',
+          name: 'Dry Mixing (Dry Incorporation)',
+          badge: 'Dual-Completion Trigger',
+          badgeClass: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+          desc: 'Increasing duration, speed (strictly 5 RPM step), or temperature promotes dispersion and lowers Mooney. Evaluated strictly via dual completion criteria: Target Temp OR satisfying time.'
+        },
+        {
+          num: '04',
+          name: 'Wet Mixing (Coupled Heating)',
+          badge: 'Coupled Macro-Action',
+          badgeClass: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+          desc: 'Speed reduction is strictly coupled with duration and silanization target temperature hold (152°C). Never decouple speed reduction from endpoint temperature control.'
+        },
+        {
+          num: '05',
+          name: 'Carbon Black PID Stage',
+          badge: 'Upper & Lower Mixer 5–10s Step',
+          badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+          desc: 'Carbon black has no silanization. Both upper and lower mixer durations are open for compression in discrete 5–10s steps, eliminating redundant rolling friction.'
+        },
+        {
+          num: '06',
+          name: 'Silica Lower Mixer PID',
+          badge: 'Lower Mixer 10s Step (Non-Monotonic)',
+          badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+          desc: 'For Silica, only the lower mixer duration is open, strictly in discrete 10s increments. Model must verify absence of overmixing or silica flocculation. Clear physical formulas provided.'
+        }
+      ] : [
+        {
+          num: '01',
+          name: 'Step 1–2 (投料区)',
+          badge: '强制冻结',
+          badgeClass: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+          desc: '属于生胶投料、加炭黑/白炭黑与小料阶段。动作空间完全禁止修改其 Target 时长与转速，防止气力输送漏料、除尘吸附不充分或压栓动作干涉。'
+        },
+        {
+          num: '02',
+          name: '压栓 / Ram 动作',
+          badge: '从动作空间移除',
+          badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+          desc: '气缸行程与机械密封受物理结构限制，基本不作为 DOE 优化变量；系统仅执行 SP-AV 跟踪监控与卡栓异常审计。'
+        },
+        {
+          num: '03',
+          name: 'Dry Mixing (干混段)',
+          badge: '联合完成条件 (转速5起调)',
+          badgeClass: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+          desc: '加时长、加转速（以 5 RPM 起调）、提高温度有助于打破粒子团并降低门尼粘度。必须以“达到目标温度且/或满足时间”的联合完成条件评价。'
+        },
+        {
+          num: '04',
+          name: 'Wet Mixing (湿混段)',
+          badge: '强耦合动作',
+          badgeClass: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+          desc: '降 RPM 可拉长混炼时间，温度 Target 共同控制终点。严禁把“降 RPM”作为孤立动作，必须作为“RPM↓ + 允许/要求 duration↑ + 温度终点保持”的耦合动作。'
+        },
+        {
+          num: '05',
+          name: '炭黑 PID (Carbon Black)',
+          badge: '上&下密炼 5–10s 步进',
+          badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+          desc: '炭黑无硅烷化反应，主要调上下密炼 duration；开放上密炼与下密炼 PID duration，单次变化严格以 5–10 s 为步进原则，消除后段冗余捏合。'
+        },
+        {
+          num: '06',
+          name: '白炭黑 PID (Silica)',
+          badge: '仅下密炼 10s 一档 / 非单调检验',
+          badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+          desc: '仅开放下密炼 duration，严格按 10 s 一档步进；绝对不能预设“时间越长门尼越低”，必须由模型和历史回放确认方向与过调风险（防止发生二次絮凝返粗），每项推荐均输出清晰物理机理计算。'
+        }
+      ];
+
+      container.innerHTML = rulesData.map(r => `
+        <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+          <div class="flex items-center space-x-2 text-slate-200 font-bold">
+            <span class="px-2 py-0.5 rounded bg-slate-800 text-xs text-slate-400 font-mono">${r.num}</span>
+            <span>${r.name}</span>
+            <span class="ml-auto px-2 py-0.5 rounded text-xs border ${r.badgeClass}">${r.badge}</span>
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">${r.desc}</p>
+        </div>
+      `).join('');
+    }
+
+    // ==========================================
+    // ENERGY PROFILER MODULE (TAB 2)
+    // ==========================================
+    let profilerRankings = [];
+    let profilerCurrentCompound = 'M1-T15760';
+    let profilerMaterialData = null;
+    let profilerStepData = null;
+    let profilerFilterSystem = 'ALL';
+
+    async function fetchEnergyRankings() {
+      try {
+        const res = await fetch('/api/energy_ranking');
+        const json = await res.json();
+        if (json.status === 'success') {
+          profilerRankings = json.data;
+          renderEnergyRankings();
+          renderCompoundChips();
+        }
+      } catch (err) {
+        console.error("Failed to load energy rankings:", err);
+      }
+    }
+
+    function filterProfilerRanking(sys) {
+      profilerFilterSystem = sys;
+      ['all', 'silica', 'cb'].forEach(k => {
+        const btn = document.getElementById(`btn-rank-${k}`);
+        if (!btn) return;
+        const targetSys = k === 'all' ? 'ALL' : (k === 'silica' ? 'Silica' : 'CarbonBlack');
+        if (targetSys === sys) {
+          btn.className = 'px-3 py-1 rounded-lg text-xs font-semibold bg-amber-500 text-slate-950';
+        } else {
+          btn.className = 'px-3 py-1 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800';
+        }
+      });
+      renderEnergyRankings();
+    }
+
+    function renderEnergyRankings() {
+      const tbody = document.getElementById('energy-ranking-tbody');
+      if (!tbody) return;
+      const isEn = (currentLang === 'en');
+
+      let list = profilerRankings;
+      if (profilerFilterSystem !== 'ALL') {
+        list = list.filter(item => item.system === profilerFilterSystem);
+      }
+
+      tbody.innerHTML = list.map(item => {
+        const isSilica = item.system === 'Silica';
+        const rankBadge = item.rank === 1 ? 'bg-rose-500 text-white' : 
+                          (item.rank === 2 ? 'bg-amber-500 text-slate-950' : 
+                          (item.rank === 3 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'));
+        return `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="py-3 px-3 text-center">
+              <span class="inline-flex items-center justify-center w-6 h-6 rounded-full font-bold text-xs ${rankBadge}">
+                ${item.rank}
+              </span>
+            </td>
+            <td class="py-3 px-4">
+              <div class="font-bold text-white text-xs md:text-sm">${item.compound_id}</div>
+              <div class="text-[10px] text-slate-400 truncate max-w-[180px]">${item.full_name}</div>
+            </td>
+            <td class="py-3 px-3">
+              <span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-semibold border ${isSilica ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/10 text-amber-300 border-amber-500/30'}">
+                <i class="fa-solid ${isSilica ? 'fa-leaf' : 'fa-cubes'} text-[10px]"></i>
+                <span>${isEn ? (isSilica ? 'Silica' : 'Carbon Black') : (isSilica ? '白炭黑' : '炭黑')}</span>
+              </span>
+            </td>
+            <td class="py-3 px-3 text-right">
+              <div class="text-white font-bold text-xs md:text-sm">${item.baseline_kwh_ton}</div>
+              <div class="text-[10px] text-slate-400">${item.baseline_kwh_batch} kWh/${isEn ? 'batch' : '车'}</div>
+            </td>
+            <td class="py-3 px-3 text-right">
+              <div class="text-slate-200 font-bold text-xs md:text-sm">${item.optimized_kwh_ton}</div>
+              <div class="text-[10px] text-slate-400">${item.optimized_kwh_batch} kWh/${isEn ? 'batch' : '车'}</div>
+            </td>
+            <td class="py-3 px-3 text-right">
+              <div class="text-emerald-400 font-bold text-xs md:text-sm">-${item.savings_kwh_ton} kWh/t</div>
+              <div class="text-[10px] text-emerald-500/90 font-medium">-${item.savings_pct}% (-${item.savings_kwh_batch} kWh)</div>
+            </td>
+            <td class="py-3 px-3 text-center">
+              <span class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                ${item.msb_energy_share_pct}%
+              </span>
+            </td>
+            <td class="py-3 px-3 text-center font-sans">
+              <button onclick="drillDownProfiler('${item.compound_id}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-amber-300 border border-amber-500/30 transition text-xs font-semibold flex items-center space-x-1 mx-auto shadow-sm">
+                <i class="fa-solid fa-microscope text-[10px]"></i>
+                <span>${isEn ? 'Drill Down' : '配方工步'}</span>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function drillDownProfiler(cid) {
+      selectCompound(cid);
+      const target = document.getElementById('step-section-heading');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    function renderMaterialImpact(data) {
+      const isEn = (currentLang === 'en');
+      // Total phr
+      const totalPhrElem = document.getElementById('mat-total-phr');
+      if (totalPhrElem) totalPhrElem.innerText = `${isEn ? 'Total phr' : '总份数'}: ${data.total_phr.toFixed(1)} phr`;
+
+      // Stacked Bar
+      const stackedBar = document.getElementById('mat-stacked-bar');
+      if (stackedBar) {
+        stackedBar.innerHTML = data.materials.map(m => {
+          const pct = (m.phr / data.total_phr * 100).toFixed(1);
+          const matLabel = m.code ? (m.short_name ? `${m.code} (${m.short_name})` : m.code) : (m.name_zh || m.name_en || '');
+          return `<div style="width: ${pct}%; background-color: ${m.color};" class="h-full transition-all duration-300" title="${matLabel}: ${m.phr} phr (${pct}%)"></div>`;
+        }).join('');
+      }
+
+      // Material Table
+      const tbody = document.getElementById('material-list-tbody');
+      if (tbody) {
+        tbody.innerHTML = data.materials.map(m => {
+          const pct = (m.phr / data.total_phr * 100).toFixed(1);
+          const matCode = m.code || m.name_zh || m.name_en || '';
+          const shortName = m.short_name || '';
+          return `
+            <tr class="hover:bg-slate-900/60 transition">
+              <td class="py-2.5 px-3 text-slate-200 flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0" style="background-color: ${m.color};"></span>
+                <div class="truncate max-w-[220px]">
+                  <span class="font-mono font-bold text-white text-xs">${matCode}</span>
+                  ${shortName ? `<span class="ml-1 text-[11px] font-mono text-slate-400">(${shortName})</span>` : ''}
+                </div>
+              </td>
+              <td class="py-2.5 px-3 text-right font-bold text-white font-mono text-xs">${m.phr.toFixed(m.phr < 1 ? 2 : 1)}</td>
+              <td class="py-2.5 px-3 text-center">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300 border border-slate-700">${m.category}</span>
+              </td>
+              <td class="py-2.5 px-2 text-right text-slate-400 font-mono text-xs">${pct}%</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // Sensitivities Cards
+      const sensContainer = document.getElementById('mat-sensitivities-container');
+      const sensCountElem = document.getElementById('mat-sens-count');
+      if (sensCountElem) sensCountElem.innerText = `${data.energy_sensitivities.length} ${isEn ? 'Core Impact Factors' : '项核心影响因子'}`;
+
+      if (sensContainer) {
+        sensContainer.innerHTML = data.energy_sensitivities.map(s => {
+          const isHigh = s.impact_level.includes('HIGH');
+          const isInnov = s.impact_level.includes('INNOVATIVE');
+          const isSecurity = s.impact_level.includes('SECURITY');
+          
+          let cardBorder = 'border-slate-800';
+          if (isInnov) {
+            cardBorder = 'border-emerald-500/40 bg-emerald-950/20';
+          } else if (isSecurity) {
+            cardBorder = 'border-blue-500/40 bg-blue-950/20';
+          } else if (isHigh) {
+            cardBorder = 'border-rose-500/30 bg-rose-950/10';
+          }
+
+          return `
+            <div class="p-4 rounded-xl border ${cardBorder} bg-slate-950/70 space-y-2 transition shadow-sm hover:border-slate-700">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                <div class="flex items-center space-x-2">
+                  <span class="font-bold text-white text-xs md:text-sm font-sans">${isEn ? s.ingredient_en : s.ingredient_zh}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300">${s.phr_value} phr</span>
+                </div>
+                <div class="flex items-center space-x-2 self-start sm:self-auto">
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold ${isInnov ? 'bg-emerald-500 text-slate-950' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'}">
+                    ${s.coeff_text}
+                  </span>
+                </div>
+              </div>
+              <p class="text-xs text-slate-400 font-sans leading-relaxed pt-1 border-t border-slate-800/60">
+                ${isEn ? s.mechanism_en : s.mechanism_zh}
+              </p>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // Merged Step Energy Dynamics & Prescriptive Recommendations rendered via renderWorkbench()
+
+  </script>
+</body>
+</html>

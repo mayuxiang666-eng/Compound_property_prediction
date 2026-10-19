@@ -155,3 +155,19 @@ python compound_energy_optimizer.py --mode all --top 5
   - `reports/compound_energy_optimization_auto/top5_cb_and_silica_energy_potential_dashboard.png`
   - `reports/compound_energy_optimization_auto/b00458_b00163_and_top_compounds_step_diagnosis.png`
 - **分步遥测原始库**：`scratch/top_compounds_steps_raw.csv`（471,013 行真实分步参数）
+
+### 5.3 Web 看板系统与 10.246.97.159 生产服务器部署 (Mixing Energy Dashboard)
+- **生产访问入口**：`http://10.246.97.159:8888/`（直接在浏览器访问，顶部点击「**⚡ 胶料节能潜力与优化**」Tab）
+- **核心功能**：
+  1. **全厂胶料能耗潜力排行 (Energy Potential Ranking)**：全厂 33 款高产量胶料多维度排行，支持按「全部」、「炭黑 TOP 5」、「白炭黑 TOP 5」一键筛选与模糊搜索；
+  2. **工步级遥测与方差贡献率 Wi 诊断 (Step-Level Diagnosis)**：查看任意胶料各工步设定与实测转速、功率、电耗及方差贡献率 $W_i$；
+  3. **三大工艺优化处方建议**：MST 降速处方（-5 RPM）、MSB 降时处方（-9s）、白炭黑专属 PID 总体时长门禁（PASS/CLAMPED）及炭黑规则豁免（EXEMPT）；
+  4. **全流程一键批处理重算**：支持前端一键执行动态多阶段批处理重算，并热更新前端数据；
+  5. **高清四联看板放大预览**：集成嵌入 Top 5 潜力排行看板与重点胶料分步诊断看板，支持点击放大。
+- **本地开发运行**：
+  ```bash
+  # 运行本地 Flask 测试看板 (Port 5000)
+  python web_dashboard/app.py
+  ```
+- **服务器批处理重算脚本**：
+  在服务器 `D:\HefeiEnergyDashboard_Release\run_server\` 目录下双击 `run_batch_optimization.bat`，即可一键重算并刷新全部数据资产。

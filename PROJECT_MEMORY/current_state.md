@@ -132,3 +132,18 @@
   - 引擎代码：`compound_energy_optimizer.py`（支持 `--mode rank/diagnose/all`）；
   - 报告：`reports/compound_energy_optimization_auto/Top5_CarbonBlack_and_Silica_Energy_Optimization_Report.md` 与 `docs/Top5_CarbonBlack_and_Silica_Energy_Optimization_Report.md`；
   - 数据表与图表：`reports/compound_energy_optimization_auto/*.csv` 及两张高分辨率看板。
+
+## 2026-10-19 Web 看板统一工程集成与生产环境上线 (10.246.97.159:8888)
+
+- **当前里程碑**：全厂混炼能耗潜力排行与分步优化引擎（`CompoundEnergyOptimizer`）已无缝集成至生产环境「合肥工厂密炼能源管理平台」（Hefei Mixing Energy Management Platform），并完成实网部署与功能验证。
+- **访问地址**：`http://10.246.97.159:8888/`（切换至「⚡ 胶料节能潜力与优化」Tab）。
+- **主要交付模块与功能**：
+  1. **全厂胶料能耗潜力排行榜 (Plant-Wide Ranking)**：全厂 33 款高产量胶料多维度排行，支持按「全部」、「炭黑 TOP 5」、「白炭黑 TOP 5」一键筛选与模糊搜索；完整呈现 P15 黄金低耗、P50 中位数、P85 高耗位、车次能耗极差（$\Delta E = P85 - P15$）、年化混炼产量及年化节电潜力（MWh/年）；
+  2. **工步级遥测与方差贡献率 Wi 诊断表 (Step-Level Telemetry & Diagnosis)**：精确呈现每一步的设定/实测时间、转速、功率、电耗及 $W_i$ 方差贡献率，$W_i \ge 20\%$ 的靶向波动工步标红高亮；
+  3. **三大工艺优化处方建议卡片**：
+     - **上密炼机 (MST) 降速处方**：标调靶向工步调降 $-5\text{ RPM}$、预计功率降幅及节电量，标明非牛顿流体剪切稀化幂律机理依据；
+     - **下密炼机 (MSB) 降时处方**：标调下密炼停留时间压缩（如 $-9\text{s}$），标明边际能耗速率与防过炼降温均化机理；
+     - **白炭黑专属 PID 总体时长 Hard Rule 刚性门禁卡片**：白炭黑胶料展示安全区间对比进度条，标注 `PASS` 或 `CLAMPED`；炭黑胶料显式标注 `[规则豁免 (炭黑体系)]`；
+  4. **全流程一键批处理重算 (One-Click Batch Execution)**：支持前端一键触发批处理重算，实时动态多阶段进度弹窗；后台提供 `run_batch_optimization.bat` 支持自动更新；
+  5. **高清四联诊断看板图库与放大预览**：集成嵌入 Top 5 潜力排行看板图与重点胶料分步诊断看板图，支持点击放大查看大图；
+  6. **一键 CSV 导出**：支持一键导出排行榜 CSV 与特定胶料分步诊断 CSV。

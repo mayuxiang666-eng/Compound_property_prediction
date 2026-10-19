@@ -1,0 +1,679 @@
+<!-- ============================================================================== -->
+<!-- MODULE 3: 胶料节能潜力排行与分步优化工作台 (ENERGY POTENTIAL & STEP DOE WORKBENCH) -->
+<!-- ============================================================================== -->
+<main class="dashboard-grid" v-show="currentTab === 'energy-optimization'" style="display: flex; flex-direction: column; gap: 1.5rem; padding: 1.5rem 0.5rem;">
+
+    <!-- Top Workbench Control & Action Header -->
+    <section class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #ff9f00 0%, #ea580c 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.1rem; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);">
+                        ⚡
+                    </div>
+                    <h2 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.02em;">
+                        {{ currentLang === 'zh' ? '全厂胶料能耗潜力排行与分步优化工作台' : 'Plant-Wide Energy Potential Ranking & Step DOE Optimizer' }}
+                    </h2>
+                    <span style="display: inline-block; padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; background: #fef3c7; color: #b45309; border: 1px solid #fde68a;">
+                        {{ currentLang === 'zh' ? '白炭黑 PID 刚性门禁 | 炭黑豁免' : 'Silica Hard Rule Active | CB Exempt' }}
+                    </span>
+                </div>
+                <p style="color: #64748b; font-size: 0.88rem; margin: 0; max-width: 900px; line-height: 1.5;">
+                    {{ currentLang === 'zh' ? '结合全厂年化产量与车次能耗离散度 (P15 黄金低耗 vs P85 高耗极差)，多维度诊断 Top 5 炭黑与 Top 5 白炭黑高潜力胶料，输出上密炼降速与下密炼降时处方，刚性执行白炭黑 PID 总时长门禁。' : 'Screening Top 5 Carbon Black & Silica compounds by production volume and batch energy spread (P85-P15), providing step-level speed & time curtailment recipes with strict PID duration hard rule enforcement.' }}
+                </p>
+                <div style="margin-top: 0.4rem; font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 0.75rem;">
+                    <span>📅 {{ optData.generated_at ? (currentLang === 'zh' ? '基准计算时间：' + optData.generated_at : 'Computed at: ' + optData.generated_at) : (currentLang === 'zh' ? '机理推演引擎在线' : 'Physics Engine Online') }}</span>
+                    <span>•</span>
+                    <span>🏢 {{ currentLang === 'zh' ? '合肥工厂密炼车间 (ML01-ML10)' : 'Hefei Mixing Shop (ML01-ML10)' }}</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons Group -->
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <button @click="openChartModal('ranking_dashboard')" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem; border-radius: 10px; font-size: 0.82rem; font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
+                    <span>📊</span>
+                    <span>{{ currentLang === 'zh' ? '潜力排行四联看板' : 'Potential Dashboard' }}</span>
+                </button>
+                <button @click="openChartModal('diagnosis_dashboard')" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem; border-radius: 10px; font-size: 0.82rem; font-weight: 700; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
+                    <span>🔬</span>
+                    <span>{{ currentLang === 'zh' ? '分步诊断四联看板' : 'Step Diagnosis Dashboard' }}</span>
+                </button>
+                <button @click="triggerBatchOptimization" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.35rem; border-radius: 10px; font-size: 0.88rem; font-weight: 800; background: linear-gradient(135deg, #ff9f00 0%, #ea580c 100%); border: none; color: white; cursor: pointer; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35); transition: all 0.2s;">
+                    <span style="font-size: 1rem;">🚀</span>
+                    <span>{{ currentLang === 'zh' ? '全流程一键批处理重算' : 'Run Batch Optimization' }}</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4 High-Impact KPI Metric Cards -->
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem;">
+        
+        <!-- KPI 1: CB Top 5 Savings -->
+        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; background: white; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.5rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -10px; right: -10px; width: 60px; height: 60px; background: rgba(15, 23, 42, 0.03); border-radius: 50%;"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.82rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em;">
+                    {{ currentLang === 'zh' ? '炭黑 Top 5 节电潜力' : 'Carbon Black Top 5 Savings' }}
+                </span>
+                <span style="padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; background: #f1f5f9; color: #334155;">
+                    {{ currentLang === 'zh' ? '5 款主力炭黑' : '5 Top Compounds' }}
+                </span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 0.4rem;">
+                <span style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800; color: #0f172a;">
+                    {{ optData.summary.cb_top5_mwh }}
+                </span>
+                <span style="font-size: 0.85rem; font-weight: 700; color: #64748b;">MWh/年</span>
+            </div>
+            <div style="font-size: 0.75rem; color: #64748b; line-height: 1.4;">
+                {{ currentLang === 'zh' ? '覆盖 B00458, B00163, B00460B, B15563R1, R00218W2' : 'Covers B00458, B00163, B00460B, B15563R1, R00218W2' }}
+            </div>
+        </div>
+
+        <!-- KPI 2: Silica Top 5 Savings -->
+        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; background: white; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.5rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -10px; right: -10px; width: 60px; height: 60px; background: rgba(2, 132, 199, 0.04); border-radius: 50%;"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.82rem; font-weight: 700; color: #0284c7; text-transform: uppercase; letter-spacing: 0.04em;">
+                    {{ currentLang === 'zh' ? '白炭黑 Top 5 节电潜力' : 'Silica Top 5 Savings' }}
+                </span>
+                <span style="padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; background: #e0f2fe; color: #0369a1;">
+                    {{ currentLang === 'zh' ? 'PID门禁合规' : 'PID Hard Rule' }}
+                </span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 0.4rem;">
+                <span style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800; color: #0284c7;">
+                    {{ optData.summary.silica_top5_mwh }}
+                </span>
+                <span style="font-size: 0.85rem; font-weight: 700; color: #0369a1;">MWh/年</span>
+            </div>
+            <div style="font-size: 0.75rem; color: #64748b; line-height: 1.4;">
+                {{ currentLang === 'zh' ? '覆盖 T15760, T20153W, T09170, T33025W3, T17771' : 'Covers T15760, T20153W, T09170, T33025W3, T17771' }}
+            </div>
+        </div>
+
+        <!-- KPI 3: Total Annual Cost Saving -->
+        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; background: white; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.5rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -10px; right: -10px; width: 60px; height: 60px; background: rgba(16, 185, 129, 0.04); border-radius: 50%;"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.82rem; font-weight: 700; color: #059669; text-transform: uppercase; letter-spacing: 0.04em;">
+                    {{ currentLang === 'zh' ? '年化节电总电费' : 'Annual Cost Savings' }}
+                </span>
+                <span style="padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; background: #dcfce7; color: #15803d;">
+                    {{ optData.summary.total_savings_mwh }} MWh
+                </span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 0.2rem;">
+                <span style="font-size: 1.2rem; font-weight: 800; color: #059669;">￥</span>
+                <span style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800; color: #059669;">
+                    {{ Math.round(optData.summary.annual_cost_rmb).toLocaleString() }}
+                </span>
+                <span style="font-size: 0.85rem; font-weight: 700; color: #64748b;">/年</span>
+            </div>
+            <div style="font-size: 0.75rem; color: #64748b; line-height: 1.4;">
+                {{ currentLang === 'zh' ? '按工业综合电价 0.70 元/kWh 核算' : 'Calculated at average 0.70 RMB/kWh' }}
+            </div>
+        </div>
+
+        <!-- KPI 4: Mean Specific Energy Saving -->
+        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; background: white; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.5rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -10px; right: -10px; width: 60px; height: 60px; background: rgba(234, 88, 12, 0.04); border-radius: 50%;"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.82rem; font-weight: 700; color: #ea580c; text-transform: uppercase; letter-spacing: 0.04em;">
+                    {{ currentLang === 'zh' ? '平均单耗节能量' : 'Avg Specific Saving' }}
+                </span>
+                <span style="padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; background: #ffedd5; color: #c2410c;">
+                    {{ currentLang === 'zh' ? '标杆降幅' : 'Benchmark' }}
+                </span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 0.4rem;">
+                <span style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800; color: #ea580c;">
+                    {{ optData.summary.avg_saving_kwh_t }}
+                </span>
+                <span style="font-size: 0.85rem; font-weight: 700; color: #9a3412;">kWh/吨</span>
+            </div>
+            <div style="font-size: 0.75rem; color: #64748b; line-height: 1.4;">
+                {{ currentLang === 'zh' ? '每车节电约 1.35 ~ 1.78 kWh，门尼合格率保持 100%' : '1.35 - 1.78 kWh/batch savings with 100% Mooney in spec' }}
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 1: 全厂胶料能耗潜力排行榜 (PLANT-WIDE POTENTIAL RANKING) -->
+    <section class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+            <div>
+                <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>🏆</span>
+                    <span>{{ currentLang === 'zh' ? '全厂胶料能耗优化潜力排行榜' : 'Plant-Wide Energy Saving Potential Ranking' }}</span>
+                </h3>
+                <p style="color: #64748b; font-size: 0.82rem; margin-top: 0.25rem;">
+                    {{ currentLang === 'zh' ? '以车次单耗极差 (P85 - P15) 衡量工艺离散度，结合年化混炼产量测算总节电潜力 MWh。点击胶料行可一键联动下方分步诊断。' : 'Evaluated by batch energy spread (P85-P15) weighted with annual tons. Click any row to load step diagnosis.' }}
+                </p>
+            </div>
+
+            <!-- Filter Controls -->
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <!-- Category Pills -->
+                <div style="display: flex; background: #f1f5f9; padding: 0.2rem; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <button @click="optRankingFilter = 'all'" :style="{ background: optRankingFilter === 'all' ? '#ffffff' : 'transparent', color: optRankingFilter === 'all' ? '#0f172a' : '#64748b', boxShadow: optRankingFilter === 'all' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }" style="border: none; padding: 0.35rem 0.85rem; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                        {{ currentLang === 'zh' ? '全部 (' + optData.rankings.length + ')' : 'All (' + optData.rankings.length + ')' }}
+                    </button>
+                    <button @click="optRankingFilter = 'cb_top5'" :style="{ background: optRankingFilter === 'cb_top5' ? '#0f172a' : 'transparent', color: optRankingFilter === 'cb_top5' ? '#ffffff' : '#475569', boxShadow: optRankingFilter === 'cb_top5' ? '0 1px 3px rgba(0,0,0,0.2)' : 'none' }" style="border: none; padding: 0.35rem 0.85rem; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                        {{ currentLang === 'zh' ? '炭黑 TOP 5' : 'Carbon Black TOP 5' }}
+                    </button>
+                    <button @click="optRankingFilter = 'silica_top5'" :style="{ background: optRankingFilter === 'silica_top5' ? '#0284c7' : 'transparent', color: optRankingFilter === 'silica_top5' ? '#ffffff' : '#0369a1', boxShadow: optRankingFilter === 'silica_top5' ? '0 1px 3px rgba(2,132,199,0.3)' : 'none' }" style="border: none; padding: 0.35rem 0.85rem; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                        {{ currentLang === 'zh' ? '白炭黑 TOP 5' : 'Silica TOP 5' }}
+                    </button>
+                </div>
+
+                <!-- Search Input -->
+                <div style="position: relative;">
+                    <input type="text" v-model="optSearchQuery" :placeholder="currentLang === 'zh' ? '搜索胶料代号/机台...' : 'Filter compound/mixer...'" style="padding: 0.4rem 0.85rem 0.4rem 2rem; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.8rem; width: 180px; background: white; outline: none;">
+                    <span style="position: absolute; left: 0.6rem; top: 0.45rem; font-size: 0.75rem; color: #94a3b8;">🔍</span>
+                </div>
+
+                <!-- Export CSV -->
+                <button @click="exportOptimizationRankingCSV" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; cursor: pointer; transition: all 0.2s;">
+                    <span>📥</span>
+                    <span>{{ currentLang === 'zh' ? '导出CSV' : 'Export CSV' }}</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Ranking Table Container -->
+        <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.83rem; text-align: left;">
+                <thead>
+                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 700;">
+                        <th style="padding: 0.65rem 0.85rem; width: 60px;">#</th>
+                        <th style="padding: 0.65rem 0.85rem;">{{ currentLang === 'zh' ? '胶料代号与全称' : 'Compound Name' }}</th>
+                        <th style="padding: 0.65rem 0.85rem;">{{ currentLang === 'zh' ? '体系分类' : 'System' }}</th>
+                        <th style="padding: 0.65rem 0.85rem; text-align: center;">{{ currentLang === 'zh' ? '主产机台' : 'Mixer' }}</th>
+                        <th style="padding: 0.65rem 0.85rem; text-align: right;">{{ currentLang === 'zh' ? '样本批次' : 'Batches' }}</th>
+                        <th style="padding: 0.65rem 0.85rem; text-align: right;">{{ currentLang === 'zh' ? '年化产量(t)' : 'Annual Tons' }}</th>
+                        <th style="padding: 0.65rem 0.85rem; text-align: right; color: #16a34a;">{{ currentLang === 'zh' ? 'P15黄金低耗' : 'P15 Golden' }}</th>
+                        <th style="padding: 0.65rem 0.85rem; text-align: right;">{{ currentLang === 'zh' ? 'P50中位数' : 'P50 Median' }}</th>
+                        <th style="padding: 0.65rem 0.85rem; text-align: right; color: #e11d48;">{{ currentLang === 'zh' ? 'P85高耗位' : 'P85 High' }}</th>
+                        <th style="padding: 0.65rem 0.85rem; text-align: right; font-weight: 800; color: #ea580c;">{{ currentLang === 'zh' ? '能耗极差(kWh/t)' : 'Spread (kWh/t)' }}</th>
+                        <th style="padding: 0.65rem 0.85rem; text-align: right; font-weight: 800; color: #0284c7;">{{ currentLang === 'zh' ? '年化潜力(MWh)' : 'Annual MWh' }}</th>
+                        <th style="padding: 0.65rem 0.85rem; text-align: center;">{{ currentLang === 'zh' ? '分步诊断' : 'Diagnosis' }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in optFilteredRankings" :key="item.compound_name" 
+                        :style="{ background: optSelectedCompound === item.compound_name ? '#f0f9ff' : 'transparent', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }"
+                        @click="selectOptCompound(item.compound_name)">
+                        
+                        <!-- Rank -->
+                        <td style="padding: 0.6rem 0.85rem; font-weight: 800; color: #0f172a;">
+                            <span v-if="item.rank <= 3" style="display: inline-block; width: 22px; height: 22px; border-radius: 50%; background: #ffedd5; color: #c2410c; text-align: center; line-height: 22px; font-size: 0.75rem;">
+                                {{ item.rank }}
+                            </span>
+                            <span v-else style="color: #64748b;">{{ item.rank }}</span>
+                        </td>
+
+                        <!-- Name -->
+                        <td style="padding: 0.6rem 0.85rem;">
+                            <div style="font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
+                                <span>{{ item.short_code }}</span>
+                                <span v-if="item.is_top_cb" style="padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.68rem; font-weight: 700; background: #0f172a; color: #f8fafc;">
+                                    TOP 5 炭黑
+                                </span>
+                                <span v-if="item.is_top_silica" style="padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.68rem; font-weight: 700; background: #0284c7; color: white;">
+                                    TOP 5 白炭黑
+                                </span>
+                            </div>
+                            <div style="font-size: 0.73rem; color: #94a3b8; font-family: monospace;">{{ item.compound_name }}</div>
+                        </td>
+
+                        <!-- System -->
+                        <td style="padding: 0.6rem 0.85rem;">
+                            <span :style="{ background: item.system === 'Silica' ? '#e0f2fe' : '#f1f5f9', color: item.system === 'Silica' ? '#0369a1' : '#334155' }" style="padding: 0.2rem 0.55rem; border-radius: 12px; font-size: 0.74rem; font-weight: 600;">
+                                {{ currentLang === 'zh' ? item.system_zh : item.system }}
+                            </span>
+                        </td>
+
+                        <!-- Mixer -->
+                        <td style="padding: 0.6rem 0.85rem; text-align: center; font-weight: 600; color: #475569;">
+                            {{ item.mixer }}
+                        </td>
+
+                        <!-- Batches -->
+                        <td style="padding: 0.6rem 0.85rem; text-align: right; color: #64748b;">
+                            {{ item.batches }}
+                        </td>
+
+                        <!-- Annual Tons -->
+                        <td style="padding: 0.6rem 0.85rem; text-align: right; font-weight: 600; color: #334155;">
+                            {{ formatNumber(item.annual_tons, 0) }}
+                        </td>
+
+                        <!-- P15 -->
+                        <td style="padding: 0.6rem 0.85rem; text-align: right; font-weight: 700; color: #16a34a;">
+                            {{ formatNumber(item.p15_kwh_t, 2) }}
+                        </td>
+
+                        <!-- P50 -->
+                        <td style="padding: 0.6rem 0.85rem; text-align: right; color: #334155;">
+                            {{ formatNumber(item.p50_kwh_t, 2) }}
+                        </td>
+
+                        <!-- P85 -->
+                        <td style="padding: 0.6rem 0.85rem; text-align: right; color: #e11d48;">
+                            {{ formatNumber(item.p85_kwh_t, 2) }}
+                        </td>
+
+                        <!-- Spread -->
+                        <td style="padding: 0.6rem 0.85rem; text-align: right; font-weight: 800; color: #ea580c;">
+                            {{ formatNumber(item.spread_p85_p15, 2) }}
+                        </td>
+
+                        <!-- Annual MWh -->
+                        <td style="padding: 0.6rem 0.85rem; text-align: right; font-weight: 800; color: #0284c7;">
+                            {{ formatNumber(item.saving_mwh, 1) }}
+                        </td>
+
+                        <!-- Action -->
+                        <td style="padding: 0.6rem 0.85rem; text-align: center;">
+                            <button @click.stop="selectOptCompound(item.compound_name)" style="padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; cursor: pointer; transition: all 0.15s;">
+                                {{ currentLang === 'zh' ? '诊断' : 'Diagnose' }}
+                            </button>
+                        </td>
+                    </tr>
+                    <tr v-if="optFilteredRankings.length === 0">
+                        <td colspan="12" style="padding: 2rem; text-align: center; color: #94a3b8;">
+                            {{ currentLang === 'zh' ? '未找到符合条件的胶料记录' : 'No compounds matching query' }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- SECTION 2: 分步优化与机理诊断模块 (STEP-LEVEL TELEMETRY & PRESCRIPTIVE DOE) -->
+    <section id="section-step-diagnosis" class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0;">
+        
+        <!-- Diagnostic Compound Header Banner -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; padding-bottom: 1.25rem; border-bottom: 1px solid #e2e8f0; margin-bottom: 1.25rem;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.3rem;">
+                    <span style="font-size: 1.25rem;">🔬</span>
+                    <span style="font-family: var(--font-heading); font-size: 1.35rem; font-weight: 800; color: #0f172a;">
+                        {{ currentLang === 'zh' ? '工步级遥测诊断与处方推荐：' : 'Step-Level Telemetry & Prescriptions: ' }}
+                        <span style="color: #0284c7;">{{ optCurrentDiagnostic.short_code }}</span>
+                    </span>
+                    <span :style="{ background: optCurrentDiagnostic.is_silica ? '#e0f2fe' : '#f1f5f9', color: optCurrentDiagnostic.is_silica ? '#0369a1' : '#334155' }" style="padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
+                        {{ optCurrentDiagnostic.is_silica ? (currentLang === 'zh' ? '白炭黑体系' : 'Silica') : (currentLang === 'zh' ? '炭黑体系' : 'Carbon Black') }}
+                    </span>
+                    <span style="padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; background: #f8fafc; border: 1px solid #e2e8f0; color: #475569;">
+                        {{ currentLang === 'zh' ? '主产机台: ' : 'Mixer: ' }}{{ optCurrentDiagnostic.mixer }}
+                    </span>
+                </div>
+                <div style="font-size: 0.78rem; color: #64748b; font-family: monospace;">
+                    {{ optCurrentDiagnostic.compound_name }} (车次称重: {{ optCurrentDiagnostic.weight_kg }} kg, 诊断样本数: {{ optCurrentDiagnostic.sample_batches }} 车)
+                </div>
+            </div>
+
+            <!-- Header Quick Metrics & Export -->
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <div style="padding: 0.4rem 0.8rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; text-align: right;">
+                    <div style="font-size: 0.7rem; color: #64748b;">基线均值</div>
+                    <div style="font-size: 0.95rem; font-weight: 700; color: #334155;">{{ optCurrentDiagnostic.base_kwh_t }} <span style="font-size: 0.7rem;">kWh/t</span></div>
+                </div>
+                <div style="padding: 0.4rem 0.8rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; text-align: right;">
+                    <div style="font-size: 0.7rem; color: #15803d;">优化后预估</div>
+                    <div style="font-size: 0.95rem; font-weight: 800; color: #16a34a;">{{ optCurrentDiagnostic.post_doe_kwh_t }} <span style="font-size: 0.7rem;">kWh/t</span></div>
+                </div>
+                <div style="padding: 0.4rem 0.8rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; text-align: right;">
+                    <div style="font-size: 0.7rem; color: #1d4ed8;">预期节能量</div>
+                    <div style="font-size: 0.95rem; font-weight: 800; color: #0284c7;">-{{ optCurrentDiagnostic.saving_kwh_t }} <span style="font-size: 0.7rem;">kWh/t (-{{ optCurrentDiagnostic.saving_pct }}%)</span></div>
+                </div>
+                <button @click="exportCompoundDiagnosisCSV" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.5rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; background: #ffffff; border: 1px solid #cbd5e1; color: #334155; cursor: pointer; transition: all 0.2s;">
+                    <span>📥</span>
+                    <span>{{ currentLang === 'zh' ? '导出分步表' : 'Export Step CSV' }}</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 3 Core Prescriptive Optimization Cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+            
+            <!-- Card 1: MST Speed Reduction Prescription -->
+            <div style="padding: 1.25rem; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <span style="font-weight: 800; font-size: 0.92rem; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
+                            <span>⚙️</span>
+                            <span>{{ currentLang === 'zh' ? '上密炼 (MST) 降速处方' : 'Upper Mixer Speed Cut' }}</span>
+                        </span>
+                        <span style="padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: #ffedd5; color: #c2410c;">
+                            {{ optCurrentDiagnostic.mst_prescription.delta_rpm }} RPM
+                        </span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <span style="font-size: 0.85rem; color: #475569;">推荐工步:</span>
+                        <span style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">{{ optCurrentDiagnostic.mst_prescription.step_name }}</span>
+                    </div>
+                    <div style="font-size: 0.82rem; color: #334155; margin-bottom: 0.6rem; display: flex; gap: 1rem;">
+                        <span>转速调整: <strong>{{ optCurrentDiagnostic.mst_prescription.curr_rpm }} ➔ {{ optCurrentDiagnostic.mst_prescription.target_rpm }} RPM</strong></span>
+                        <span>功率降幅: <strong style="color: #e11d48;">-{{ optCurrentDiagnostic.mst_prescription.power_drop_kw }} kW</strong></span>
+                    </div>
+                    <p style="font-size: 0.76rem; color: #64748b; line-height: 1.5; margin: 0; background: white; padding: 0.65rem 0.8rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        💡 {{ optCurrentDiagnostic.mst_prescription.basis_zh }}
+                    </p>
+                </div>
+                <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; font-size: 0.8rem;">
+                    <span style="color: #64748b;">预估单工步节电:</span>
+                    <strong style="color: #16a34a;">-{{ optCurrentDiagnostic.mst_prescription.saving_kwh_t }} kWh/t</strong>
+                </div>
+            </div>
+
+            <!-- Card 2: MSB Time Curtailment Prescription -->
+            <div style="padding: 1.25rem; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <span style="font-weight: 800; font-size: 0.92rem; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
+                            <span>⏱️</span>
+                            <span>{{ currentLang === 'zh' ? '下密炼 (MSB) 降时处方' : 'Lower Mixer Time Cut' }}</span>
+                        </span>
+                        <span style="padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: #e0f2fe; color: #0369a1;">
+                            {{ optCurrentDiagnostic.msb_prescription.total_delta_s }} 秒
+                        </span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <span style="font-size: 0.85rem; color: #475569;">推荐工步:</span>
+                        <span style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">下密炼均化与排胶工序</span>
+                    </div>
+                    <div style="font-size: 0.82rem; color: #334155; margin-bottom: 0.6rem; display: flex; gap: 1rem;">
+                        <span>时长压缩: <strong>共 {{ Math.abs(optCurrentDiagnostic.msb_prescription.total_delta_s) }} 秒 (S1 {{ optCurrentDiagnostic.msb_prescription.msb1_delta_s }}s, S2 {{ optCurrentDiagnostic.msb_prescription.msb2_delta_s }}s)</strong></span>
+                    </div>
+                    <p style="font-size: 0.76rem; color: #64748b; line-height: 1.5; margin: 0; background: white; padding: 0.65rem 0.8rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        💡 {{ optCurrentDiagnostic.msb_prescription.basis_zh }}
+                    </p>
+                </div>
+                <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; font-size: 0.8rem;">
+                    <span style="color: #64748b;">预估单工序节电:</span>
+                    <strong style="color: #16a34a;">-{{ optCurrentDiagnostic.msb_prescription.saving_kwh_t }} kWh/t</strong>
+                </div>
+            </div>
+
+            <!-- Card 3: PID Total Duration Hard Rule Audit -->
+            <div style="padding: 1.25rem; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <span style="font-weight: 800; font-size: 0.92rem; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
+                            <span>🛡️</span>
+                            <span>{{ currentLang === 'zh' ? 'PID 总体时长刚性门禁' : 'PID Duration Hard Rule' }}</span>
+                        </span>
+                        <!-- Status Badge -->
+                        <span v-if="!optCurrentDiagnostic.is_silica" style="padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 800; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;">
+                            规则豁免 (炭黑)
+                        </span>
+                        <span v-else-if="optCurrentDiagnostic.pid_hard_rule.status.includes('PASS')" style="padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 800; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;">
+                            PASS 合规通过
+                        </span>
+                        <span v-else style="padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 800; background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa;">
+                            CLAMPED 截断保护
+                        </span>
+                    </div>
+
+                    <!-- Carbon Black Exemption Notice -->
+                    <div v-if="!optCurrentDiagnostic.is_silica" style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 0.5rem;">
+                        <div style="font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">
+                            ✅ {{ currentLang === 'zh' ? '炭黑配方独享能耗优化豁免' : 'Carbon Black Exemption Active' }}
+                        </div>
+                        <div style="font-size: 0.76rem; color: #64748b; line-height: 1.4;">
+                            炭黑胶料不受白炭黑专属 PID 总体时长范围限制，上密炼降速 5 RPM 与下密炼降时 9s 全部如期生效，节能潜力最大化释放。
+                        </div>
+                    </div>
+
+                    <!-- Silica Hard Rule Verification Progress -->
+                    <div v-else style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 0.5rem;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
+                            <span>目标温区: {{ optCurrentDiagnostic.pid_hard_rule.tier_label }}</span>
+                            <span style="color: #0284c7;">刚性范围: [{{ optCurrentDiagnostic.pid_hard_rule.band_min_s }}-{{ optCurrentDiagnostic.pid_hard_rule.band_max_s }}s]</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b; margin-bottom: 0.35rem;">
+                            <span>当前时长: <strong>{{ optCurrentDiagnostic.pid_hard_rule.curr_total_s }}s</strong></span>
+                            <span>优化后预计: <strong style="color: #16a34a;">{{ optCurrentDiagnostic.pid_hard_rule.post_total_s }}s</strong></span>
+                        </div>
+                        <!-- Range Bar -->
+                        <div style="position: relative; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; margin-top: 0.4rem;">
+                            <div style="position: absolute; left: 20%; width: 60%; height: 100%; background: #bbf7d0;"></div>
+                            <div :style="{ left: Math.min(90, Math.max(10, (optCurrentDiagnostic.pid_hard_rule.post_total_s / 200) * 100)) + '%' }" style="position: absolute; top: 0; width: 4px; height: 100%; background: #16a34a; box-shadow: 0 0 4px #16a34a;"></div>
+                        </div>
+                    </div>
+
+                    <p style="font-size: 0.74rem; color: #64748b; line-height: 1.4; margin: 0;">
+                        {{ optCurrentDiagnostic.pid_hard_rule.note }}
+                    </p>
+                </div>
+                <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; font-size: 0.8rem;">
+                    <span style="color: #64748b;">门禁合规状态:</span>
+                    <strong :style="{ color: optCurrentDiagnostic.is_silica ? '#16a34a' : '#475569' }">
+                        {{ optCurrentDiagnostic.pid_hard_rule.status_label }}
+                    </strong>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Step-by-Step Telemetry & Variance Wi Breakdown Table -->
+        <div style="margin-top: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <h4 style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                    <span>📋</span>
+                    <span>{{ currentLang === 'zh' ? '工步级遥测明细与方差贡献率 Wi 诊断' : 'Step-Level Telemetry & Variance Breakdown' }}</span>
+                </h4>
+                <div style="font-size: 0.76rem; color: #64748b;">
+                    注：方差贡献率 Wi &gt; 15% 工步已高亮红标，为重点工艺调优靶向工步。
+                </div>
+            </div>
+
+            <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
+                    <thead>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 700;">
+                            <th style="padding: 0.55rem 0.8rem;">工步序号</th>
+                            <th style="padding: 0.55rem 0.8rem;">阶段描述</th>
+                            <th style="padding: 0.55rem 0.8rem; text-align: right;">设定时长(s)</th>
+                            <th style="padding: 0.55rem 0.8rem; text-align: right;">实测时长(s)</th>
+                            <th style="padding: 0.55rem 0.8rem; text-align: right;">设定转速(RPM)</th>
+                            <th style="padding: 0.55rem 0.8rem; text-align: right;">实测转速(RPM)</th>
+                            <th style="padding: 0.55rem 0.8rem; text-align: right;">实测功率(kW)</th>
+                            <th style="padding: 0.55rem 0.8rem; text-align: right;">实测耗电(kWh)</th>
+                            <th style="padding: 0.55rem 0.8rem; text-align: right;">方差贡献率 Wi</th>
+                            <th style="padding: 0.55rem 0.8rem; text-align: center;">优化状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="step in optCurrentDiagnostic.steps" :key="step.step_id" 
+                            :style="{ background: step.is_primary_opt ? '#fffbeb' : (step.is_high_variance ? '#fef2f2' : 'transparent'), borderBottom: '1px solid #f1f5f9' }">
+                            
+                            <!-- Step ID -->
+                            <td style="padding: 0.55rem 0.8rem; font-weight: 700; color: #0f172a;">
+                                {{ step.step_id }}
+                            </td>
+
+                            <!-- Description -->
+                            <td style="padding: 0.55rem 0.8rem;">
+                                <div style="font-weight: 600; color: #1e293b;">{{ step.desc_zh }}</div>
+                            </td>
+
+                            <!-- Time SP & Act -->
+                            <td style="padding: 0.55rem 0.8rem; text-align: right; color: #64748b;">
+                                {{ step.time_sp }}
+                            </td>
+                            <td style="padding: 0.55rem 0.8rem; text-align: right; font-weight: 600; color: #0f172a;">
+                                {{ formatNumber(step.time_act, 1) }}
+                            </td>
+
+                            <!-- Speed SP & Act -->
+                            <td style="padding: 0.55rem 0.8rem; text-align: right; color: #64748b;">
+                                {{ step.rpm_sp }}
+                            </td>
+                            <td style="padding: 0.55rem 0.8rem; text-align: right; font-weight: 600; color: #0f172a;">
+                                {{ formatNumber(step.rpm_act, 1) }}
+                            </td>
+
+                            <!-- Power -->
+                            <td style="padding: 0.55rem 0.8rem; text-align: right; color: #334155;">
+                                {{ formatNumber(step.power_kw, 1) }}
+                            </td>
+
+                            <!-- Energy -->
+                            <td style="padding: 0.55rem 0.8rem; text-align: right; font-weight: 700; color: #0f172a;">
+                                {{ formatNumber(step.energy_kwh, 2) }}
+                            </td>
+
+                            <!-- Variance Wi -->
+                            <td style="padding: 0.55rem 0.8rem; text-align: right;">
+                                <span v-if="step.var_contrib_pct >= 20.0" style="padding: 0.15rem 0.45rem; border-radius: 6px; font-size: 0.75rem; font-weight: 800; background: #fee2e2; color: #b91c1c;">
+                                    🔥 {{ formatNumber(step.var_contrib_pct, 1) }}%
+                                </span>
+                                <span v-else-if="step.var_contrib_pct >= 10.0" style="padding: 0.15rem 0.45rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: #ffedd5; color: #c2410c;">
+                                    ⚠️ {{ formatNumber(step.var_contrib_pct, 1) }}%
+                                </span>
+                                <span v-else style="color: #64748b;">
+                                    {{ formatNumber(step.var_contrib_pct, 1) }}%
+                                </span>
+                            </td>
+
+                            <!-- Tag -->
+                            <td style="padding: 0.55rem 0.8rem; text-align: center;">
+                                <span v-if="step.is_primary_opt" style="padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 800; background: #f59e0b; color: white;">
+                                    调降 RPM
+                                </span>
+                                <span v-else-if="step.stage === 'MSB'" style="padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 800; background: #0284c7; color: white;">
+                                    压缩时间
+                                </span>
+                                <span v-else style="color: #cbd5e1;">—</span>
+                            </td>
+                        </tr>
+                        <tr v-if="!optCurrentDiagnostic.steps || optCurrentDiagnostic.steps.length === 0">
+                            <td colspan="10" style="padding: 2rem; text-align: center; color: #94a3b8;">
+                                暂无该胶料高频工步细分数据，请点击上方表格选择其他胶料。
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- SECTION 3: 高清可视化四联看板图库 (HIGH-RES DIAGNOSTIC DASHBOARDS) -->
+    <section class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+                <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>🖼️</span>
+                    <span>{{ currentLang === 'zh' ? '全厂能耗优化高清四联诊断看板图库' : 'High-Resolution Diagnostic Dashboards' }}</span>
+                </h3>
+                <p style="color: #64748b; font-size: 0.82rem; margin-top: 0.25rem;">
+                    {{ currentLang === 'zh' ? '点击缩略图可查看 4K 高清大图，包含生产产量加权极差分布、分步方差贡献率与 PID 刚性温区门禁对比。' : 'Click thumbnails to expand full-resolution multi-panel diagnostic charts.' }}
+                </p>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 1.5rem;">
+            
+            <!-- Dashboard Image Card 1: Top 5 Potential Dashboard -->
+            <div style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #f8fafc; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                <div style="padding: 0.85rem 1.2rem; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">📊 Top 5 炭黑与白炭黑能耗极差与节电潜力四联看板</span>
+                    <button @click="openChartModal('ranking_dashboard')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: white; border: 1px solid #cbd5e1; color: #0284c7; cursor: pointer;">
+                        放大查看 🔍
+                    </button>
+                </div>
+                <div style="padding: 0.75rem; cursor: pointer; text-align: center;" @click="openChartModal('ranking_dashboard')">
+                    <img src="top5_cb_and_silica_energy_potential_dashboard.png" alt="Top 5 Potential Dashboard" style="max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #e2e8f0;">
+                </div>
+            </div>
+
+            <!-- Dashboard Image Card 2: Step Diagnosis Dashboard -->
+            <div style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #f8fafc; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                <div style="padding: 0.85rem 1.2rem; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">🔬 重点胶料工步方差贡献率与降速降时处方四联看板</span>
+                    <button @click="openChartModal('diagnosis_dashboard')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: white; border: 1px solid #cbd5e1; color: #0284c7; cursor: pointer;">
+                        放大查看 🔍
+                    </button>
+                </div>
+                <div style="padding: 0.75rem; cursor: pointer; text-align: center;" @click="openChartModal('diagnosis_dashboard')">
+                    <img src="b00458_b00163_and_top_compounds_step_diagnosis.png" alt="Step Diagnosis Dashboard" style="max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #e2e8f0;">
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- POPUP MODAL 1: 全流程一键批处理进度弹窗 (BATCH EXECUTION PROGRESS MODAL) -->
+    <div v-if="optShowBatchModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); z-index: 999999; display: flex; align-items: center; justify-content: center; padding: 1.5rem;">
+        <div style="width: 580px; max-width: 95vw; background: white; border-radius: 18px; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); display: flex; flex-direction: column; gap: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #ff9f00 0%, #ea580c 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.3rem;">
+                    🚀
+                </div>
+                <div>
+                    <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0;">
+                        全流程一键批处理重算 (Batch Optimization)
+                    </h3>
+                    <p style="font-size: 0.8rem; color: #64748b; margin-top: 0.2rem;">
+                        多因子工艺极差推演与白炭黑 PID 刚性门禁闭环计算中...
+                    </p>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 0.4rem;">
+                    <span>执行进度</span>
+                    <span style="color: #ea580c;">{{ optBatchProgressPct }}%</span>
+                </div>
+                <div style="height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden;">
+                    <div :style="{ width: optBatchProgressPct + '%' }" style="height: 100%; background: linear-gradient(90deg, #ff9f00, #ea580c); transition: width 0.3s ease;"></div>
+                </div>
+            </div>
+
+            <!-- Current Step Indicator -->
+            <div style="padding: 1rem; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 20px; height: 20px; border: 3px solid #f97316; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                <span style="font-size: 0.84rem; font-weight: 600; color: #1e293b;">{{ optBatchStepText }}</span>
+            </div>
+
+            <!-- Status Notice -->
+            <div style="font-size: 0.75rem; color: #94a3b8; text-align: center;">
+                计算完成后前端数据与高清看板将无缝热更新，无需重启服务。
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP MODAL 2: 高清看板大图预览弹窗 (IMAGE ENLARGE MODAL) -->
+    <div v-if="optActiveChartModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;" @click.self="closeChartModal">
+        <div style="width: 1400px; max-width: 96vw; height: 92vh; background: white; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 60px rgba(0,0,0,0.4);">
+            <!-- Modal Header -->
+            <div style="padding: 1rem 1.5rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 800; font-size: 1rem; color: #0f172a;">
+                    {{ optActiveChartModal === 'ranking_dashboard' ? '📊 Top 5 炭黑与白炭黑能耗极差与节电潜力四联看板' : '🔬 重点胶料工步方差贡献率与降速降时处方四联看板' }}
+                </span>
+                <button @click="closeChartModal" style="background: #e2e8f0; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 1rem; cursor: pointer; color: #475569; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+                    ✕
+                </button>
+            </div>
+            <!-- Image Body -->
+            <div style="flex: 1; overflow: auto; padding: 1.5rem; display: flex; align-items: center; justify-content: center; background: #0f172a;">
+                <img :src="optActiveChartModal === 'ranking_dashboard' ? 'top5_cb_and_silica_energy_potential_dashboard.png' : 'b00458_b00163_and_top_compounds_step_diagnosis.png'" 
+                     alt="Enlarged Dashboard" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Success Toast Notification -->
+    <transition name="fade">
+        <div v-if="optShowToast" style="position: fixed; bottom: 2rem; right: 2rem; z-index: 999999; background: #0f172a; color: white; padding: 0.85rem 1.4rem; border-radius: 30px; font-size: 0.85rem; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 0.6rem; border: 1px solid #334155;">
+            <span>{{ optToastMessage }}</span>
+        </div>
+    </transition>
+
+</main>
