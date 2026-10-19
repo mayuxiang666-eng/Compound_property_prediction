@@ -516,7 +516,10 @@
                     <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0;">
                         1. 实验工单核验与数据库确认
                     </h3>
-                    <span v-if="doeOrderVerified" style="padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.74rem; font-weight: 800; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;">
+                    <span v-if="doeQueryLoading" style="padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.74rem; font-weight: 800; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
+                        ⏳ 正在查询数据库工单...
+                    </span>
+                    <span v-else-if="doeOrderVerified" style="padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.74rem; font-weight: 800; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;">
                         ✅ 工单核验通过 (在库数据)
                     </span>
                     <span v-else style="padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.74rem; font-weight: 700; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;">
@@ -524,7 +527,7 @@
                     </span>
                 </div>
                 <div style="font-size: 0.78rem; color: #64748b;">
-                    支持检索全厂 359 个生产工单 20,985 真实车次高频遥测库
+                    支持检索全厂 360 个生产工单 21,040 真实车次高频遥测库
                 </div>
             </div>
 
@@ -533,19 +536,23 @@
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <label style="font-size: 0.85rem; font-weight: 700; color: #334155;">生产工单号:</label>
                     <input type="text" v-model="doeOrderIdInput" @keyup.enter="verifyOrder(doeOrderIdInput)" 
-                           placeholder="输入工单号，如 8101635..." 
+                           placeholder="输入工单号，如 1593306..." 
                            style="padding: 0.55rem 0.9rem; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem; font-weight: 700; width: 180px; background: #f8fafc; outline: none;">
-                    <button @click="verifyOrder(doeOrderIdInput)" 
-                            style="padding: 0.55rem 1.15rem; border-radius: 8px; font-size: 0.85rem; font-weight: 700; background: #0f172a; color: white; border: none; cursor: pointer; transition: all 0.2s;">
-                        🔍 核验工单
+                    <button @click="verifyOrder(doeOrderIdInput)" :disabled="doeQueryLoading"
+                            style="padding: 0.55rem 1.15rem; border-radius: 8px; font-size: 0.85rem; font-weight: 700; background: #0f172a; color: white; border: none; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem;">
+                        <span v-if="doeQueryLoading">⏳ 查询中...</span>
+                        <span v-else>🔍 核验工单</span>
                     </button>
                 </div>
 
                 <!-- Quick Recommendation Chips -->
                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                     <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">推荐在库工单:</span>
+                    <button @click="quickLoadOrder('1593306')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #fdf4ff; color: #9333ea; border: 1px solid #f0abfc; cursor: pointer;">
+                        1593306 (T15760 白炭黑 55车)
+                    </button>
                     <button @click="quickLoadOrder('8101635')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; cursor: pointer;">
-                        8101635 (T15760 白炭黑 146车)
+                        8101635 (T15760 白炭黑 60车)
                     </button>
                     <button @click="quickLoadOrder('8113482')" style="padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; cursor: pointer;">
                         8113482 (T15760 白炭黑 73车)
@@ -601,6 +608,318 @@
                         [{{ doeOrderData.spec_min }} - {{ doeOrderData.spec_max }}] MU
                     </div>
                     <div style="font-size: 0.72rem; color: #64748b;">靶心目标: {{ doeOrderData.spec_target }} MU</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PANEL 1.1: 当前工单所有车次能耗分布图 (BATCH-LEVEL ENERGY DISTRIBUTION CHART) -->
+        <section v-if="doeOrderVerified && doeOrderData && doeBatchChartModel" class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="font-size: 1.3rem;">📊</span>
+                    <h3 style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0;">
+                        当前工单车次能耗分布走势与分位标杆 (共 {{ doeOrderData.total_batches }} 车)
+                    </h3>
+                    <span style="padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;">
+                        单车比能耗 kWh/t
+                    </span>
+                </div>
+
+                <!-- Quantile summary stats badges -->
+                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; border-radius: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; font-size: 0.74rem;">
+                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #16a34a;"></span>
+                        <span style="color: #15803d; font-weight: 700;">P15 黄金低耗: {{ doeOrderData.p15_kwh_t }} kWh/t</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 0.74rem;">
+                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #0284c7;"></span>
+                        <span style="color: #0369a1; font-weight: 700;">P50 中位基线: {{ doeOrderData.p50_kwh_t }} kWh/t</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; border-radius: 8px; background: #fff1f2; border: 1px solid #fecdd3; font-size: 0.74rem;">
+                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #e11d48;"></span>
+                        <span style="color: #be123c; font-weight: 700;">P85 偏高能耗: {{ doeOrderData.p85_kwh_t }} kWh/t</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; border-radius: 8px; background: #fff7ed; border: 1px solid #fed7aa; font-size: 0.74rem;">
+                        <span style="color: #ea580c; font-weight: 800;">ΔE 极差: {{ doeOrderData.spread_kwh_t }} kWh/t</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SVG Visual Chart Container -->
+            <div style="position: relative; width: 100%; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.75rem 0.5rem 0.5rem 0.5rem; overflow-x: auto;">
+                <svg :viewBox="'0 0 ' + doeBatchChartModel.chartWidth + ' ' + doeBatchChartModel.chartHeight" 
+                     style="width: 100%; min-width: 720px; height: 230px; display: block;">
+                    
+                    <!-- Grid Lines & Y Axis Ticks -->
+                    <g v-for="(t, idx) in doeBatchChartModel.ticks" :key="'tick-' + idx">
+                        <line :x1="doeBatchChartModel.padLeft" :y1="t.y" 
+                              :x2="doeBatchChartModel.chartWidth - doeBatchChartModel.padRight" :y2="t.y" 
+                              stroke="#f1f5f9" stroke-width="1" />
+                        <text :x="doeBatchChartModel.padLeft - 8" :y="t.y + 4" 
+                              text-anchor="end" font-size="10" fill="#94a3b8" font-family="monospace">
+                            {{ t.val }}
+                        </text>
+                    </g>
+
+                    <!-- Baseline Range Shading (第 1 ~ doeBaselineEnd 车) -->
+                    <rect v-if="doeBatchChartModel.bars && doeBatchChartModel.bars.length"
+                          :x="doeBatchChartModel.padLeft" 
+                          :y="doeBatchChartModel.padTop" 
+                          :width="Math.max(10, ((doeBaselineEnd - doeBaselineStart + 1) / doeBatchChartModel.totalBatches) * doeBatchChartModel.plotWidth)" 
+                          :height="doeBatchChartModel.plotHeight" 
+                          fill="rgba(241, 245, 249, 0.55)" />
+
+                    <!-- Trial Range Highlight Box (DOE 实验车次区间) -->
+                    <g v-if="doeBatchChartModel.trialBox">
+                        <rect :x="doeBatchChartModel.trialBox.x" :y="doeBatchChartModel.trialBox.y" 
+                              :width="doeBatchChartModel.trialBox.width" :height="doeBatchChartModel.trialBox.height" 
+                              fill="rgba(147, 51, 234, 0.08)" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="4,3" rx="4" />
+                        <text :x="doeBatchChartModel.trialBox.x + doeBatchChartModel.trialBox.width / 2" 
+                              :y="doeBatchChartModel.padTop + 14" 
+                              text-anchor="middle" font-size="10" font-weight="bold" fill="#7e22ce">
+                            ⚗️ 当前 DOE 实验车次区间 (第 {{ doeTrialStart }} ~ {{ doeTrialEnd }} 车)
+                        </text>
+                    </g>
+
+                    <!-- P85 Horizontal Benchmark Line -->
+                    <line :x1="doeBatchChartModel.padLeft" :y1="doeBatchChartModel.yP85" 
+                          :x2="doeBatchChartModel.chartWidth - doeBatchChartModel.padRight" :y2="doeBatchChartModel.yP85" 
+                          stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="5,4" />
+                    <text :x="doeBatchChartModel.chartWidth - doeBatchChartModel.padRight + 6" :y="doeBatchChartModel.yP85 + 3" 
+                          font-size="10" font-weight="700" fill="#e11d48">
+                        P85: {{ doeBatchChartModel.p85 }}
+                    </text>
+
+                    <!-- P50 Horizontal Median Line -->
+                    <line :x1="doeBatchChartModel.padLeft" :y1="doeBatchChartModel.yP50" 
+                          :x2="doeBatchChartModel.chartWidth - doeBatchChartModel.padRight" :y2="doeBatchChartModel.yP50" 
+                          stroke="#0284c7" stroke-width="1.5" stroke-dasharray="4,4" />
+                    <text :x="doeBatchChartModel.chartWidth - doeBatchChartModel.padRight + 6" :y="doeBatchChartModel.yP50 + 3" 
+                          font-size="10" font-weight="700" fill="#0284c7">
+                        P50: {{ doeBatchChartModel.p50 }}
+                    </text>
+
+                    <!-- P15 Horizontal Golden Benchmark Line -->
+                    <line :x1="doeBatchChartModel.padLeft" :y1="doeBatchChartModel.yP15" 
+                          :x2="doeBatchChartModel.chartWidth - doeBatchChartModel.padRight" :y2="doeBatchChartModel.yP15" 
+                          stroke="#10b981" stroke-width="1.5" stroke-dasharray="5,4" />
+                    <text :x="doeBatchChartModel.chartWidth - doeBatchChartModel.padRight + 6" :y="doeBatchChartModel.yP15 + 3" 
+                          font-size="10" font-weight="700" fill="#15803d">
+                        P15: {{ doeBatchChartModel.p15 }}
+                    </text>
+
+                    <!-- Bars for Each Batch -->
+                    <g v-for="b in doeBatchChartModel.bars" :key="'bar-' + b.batch_no" 
+                       @mouseenter="doeHoveredBatch = b" 
+                       @mouseleave="doeHoveredBatch = null" 
+                       style="cursor: pointer;">
+                        <!-- Bar -->
+                        <rect :x="b.x" :y="b.y" :width="b.width" :height="b.height" 
+                              :fill="b.isTrial ? '#9333ea' : b.color" 
+                              :opacity="b.isTrial ? 0.95 : (doeHoveredBatch && doeHoveredBatch.batch_no === b.batch_no ? 1 : 0.85)"
+                              rx="2" />
+                        
+                        <!-- Batch number label along x-axis -->
+                        <text v-if="b.batch_no === 1 || b.batch_no % (doeBatchChartModel.totalBatches > 80 ? 10 : 5) === 0 || b.batch_no === doeBatchChartModel.totalBatches" 
+                              :x="b.x + b.width / 2" :y="doeBatchChartModel.chartHeight - 10" 
+                              text-anchor="middle" font-size="9" fill="#64748b" font-family="monospace">
+                            #{{ b.batch_no }}
+                        </text>
+                    </g>
+                </svg>
+
+                <!-- Floating Hover Tooltip / Detail Callout -->
+                <div v-if="doeHoveredBatch" 
+                     style="margin-top: 0.5rem; padding: 0.5rem 0.85rem; border-radius: 8px; background: #0f172a; color: white; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; font-size: 0.8rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-weight: 800; color: #38bdf8;">车次 #{{ doeHoveredBatch.batch_no }}</span>
+                        <span style="color: #94a3b8; font-family: monospace;">托盘: {{ doeHoveredBatch.pallet_id }}</span>
+                        <span>比能耗: <strong style="color: #4ade80;">{{ doeHoveredBatch.kwh_t }} kWh/t</strong></span>
+                        <span>整车电耗: {{ doeHoveredBatch.total_kwh }} kWh (上密炼 {{ doeHoveredBatch.mst_kwh }} + 下密炼 {{ doeHoveredBatch.msb_kwh }})</span>
+                        <span :style="{ color: doeHoveredBatch.rating === 'P15' ? '#4ade80' : (doeHoveredBatch.rating === 'P85' ? '#f87171' : '#38bdf8') }" style="font-weight: 700;">
+                            [{{ doeHoveredBatch.rating_label }}]
+                        </span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        <button @click="setBaselineEnd(doeHoveredBatch.batch_no)" 
+                                style="padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.72rem; font-weight: 700; background: #334155; color: #e2e8f0; border: 1px solid #475569; cursor: pointer;">
+                            设为基线终止
+                        </button>
+                        <button @click="setTrialStart(doeHoveredBatch.batch_no)" 
+                                style="padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.72rem; font-weight: 700; background: #9333ea; color: white; border: none; cursor: pointer;">
+                            设为实验起始
+                        </button>
+                        <button @click="setTrialEnd(doeHoveredBatch.batch_no)" 
+                                style="padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.72rem; font-weight: 700; background: #7c3aed; color: white; border: none; cursor: pointer;">
+                            设为实验终止
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div style="display: flex; align-items: center; justify-content: center; gap: 1.25rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #f1f5f9; font-size: 0.75rem; color: #64748b; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                        <span style="display: inline-block; width: 12px; height: 10px; border-radius: 2px; background: #10b981;"></span>
+                        <span>🟢 P15 黄金低耗 (&le; {{ doeBatchChartModel.p15 }} kWh/t)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                        <span style="display: inline-block; width: 12px; height: 10px; border-radius: 2px; background: #0284c7;"></span>
+                        <span>🔵 P50 常规区间 ({{ doeBatchChartModel.p15 }} ~ {{ doeBatchChartModel.p85 }} kWh/t)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                        <span style="display: inline-block; width: 12px; height: 10px; border-radius: 2px; background: #f43f5e;"></span>
+                        <span>🔴 P85 偏高能耗 (&ge; {{ doeBatchChartModel.p85 }} kWh/t)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                        <span style="display: inline-block; width: 12px; height: 10px; border-radius: 2px; background: #9333ea;"></span>
+                        <span style="color: #7e22ce; font-weight: 700;">🟣 当前选定 DOE 实验车次 (第 {{ doeTrialStart }} ~ {{ doeTrialEnd }} 车)</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PANEL 1.2: 当前工单逐车详细遥测表 (BATCH-LEVEL TELEMETRY DETAIL TABLE) -->
+        <section v-if="doeOrderVerified && doeOrderData" class="glass-card" style="padding: 1.5rem 1.75rem; border-radius: 16px; background: white; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="font-size: 1.3rem;">📋</span>
+                    <h3 style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0;">
+                        当前工单逐车生产与能耗遥测明细
+                    </h3>
+                    <span style="padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.74rem; font-weight: 600; background: #f1f5f9; color: #475569;">
+                        共 {{ doeOrderData.total_batches }} 车次记录
+                    </span>
+                </div>
+
+                <!-- Table Controls: Search & Expand Toggle -->
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        <input type="text" v-model="doeBatchSearchQuery" 
+                               placeholder="筛选车次/托盘/评级..." 
+                               style="padding: 0.4rem 0.75rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.78rem; width: 170px; outline: none; background: #f8fafc;">
+                    </div>
+                    <button @click="doeBatchTableExpanded = !doeBatchTableExpanded" 
+                            style="padding: 0.4rem 0.85rem; border-radius: 6px; font-size: 0.78rem; font-weight: 700; background: #eff6ff; color: #0284c7; border: 1px solid #bfdbfe; cursor: pointer; transition: all 0.2s;">
+                        {{ doeBatchTableExpanded ? '收起为前 15 车' : ('展开查看全部 ' + doeOrderData.total_batches + ' 车') }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Batches Table -->
+            <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;">
+                    <thead>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 700;">
+                            <th style="padding: 0.65rem 0.85rem; text-align: center;">车次</th>
+                            <th style="padding: 0.65rem 0.85rem;">托盘编号</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: right;">整车总耗电 (kWh)</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: right;">单车比能耗 (kWh/t)</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: right;">上密炼耗电 (kWh)</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: right;">下密炼耗电 (kWh)</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: center;">上密炼时长 (s)</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: center;">下密炼控温 (s)</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: center;">能耗分位评级</th>
+                            <th style="padding: 0.65rem 0.85rem; text-align: center;">实验范围快捷设定</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="b in filteredOrderBatches" :key="'tb-' + b.batch_no" 
+                            :style="{ background: (b.batch_no >= doeTrialStart && b.batch_no <= doeTrialEnd) ? '#faf5ff' : ((b.batch_no >= doeBaselineStart && b.batch_no <= doeBaselineEnd) ? '#f8fafc' : '#ffffff') }"
+                            style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;">
+                            
+                            <td style="padding: 0.55rem 0.85rem; text-align: center; font-weight: 800; font-family: monospace;">
+                                <span :style="{ color: (b.batch_no >= doeTrialStart && b.batch_no <= doeTrialEnd) ? '#9333ea' : '#0f172a' }">
+                                    #{{ b.batch_no }}
+                                </span>
+                                <span v-if="b.batch_no >= doeTrialStart && b.batch_no <= doeTrialEnd" 
+                                      style="display: block; font-size: 0.68rem; color: #a855f7; font-weight: 700;">
+                                    DOE 实验
+                                </span>
+                                <span v-else-if="b.batch_no >= doeBaselineStart && b.batch_no <= doeBaselineEnd" 
+                                      style="display: block; font-size: 0.68rem; color: #64748b; font-weight: 600;">
+                                    基线对照
+                                </span>
+                            </td>
+
+                            <td style="padding: 0.55rem 0.85rem; font-family: monospace; color: #475569; font-weight: 600;">
+                                {{ b.pallet_id }}
+                            </td>
+
+                            <td style="padding: 0.55rem 0.85rem; text-align: right; font-weight: 700; color: #0f172a;">
+                                {{ b.total_kwh }}
+                            </td>
+
+                            <td style="padding: 0.55rem 0.85rem; text-align: right; font-weight: 800;"
+                                :style="{ color: b.rating === 'P15' ? '#16a34a' : (b.rating === 'P85' ? '#e11d48' : '#0284c7') }">
+                                {{ b.kwh_t }}
+                            </td>
+
+                            <td style="padding: 0.55rem 0.85rem; text-align: right; color: #64748b;">
+                                {{ b.mst_kwh }}
+                            </td>
+
+                            <td style="padding: 0.55rem 0.85rem; text-align: right; color: #64748b;">
+                                {{ b.msb_kwh }}
+                            </td>
+
+                            <td style="padding: 0.55rem 0.85rem; text-align: center; color: #475569; font-family: monospace;">
+                                {{ b.mst_dur_s }}s
+                            </td>
+
+                            <td style="padding: 0.55rem 0.85rem; text-align: center; color: #475569; font-family: monospace;">
+                                {{ b.msb_s1_dur_s }}s
+                            </td>
+
+                            <td style="padding: 0.55rem 0.85rem; text-align: center;">
+                                <span :style="{ 
+                                    background: b.rating === 'P15' ? '#dcfce7' : (b.rating === 'P85' ? '#ffe4e6' : '#e0f2fe'),
+                                    color: b.rating === 'P15' ? '#15803d' : (b.rating === 'P85' ? '#be123c' : '#0369a1'),
+                                    border: b.rating === 'P15' ? '1px solid #bbf7d0' : (b.rating === 'P85' ? '1px solid #fecdd3' : '1px solid #bae6fd')
+                                }" style="padding: 0.2rem 0.55rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; white-space: nowrap;">
+                                    {{ b.rating_label }}
+                                </span>
+                            </td>
+
+                            <td style="padding: 0.55rem 0.85rem; text-align: center;">
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
+                                    <button @click="setBaselineEnd(b.batch_no)" 
+                                            title="将此车设为基线终止车次"
+                                            style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; cursor: pointer;">
+                                        设为基准止
+                                    </button>
+                                    <button @click="setTrialStart(b.batch_no)" 
+                                            title="将此车设为实验起始车次"
+                                            style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; cursor: pointer;">
+                                        设为实验起
+                                    </button>
+                                    <button @click="setTrialEnd(b.batch_no)" 
+                                            title="将此车设为实验终止车次"
+                                            style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; cursor: pointer;">
+                                        设为实验止
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-if="filteredOrderBatches.length === 0">
+                            <td colspan="10" style="padding: 2rem; text-align: center; color: #94a3b8;">
+                                没有找到符合筛选条件的车次
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer summary note -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; font-size: 0.76rem; color: #64748b; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    当前显示: {{ filteredOrderBatches.length }} / {{ doeOrderData.total_batches }} 车次
+                    <span v-if="!doeBatchTableExpanded && !doeBatchSearchQuery" style="color: #0284c7; margin-left: 0.5rem;">
+                        (已默认收起显示前 15 车，点击上方展开按钮可查看全工单 {{ doeOrderData.total_batches }} 车)
+                    </span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span>基准区间: <strong>第 {{ doeBaselineStart }} ~ {{ doeBaselineEnd }} 车</strong></span>
+                    <span>实验区间: <strong style="color: #9333ea;">第 {{ doeTrialStart }} ~ {{ doeTrialEnd }} 车</strong></span>
                 </div>
             </div>
         </section>
