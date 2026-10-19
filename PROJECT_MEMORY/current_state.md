@@ -75,3 +75,57 @@
 - B3按最大精确结构模板评估：T15760 275车、B00458 186车；两个试点均为`CONTROL_TRANSFER_UNAVAILABLE`。
 - B5/B6/B7全部保持阻断；没有DML、Target推荐、人工微试验或控制写入。
 - 两次完整运行的A/B2/B3核心指标和预测哈希一致；详见`PROJECT_MEMORY/m1_relative_improvement_gate0_ab_v1_20260817.md`。
+# 2026-08-20 MooneyIntegratedData V2.5
+
+- `EFTMMS059\AIDATASERVER / MooneyIntegratedData` 已完成V2.5真实来源修复与回填。
+- 真实Header 3,300批；真实MST/MSB Step 262批；Core Material 53,427行且孤儿0；typed QM 104,865行；Asia/Shanghai Weather 23,088小时。
+- 所有旧Phase均明确标记为synthetic；Mart旧Phase数值已清空，TrainingReady仍为0。
+- 治理快照SHA256：`2a6b6cb2bb01f3b8202f0f7b696f811d263b9b6f89b3431725e516a64ebf2b35`。
+- 当前阻断：云端无Archive，旧车次真实1Hz曲线与历史WeighingTime无法从Active恢复；Recipe配方组成尚未入库。
+- 现有服务器`daily_pipeline_runner.py`包含模型训练/校准且日期写死，不可作为数据专用每日增量任务。
+- 详见 `mooney_integrated_data_v25_repair_execution_20260820.md`。
+
+# 2026-08-20 MooneyIntegratedData V2.6 更正
+
+- V2.5 对云端 Active 可恢复范围的判断不完整：HESFESFEPLANT 实际保留 2025-07-19 至 2026-08-20 的约 49.4 万个 M1 密炼车次。
+- `BatchTrainingReady` 大量 Step 空白的真实原因是旧 BatchData 抽取任务范围和执行方式不完整，不是云端 Step 缺失。
+- V2.6 已用云端 Active 两个 T15760 订单验证 105/105 车 Step 完整，并启动一年 M1 Header/Step 断点回填（Run 49）。
+- 本地 MMS 和 Archive 仍禁止访问；云端也仍没有 Archive，但这不影响上述约13个月 Active 数据回填。
+- 真实曲线/Phase 尚未回填的车次仍保持 `NOT_READY`；不得把“Step 已完整”误写为“模型训练已就绪”。
+- 详见 `mooney_integrated_data_v26_cloud_m1_step_backfill_20260820.md`。
+
+## 2026-08-20 相对门尼指导严格接管
+
+- 新 strict 运行器直接读取 `MooneyIntegratedData`，不访问本地 MMS/Archive。
+- 正式快照 1,708 批、523 个原始合格 Lab 组、22,795 行真实 Step；天气按原始小时数据重建后覆盖 100%。
+- 原料事件+ChargeID+typed QM 的 Lab 组完整覆盖仅 3.805%，且 `CAUSAL_ACTION_SUPPORTED=0`，所以正式状态为 `STOPPED_AT_GATE_0`。
+- B2/B3/B4/B5 均未运行，未生成 Target 推荐；旧 agent 的硬编码推荐产物已标记无效。
+- V2.6 当前回填只覆盖 Header/Step，不覆盖 BatchMaterials。下一步必须新增精确 OrderID、小批量、云端 Active only 的材料增量回填，再重跑 Gate 0。
+- 详细证据：`PROJECT_MEMORY/m1_relative_guidance_strict_takeover_20260820.md`。
+
+## 2026-08-20 V2.7 双试点材料链完成
+
+- 云端Active `BatchMaterials` 已通过精确OrderID+BatchNumber小批量链回填；29个成功Run、666订单，未访问Archive/本地MMS。
+- 材料主键重复、Core孤儿、错误provenance、伪称量时间和部分源订单均为0。
+- 正式Gate 0材料+ChargeID+typed QM组覆盖从3.805%提升到86.848%，天气100%。
+- 95%门槛仍未通过；剩余缺口是SupplierQM真实未检测，不是ChargeID格式问题。当前仍不运行B2/B3/B4/B5，不生成建议。
+- 下一步：建立路线必需QM TestName/UOM合同，并做缺失指示/消融；不得填0、复制配方常数或模糊匹配。
+
+## 2026-10-19 全厂炭黑与白炭黑胶料能耗潜力排行及分步工艺优化闭环
+
+- **当前里程碑**：全厂混炼能耗潜力排行与分步优化引擎（`CompoundEnergyOptimizer`）正式落地。
+- **数据范围**：
+  - 全厂 20,985 车真实一混（M1）批次，剔除首 1~3 车冷机热车；
+  - 关联 `MooneyIntegratedData.core.BatchMaterial` 与 BOM 配方完成 Carbon Black 与 Silica 填料体系精准分类；
+  - 提取 47.1 万行分步遥测（`scratch/top_compounds_steps_raw.csv`），覆盖 55 个纯密炼机订单与 11 个标杆胶料。
+- **核心成果**：
+  - 评出纯炭黑 Top 5（B15563R1、B00460B、B00163、R00218W2、B00458）与白炭黑 Top 5（T15760、T20153W、T09170、T33025W3、T17771），年化节电空间达 250 MWh/年（全族 295 MWh/年）；
+  - 明确“调整第几步、调多少 RPM/秒”三大数学依据：
+    1. 分步能耗方差贡献度 $W_i$ 准则；
+    2. 非牛顿流体剪切稀化幂律公式 $\Delta P / P \approx 1.10 (\Delta N / N)$；
+    3. MSB 边际功率积分速率 $e_{\text{ton,sec}} = \bar{P}_{\text{MSB}} / (3.6 W_{\text{batch}})$。
+  - 重点明确 `M1-B00458` 与 `M1-B00163` 在 `92-1020` 产线上的分步方案（MST S7 -5 RPM + MSB S1 -4s + MSB S2 -5s，预期节电 $-5.15\text{ kWh/t}$ 与 $-5.33\text{ kWh/t}$）。
+- **工程产物**：
+  - 引擎代码：`compound_energy_optimizer.py`（支持 `--mode rank/diagnose/all`）；
+  - 报告：`reports/compound_energy_optimization_auto/Top5_CarbonBlack_and_Silica_Energy_Optimization_Report.md` 与 `docs/Top5_CarbonBlack_and_Silica_Energy_Optimization_Report.md`；
+  - 数据表与图表：`reports/compound_energy_optimization_auto/*.csv` 及两张高分辨率看板。

@@ -28,7 +28,12 @@ Thumbs.db
 catboost_info/
 
 # === Scratch / temp ===
-scratch/
+scratch/*
+!scratch/compound_bom_classification.csv
+!scratch/all_compounds_energy_ranking.csv
+!scratch/top_compounds_steps_raw.csv
+!scratch/fetch_top_compounds_step_telemetry.py
+!scratch/rank_compounds_potential.py
 
 # === Large enriched datasets ===
 stage_statistics_enriched*.csv
@@ -56,4 +61,15 @@ data_store/parquet/
 !V4_1_Energy_Optimization/reports/**/*.csv
 !V4_1_Energy_Optimization/models/
 !V4_1_Energy_Optimization/models/**/*.joblib
+
+# === 2026 Energy Optimization Reports & Data Assets ===
+!reports/compound_energy_optimization_auto/
+!reports/compound_energy_optimization_auto/*
+!reports/compound_energy_optimization_auto/**/*
+!reports/msb_minus10s_october_doe/
+!reports/msb_minus10s_october_doe/*
+!reports/msb_minus10s_october_doe/**/*
+!reports/msb_minus10s_20260926/
+!reports/msb_minus10s_20260926/*
+!reports/msb_minus10s_20260926/**/*
 

@@ -122,3 +122,31 @@ print(result_df[['OrderID', 'BatchNumber', 'stage1_recipe_baseline', 'stage2_pro
 关于上线后如何异步接收实验室 LIMS/SAP QM 反馈、触发 Stage 3 在线 EWMA 动态补偿与漂移监控的完整实施方案，请参阅专用文档：
 
 📄 **[上线后延迟实验室反馈闭环优化实施计划 (docs/production_online_calibration_and_continuous_improvement_plan.md)](file:///c:/Users/uif35346/OneDrive%20-%20Continental%20AG/Desktop/Compound%20property%20prediction/Master%20batch%20data%20fectching/docs/production_online_calibration_and_continuous_improvement_plan.md)**
+
+---
+
+## 5. 全厂胶料能耗潜力排行与分步工艺优化模块 (Compound Energy Optimizer)
+
+2026年10月新增独立模块 [`compound_energy_optimizer.py`](file:///c:/Users/uif35346/OneDrive%20-%20Continental%20AG/Desktop/Compound%20property%20prediction/Master%20batch%20data%20fectching/compound_energy_optimizer.py)，用于解决全厂密炼机能耗批次间离散、定位“车次能耗悬殊度最大且产量最高”的节能高潜胶料，并基于 47.1 万行实际分步遥测（Step Telemetry）自动求解调整步号与参数幅度。
+
+### 5.1 核心功能与使用方法
+
+```powershell
+# 1. 全厂胶料节能潜力自动排行（纯炭黑 Top 5 与白炭黑 Top 5，输出年化可回收节电 MWh/yr）
+python compound_energy_optimizer.py --mode rank --top 5
+
+# 2. 针对指定胶料自动执行分步遥测方差归因与 DOE 推荐（含计算依据）
+python compound_energy_optimizer.py --mode diagnose --compounds "M1-B00458---- 12 012" "M1-B00163---- 08 010"
+
+# 3. 全流程一键批处理（排行 + 分步诊断 + 导出 CSV 汇总表与高清诊断看板）
+python compound_energy_optimizer.py --mode all --top 5
+```
+
+### 5.2 核心输入输出资产
+- **工程报告全书**：`reports/compound_energy_optimization_auto/Top5_CarbonBlack_and_Silica_Energy_Optimization_Report.md` 与 `docs/Top5_CarbonBlack_and_Silica_Energy_Optimization_Report.md`
+- **全厂排行表**：`reports/compound_energy_optimization_auto/plant_wide_energy_potential_ranking.csv`
+- **分步优化依据表**：`reports/compound_energy_optimization_auto/top_compounds_step_diagnostics_summary.csv`
+- **双联高清看板**：
+  - `reports/compound_energy_optimization_auto/top5_cb_and_silica_energy_potential_dashboard.png`
+  - `reports/compound_energy_optimization_auto/b00458_b00163_and_top_compounds_step_diagnosis.png`
+- **分步遥测原始库**：`scratch/top_compounds_steps_raw.csv`（471,013 行真实分步参数）
