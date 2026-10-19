@@ -67,7 +67,17 @@ $$\frac{\Delta P_i}{P_i} \approx 1.10 \times \left(\frac{\Delta N_i}{N_0}\right)
 $$e_{\text{sec}} = \frac{\bar{P}_{\text{MSB}}}{3600}\text{ (kWh/s)}, \qquad e_{\text{ton,sec}} = \frac{\bar{P}_{\text{MSB}}}{3.6 \times W_{\text{batch}}}\text{ (kWh/t/s)}$$
 $$\Delta t_{\text{MSB}} = -\text{round}\left(\frac{\Delta E_{\text{target}}}{e_{\text{ton,sec}}}\right)$$
 - 若 `MSB Step 1` $\ge 30\text{ s}$：直接缩短 $-8\text{ s} \sim -10\text{ s}$；
-- 若 `MSB Step 1` 仅 $20\text{ s}$ 而 `MSB Step 2` 长达 $30\sim 65\text{ s}$ 且方差占比高达 $30\% \sim 40\%$（如 `B00458`、`B00163`、`B00460B`）：采用“`MSB Step 1` 减 4~5s + `MSB Step 2` 减 5s”的分摊缩时方案。
+- 若 `MSB Step 1` 仅 $20\text{ s}$ 而 `MSB Step 2` 长达 $30\sim 65\text{ s}$ 且方差占比高：采用“`MSB Step 1` 减 4~5s + `MSB Step 2` 减 5s”的分摊缩时方案。
+
+### 4.4 总体 PID 时长（上密炼 MST + 下密炼 MSB）Hard Rule 刚性门禁（2026-10-19 12:36 更新）
+$$t_{\text{PID,total}} = t_{\text{PID,MST}} + t_{\text{PID,MSB}} \in \left[t_{\min}(T_{\text{target}}),\; t_{\max}(T_{\text{target}})\right]$$
+- **Target 165°C**：**`80 – 140 s`**
+- **Target 155°C**：**`130 – 230 s`**
+- **Target 142°C**：**`270 – 330 s`**
+- **合规审计结论**：
+  1. **白炭黑 Top 5（全部 Target 165°C，硬门禁 `80–140 s`）**：调整后总体 PID 时长分别为 `T15760` (`100.9s`)、`T20153W` (`113.5s`)、`T09170` (`111.7s`)、`T33025W3` (`109.6s`)、`T17771` (`123.1s`)，**100% 满足 `[80, 140] s`**，且将 `T17771` P85 批次从超标的 `141.3s` 拉回安全区；
+  2. **炭黑 `B15563R1`、`B00460B`、`R00218W2`（Target 155°C，硬门禁 `130–230 s`）**：调整后总体时长分别为 `170.3s`（严格 post-S5 `132.0s`）、`142.0s`、`158.9s`，**100% 满足 `[130, 230] s`**；
+  3. **炭黑 `B00458` 与 `B00163` 刚性截断保护**：在当前新版 2 步 MSB 配方下，总体时长已降至 `83.2s`（最新订单 `80.4s`）与 `99.8s`（最新订单 `92.3s`），触发下限保护：**强制截断 `MSB Δt = 0 s`（禁止缩减 MSB 时间）**，仅执行 **`MST Step 7 降速 -5 RPM`**（分别节电 **`-1.55 kWh/t`** 与 **`-2.41 kWh/t`**，并延长 MST 高温段 `+2.8s` / `+3.2s`）。
 
 ---
 
@@ -77,7 +87,7 @@ $$\Delta t_{\text{MSB}} = -\text{round}\left(\frac{\Delta E_{\text{target}}}{e_{
 2. **详细工程报告**：`reports/compound_energy_optimization_auto/Top5_CarbonBlack_and_Silica_Energy_Optimization_Report.md` 与 `docs/Top5_CarbonBlack_and_Silica_Energy_Optimization_Report.md`
 3. **诊断结果数据表**：
    - `reports/compound_energy_optimization_auto/plant_wide_energy_potential_ranking.csv`
-   - `reports/compound_energy_optimization_auto/top_compounds_step_diagnostics_summary.csv`
+   - `reports/compound_energy_optimization_auto/top_compounds_step_diagnostics_summary.csv`（含 8 列 PID Hard Rule 审计字段）
 4. **高分辨率看板图表**：
    - `reports/compound_energy_optimization_auto/top5_cb_and_silica_energy_potential_dashboard.png`
    - `reports/compound_energy_optimization_auto/b00458_b00163_and_top_compounds_step_diagnosis.png`

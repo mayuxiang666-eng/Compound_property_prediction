@@ -3998,3 +3998,22 @@
   - 明确标注三大计算依据：分步能耗方差贡献度 $W_i$ 锁定关键调整步（排除 Step 1~4 初期吃粉，锁定 Step $\ge 5$ 高剪切升温步及 MSB 固定时间步）；非牛顿流体剪切稀化幂律公式 $\Delta P / P \approx 1.10 (\Delta N / N)$ 计算 MST 降速 $-5\text{ RPM}$（$-1.32 \sim -2.27\text{ kWh/t}$）；边际功率积分速率 $e_{\text{ton,sec}} = \bar{P}_{\text{MSB}} / (3.6 W_{\text{batch}})$ 计算 MSB 缩短秒数；
   - 重点明确 `M1-B00458` 与 `M1-B00163` 在 `92-1020` 产线上的分步方案（MST Step 7 降 5 RPM + MSB S1 减 4s + MSB S2 减 5s，合计预期节能分别达 $-5.15\text{ kWh/t}$ 与 $-5.33\text{ kWh/t}$）。
 - **验证**：全量测试套件通过；图表无文字重叠；CSV 数据完整导出。详见 `PROJECT_MEMORY/experiments/20261019_plantwide_compound_energy_optimization_top5.md`。
+
+## 2026-10-19 12:36 全厂胶料能耗优化接入 PID 总体时长 Hard Rule 刚性门禁与结果重算
+
+- **改动类型**：工艺安全与硅烷化/热暴露红线门禁升级（PID Total Duration Hard Rule）、同订单内分位数去混杂、代码与全套报表同步更新
+- **核心规则（Hard Rule）**：
+  - 从上密炼（`MST_PID_Duration`：首次达到 `Target - 3°C` 至上密炼结束）到下密炼（`MSB_PID_Duration`：下密炼全步总时长）加总计算的总体时长 $t_{\text{PID,total}} = t_{\text{PID,MST}} + t_{\text{PID,MSB}}$ 必须严格落在对应温度档位区间内：
+    - **Target 165°C**：**`80 – 140 s`**
+    - **Target 155°C**：**`130 – 230 s`**
+    - **Target 142°C**：**`270 – 330 s`**
+- **核心产物更新**：
+  1. `compound_energy_optimizer.py`（新增 `PID_DURATION_HARD_RULES`、`map_pid_target_tier()`、同订单内 `P25`/`P75` 分位数分步方差归因以消除跨订单 MSB 配方切换混杂、以及总体时长低于下限时的 `MSB = 0s` 刚性截断保护）；
+  2. `reports/compound_energy_optimization_auto/Top5_CarbonBlack_and_Silica_Energy_Optimization_Report.md` 与 `docs/Top5_CarbonBlack_and_Silica_Energy_Optimization_Report.md`（新增第 3.4 节总体时长 Hard Rule 公式、第四章 10 大胶料合规性全景审计表、以及 `B00458`/`B00163` 双配方状态精确指导）；
+  3. `reports/compound_energy_optimization_auto/top_compounds_step_diagnostics_summary.csv`（新增 `PID_Target_Tier_C`、`PID_Rule_Band_s`、`Curr_PID_Top_MST_s`、`Curr_PID_Bottom_MSB_s`、`Curr_PID_Total_s`、`Post_DOE_PID_Total_s`、`PID_HardRule_Status`、`PID_HardRule_Note` 8 个合规审计字段）；
+  4. `reports/compound_energy_optimization_auto/top5_cb_and_silica_energy_potential_dashboard.png` 与 `reports/compound_energy_optimization_auto/b00458_b00163_and_top_compounds_step_diagnosis.png`（同步更新 Hard-Rule 修正后的单吨节电与 MSB 动作标注）。
+- **关键重算结论**：
+  - **白炭黑 Top 5（全部为 Target 165°C，硬门禁 `80–140 s`）**：5 款胶料调整前总体 PID 时长在 `110.9s ~ 133.1s`，执行 `MST 降 3~5 RPM + MSB 缩时 8~10s` 后总体 PID 时长落在 **`100.9s ~ 123.1s`**，**100% 满足 `[80, 140] s`**；其中 `M1-T17771` 原本高能耗批次达 `141.3s`（超出 140s 上限），缩时 `-10s` 后回到 `123.1s`，同时消除了超时过早焦烧隐患；
+  - **炭黑 Top 5（Target 155°C 档，硬门禁 `130–230 s`）**：
+    - `M1-B15563R1`（`175.7s -> 170.3s`，严格 post-S5 口径 `141.0s -> 132.0s`）、`M1-B00460B`（`152.0s -> 142.0s`）、`M1-R00218W2`（`167.2s -> 158.9s`）均严格满足 `[130, 230] s`（注：`B15563R1` 二阶段禁止继续减至 `-15s`，否则将跌破 `130s` 下限）；
+    - **`M1-B00458` 与 `M1-B00163` 触发 Hard Rule 刚性截断保护**：两款胶料在 `92-1020` 近期已由旧版 3 步 MSB（`167.5s`）切换为新版 2 步 MSB 短配方，当前总体时长分别为 **`83.2s`（最新订单 `80.4s`）** 与 **`99.8s`（最新订单 `92.3s`）**，已处于/逼近下限！根据 Hard Rule，**新版 2 步 MSB 配方下严禁再缩短 MSB 时间（强制截断 `MSB Δt = 0 s`）**，仅执行 **`MST Step 7 降速 -5 RPM`**（`B00458: 45->40 RPM` 节电 **`-1.55 kWh/t`** 并延长 MST `+2.8s` 至 `86.0s`；`B00163: 47->42 RPM` 节电 **`-2.41 kWh/t`** 并延长 MST `+3.2s` 至 `103.0s`）；仅在排产回退至旧版 3 步 MSB（`167.5s`）时方可执行 `MSB -9s`。

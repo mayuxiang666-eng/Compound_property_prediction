@@ -142,10 +142,15 @@ python compound_energy_optimizer.py --mode diagnose --compounds "M1-B00458---- 1
 python compound_energy_optimizer.py --mode all --top 5
 ```
 
-### 5.2 核心输入输出资产
+### 5.2 核心输入输出资产与 PID 总体时长 Hard Rule 门禁
+- **PID 总体时长（`MST + MSB`）Hard Rule 刚性门禁**：
+  - **Target 165°C**：总体时长必须处于 **`80 – 140 s`**
+  - **Target 155°C**：总体时长必须处于 **`130 – 230 s`**
+  - **Target 142°C**：总体时长必须处于 **`270 – 330 s`**
+  - 当胶料当前总体时长已处于或低于对应温度下限时（如 `M1-B00458` 2步MSB配方 `80.4s`、`M1-B00163` 2步MSB配方 `92.3s`），引擎自动触发 **Hard-Rule Clamping（强制锁定 `MSB Δt = 0 s`）**，仅通过 `MST` 高功率步降速（`-5 RPM`）实现节电并延长高温混炼时长。
 - **工程报告全书**：`reports/compound_energy_optimization_auto/Top5_CarbonBlack_and_Silica_Energy_Optimization_Report.md` 与 `docs/Top5_CarbonBlack_and_Silica_Energy_Optimization_Report.md`
 - **全厂排行表**：`reports/compound_energy_optimization_auto/plant_wide_energy_potential_ranking.csv`
-- **分步优化依据表**：`reports/compound_energy_optimization_auto/top_compounds_step_diagnostics_summary.csv`
+- **分步优化与 Hard Rule 审计表**：`reports/compound_energy_optimization_auto/top_compounds_step_diagnostics_summary.csv`
 - **双联高清看板**：
   - `reports/compound_energy_optimization_auto/top5_cb_and_silica_energy_potential_dashboard.png`
   - `reports/compound_energy_optimization_auto/b00458_b00163_and_top_compounds_step_diagnosis.png`

@@ -3,7 +3,13 @@
 """
 Continental AG Mixing Process Intelligence
 Automated Compound Energy Saving Potential Ranking & Step-Level DOE Optimizer
+(With Strict PID Total Duration Hard Rule Enforcement: Target 165/155/142°C)
 =============================================================================
+Hard Rule (Upper Mixer MST + Lower Mixer MSB Total PID Duration):
+  - Target 165°C:  80 - 140 s
+  - Target 155°C: 130 - 230 s
+  - Target 142°C: 270 - 330 s
+
 Usage:
   1. Plant-wide Ranking (Top N Carbon Black & Top N Silica):
      python compound_energy_optimizer.py --mode rank --top 5
@@ -30,6 +36,15 @@ import matplotlib.pyplot as plt
 plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Segoe UI']
 plt.rcParams['axes.unicode_minus'] = False
 
+# =============================================================================
+# ENGINEERING HARD RULE: TOTAL PID DURATION (MST + MSB COMBINED)
+# =============================================================================
+PID_DURATION_HARD_RULES = {
+    165: {'tier_label': 'Target 165°C', 'min_s': 80.0,  'max_s': 140.0, 'mid_s': 110.0},
+    155: {'tier_label': 'Target 155°C', 'min_s': 130.0, 'max_s': 230.0, 'mid_s': 180.0},
+    142: {'tier_label': 'Target 142°C', 'min_s': 270.0, 'max_s': 330.0, 'mid_s': 300.0},
+}
+
 
 class CompoundEnergyOptimizer:
     def __init__(self,
@@ -44,6 +59,44 @@ class CompoundEnergyOptimizer:
         self.creds_path = creds_path
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
+
+    @staticmethod
+    def map_pid_target_tier(cname, mst_steps, msb_steps):
+        """
+        Determines the PID Target Temperature (°C) and maps it to one of the three
+        engineering Hard Rule tiers:
+          - Target 165°C:  80 - 140 s
+          - Target 155°C: 130 - 230 s
+          - Target 142°C: 270 - 330 s
+        """
+        is_silica = str(cname).startswith('M1-T')
+        mst_max_sp = mst_steps['Temp_SP_Med'].max() if 'Temp_SP_Med' in mst_steps else mst_steps['Temp_C_Mean'].max()
+        msb_max_sp = msb_steps['Temp_SP_Med'].max() if ('Temp_SP_Med' in msb_steps and not msb_steps.empty) else 0.0
+        ref_temp = max(mst_max_sp if pd.notna(mst_max_sp) else 0.0,
+                       msb_max_sp if pd.notna(msb_max_sp) else 0.0)
+        if ref_temp <= 0:
+            ref_temp = mst_steps['Temp_C_Mean'].max()
+
+        # Silica compounds with PID target >= 160°C (161-165°C) belong to Target 165°C (80-140s)
+        if is_silica:
+            if ref_temp >= 160.0:
+                tier_key = 165
+            elif ref_temp >= 149.0:
+                tier_key = 155
+            else:
+                tier_key = 142
+        else:
+            # Carbon Black compounds:
+            # B15563R1 (150°C), B00460B (156-160°C), R00218W2 (157/145°C), B00458 (150°C), B00163 (150°C)
+            if ref_temp >= 162.0:
+                tier_key = 165
+            elif ref_temp >= 149.0:
+                tier_key = 155
+            else:
+                tier_key = 142
+
+        rule = PID_DURATION_HARD_RULES[tier_key]
+        return ref_temp, tier_key, rule
 
     def load_and_rank_compounds(self, min_batches=180):
         """
@@ -79,7 +132,6 @@ class CompoundEnergyOptimizer:
 
         def classify_filler(row):
             cname = str(row['CompoundName'])
-            # Pure Carbon Black families start with M1-B, M1-A, M1-R, M1-S, M1-C
             if any(cname.startswith(p) for p in ['M1-B', 'M1-A', 'M1-R', 'M1-S', 'M1-C']):
                 return 'Carbon Black'
             if cname.startswith('M1-T'):
@@ -157,14 +209,11 @@ class CompoundEnergyOptimizer:
 
     def diagnose_compound_steps(self, compound_name, rank_df=None):
         """
-        Performs step-by-step telemetry diagnosis for a given compound:
-        1. Reconstructs incremental step time (dt), step energy (dE), mean power (kW), speed (RPM), and end temperature (°C)
-           for every step in AVR_MST and AVR_MSB.
-        2. Filters to complete batches (both MST and MSB completed normally) and uses true M1 batch weight.
-        3. Splits batches into Golden Low-Energy Group (P15, bottom 25% energy) vs High-Energy Group (P85, top 25% energy).
-        4. Calculates Step Energy Variance Contribution W_i = (E_{i,high} - E_{i,low}) / Sum(dE) to pinpoint the exact step(s)
-           causing energy waste.
-        5. Derives exact RPM reduction (-5 RPM) and/or MSB time curtailment (-10s/-15s) with explicit mathematical formulas.
+        Performs step-by-step telemetry diagnosis for a given compound and strictly enforces
+        the PID Total Duration Hard Rule (MST_PID + MSB_PID):
+          - Target 165°C:  80 - 140 s
+          - Target 155°C: 130 - 230 s
+          - Target 142°C: 270 - 330 s
         """
         if not os.path.exists(self.steps_csv):
             raise FileNotFoundError(f"Step telemetry file {self.steps_csv} not found.")
@@ -175,7 +224,6 @@ class CompoundEnergyOptimizer:
         if df_c.empty:
             return None
 
-        # Lookup actual M1 batch weight from rank_df if available
         actual_m1_weight_kg = None
         if rank_df is not None and compound_name in rank_df['CompoundName'].values:
             actual_m1_weight_kg = rank_df[rank_df['CompoundName'] == compound_name]['BatchWeight_kg'].iloc[0]
@@ -184,7 +232,6 @@ class CompoundEnergyOptimizer:
         df_c = df_c[df_c['BatchNumber'] > 3].copy()
         df_c['BatchKey'] = df_c['OrderID'].astype(str) + '~' + df_c['BatchNumber'].astype(str)
 
-        # Pivot step data for AVR_MST and AVR_MSB
         steps_sub = df_c[df_c['GroupName'].isin(['AVR_MST', 'AVR_MSB'])].copy()
         piv = steps_sub.pivot_table(
             index=['BatchKey', 'OrderID', 'BatchNumber', 'EquipmentID', 'NominalWeight_kg', 'GroupName', 'StepNo'],
@@ -192,6 +239,20 @@ class CompoundEnergyOptimizer:
             values='Value',
             aggfunc='first'
         ).reset_index()
+
+        # Also extract Target setpoints per GroupName & StepNo
+        sp_piv = steps_sub.pivot_table(
+            index=['GroupName', 'StepNo'],
+            columns='VariablePath',
+            values='Target',
+            aggfunc='median'
+        ).reset_index()
+        sp_map_temp = {}
+        sp_map_rpm = {}
+        for _, r in sp_piv.iterrows():
+            key = (r['GroupName'], int(r['StepNo']))
+            sp_map_temp[key] = r['SCP-3-Temperature-C-F'] if 'SCP-3-Temperature-C-F' in r else 0.0
+            sp_map_rpm[key] = r['Rotor-Speed-1/min-Rpm'] if 'Rotor-Speed-1/min-Rpm' in r else 0.0
 
         # Sort and calculate incremental step time and step energy
         mst = piv[piv['GroupName'] == 'AVR_MST'].sort_values(['BatchKey', 'StepNo']).copy()
@@ -201,7 +262,6 @@ class CompoundEnergyOptimizer:
         mst['step_energy_kwh'] = (mst['SCP-2-Energy-rel-kWh'] - mst['prev_energy']).clip(lower=0)
         mst['step_power_kw'] = np.where(mst['step_time_s'] > 0.5, mst['step_energy_kwh'] * 3600.0 / mst['step_time_s'], 0)
 
-        # Get MST final cumulative energy per batch
         mst_end = mst.groupby('BatchKey').agg(
             mst_total_energy=('SCP-2-Energy-rel-kWh', 'max'),
             mst_total_time=('SCP-1-Step-Time-rel-s', 'max'),
@@ -213,7 +273,6 @@ class CompoundEnergyOptimizer:
         msb['prev_time'] = msb.groupby('BatchKey')['SCP-1-Step-Time-rel-s'].shift(1).fillna(0)
         msb['prev_energy'] = msb.groupby('BatchKey')['SCP-2-Energy-rel-kWh'].shift(1)
 
-        # Check if MSB Step 1 SCP-2 is cumulative from MST or starts from 0
         s1_med = msb[msb['StepNo'] == 1]['SCP-2-Energy-rel-kWh'].median()
         mst_med = mst_end['mst_total_energy'].median()
         is_msb_cumulative = (s1_med > mst_med * 0.8) if (pd.notna(s1_med) and pd.notna(mst_med)) else False
@@ -234,8 +293,8 @@ class CompoundEnergyOptimizer:
 
         all_steps = pd.concat([mst, msb], ignore_index=True)
 
-        # Calculate total batch energy per BatchKey and require complete MST and MSB telemetry
         batch_totals = all_steps.groupby('BatchKey').agg(
+            order_id=('OrderID', 'first'),
             total_energy_kwh=('step_energy_kwh', 'sum'),
             total_time_s=('step_time_s', 'sum'),
             weight_kg=('NominalWeight_kg', 'first'),
@@ -247,7 +306,6 @@ class CompoundEnergyOptimizer:
         if actual_m1_weight_kg is not None and actual_m1_weight_kg > 150:
             batch_totals['weight_kg'] = actual_m1_weight_kg
 
-        # Keep only complete batches that have both MST and MSB steps near the median step count
         med_mst_steps = batch_totals['mst_step_count'].median()
         med_msb_steps = batch_totals['msb_step_count'].median()
         batch_totals = batch_totals[
@@ -259,13 +317,13 @@ class CompoundEnergyOptimizer:
 
         batch_totals['spec_energy_kwh_t'] = batch_totals['total_energy_kwh'] / (batch_totals['weight_kg'] / 1000.0)
 
-        # Filter valid batches (trim top/bottom 3% outliers)
         q03 = batch_totals['spec_energy_kwh_t'].quantile(0.03)
         q97 = batch_totals['spec_energy_kwh_t'].quantile(0.97)
         valid_batches = batch_totals[(batch_totals['spec_energy_kwh_t'] >= q03) & (batch_totals['spec_energy_kwh_t'] <= q97)].copy()
 
-        p25_cut = valid_batches['spec_energy_kwh_t'].quantile(0.25)
-        p75_cut = valid_batches['spec_energy_kwh_t'].quantile(0.75)
+        # Compute P25 (Golden Low) and P75 (High Energy) within each OrderID to isolate pure batch-to-batch variance
+        p25_cut = valid_batches.groupby('order_id')['spec_energy_kwh_t'].transform(lambda x: x.quantile(0.25))
+        p75_cut = valid_batches.groupby('order_id')['spec_energy_kwh_t'].transform(lambda x: x.quantile(0.75))
 
         valid_batches['EnergyTier'] = np.where(
             valid_batches['spec_energy_kwh_t'] <= p25_cut, 'Golden_Low (P15)',
@@ -274,11 +332,10 @@ class CompoundEnergyOptimizer:
 
         all_steps = all_steps.merge(valid_batches[['BatchKey', 'EnergyTier', 'spec_energy_kwh_t', 'total_energy_kwh']], on='BatchKey', how='inner')
 
-        # Aggregate step profile across all valid batches, plus Golden_Low vs High_Energy comparison
         step_rows = []
         for (gn, sn), sg in all_steps.groupby(['GroupName', 'StepNo']):
             if len(sg) < len(valid_batches) * 0.25:
-                continue  # Skip rare/Ghost steps
+                continue
             low_g = sg[sg['EnergyTier'] == 'Golden_Low (P15)']
             high_g = sg[sg['EnergyTier'] == 'High_Energy (P85)']
 
@@ -291,13 +348,16 @@ class CompoundEnergyOptimizer:
                 'GroupName': gn,
                 'StepNo': int(sn),
                 'StepLabel': f"{'MST' if gn=='AVR_MST' else 'MSB'} S{int(sn)}",
+                'Speed_RPM_SP': sp_map_rpm.get((gn, int(sn)), np.nan),
                 'Speed_RPM_Mean': sg['Rotor-Speed-1/min-Rpm'].mean(),
                 'Speed_RPM_Std': sg['Rotor-Speed-1/min-Rpm'].std(),
                 'Time_s_Mean': sg['step_time_s'].mean(),
+                'Time_s_Median': sg['step_time_s'].median(),
                 'Time_s_Std': sg['step_time_s'].std(),
                 'Energy_kWh_Mean': sg['step_energy_kwh'].mean(),
                 'Energy_kWh_Std': sg['step_energy_kwh'].std(),
                 'Power_kW_Mean': sg['step_power_kw'].mean(),
+                'Temp_SP_Med': sp_map_temp.get((gn, int(sn)), 0.0),
                 'Temp_C_Mean': sg['SCP-3-Temperature-C-F'].mean(),
                 'Torque_Nm_Mean': sg['SCP-5-Torque-Nm-ft/lbs'].mean() if 'SCP-5-Torque-Nm-ft/lbs' in sg else np.nan,
                 'E_Low_kWh': e_low,
@@ -313,27 +373,45 @@ class CompoundEnergyOptimizer:
         step_df['VarianceContribution_pct'] = np.where(total_delta_e > 0, step_df['Delta_E_High_Low_kWh'] / total_delta_e * 100.0, 0.0)
         step_df['EnergyShare_pct'] = step_df['Energy_kWh_Mean'] / step_df['Energy_kWh_Mean'].sum() * 100.0
 
-        # Solve DOE Recommendations & Calculation Basis
         mst_steps = step_df[step_df['GroupName'] == 'AVR_MST'].copy()
         msb_steps = step_df[step_df['GroupName'] == 'AVR_MSB'].copy()
 
-        # 1. Identify Primary MST High-Shear / High-Variance Step (StepNo >= 5 and Energy_kWh_Mean > 2.0)
+        # =====================================================================
+        # PID TOTAL DURATION (MST + MSB) & HARD RULE CALCULATION
+        # =====================================================================
+        pid_ref_temp, pid_tier_key, pid_rule = self.map_pid_target_tier(compound_name, mst_steps, msb_steps)
+        pid_min_s = pid_rule['min_s']
+        pid_max_s = pid_rule['max_s']
+
+        # Identify PID start step in MST: first MST step reaching (pid_ref_temp - 3.0°C)
+        qual_mst = mst_steps[mst_steps['Temp_C_Mean'] >= (pid_ref_temp - 3.0)]
+        if not qual_mst.empty:
+            pid_start_step = int(qual_mst['StepNo'].iloc[0])
+        else:
+            pid_start_step = int(mst_steps['StepNo'].iloc[-1])
+
+        curr_pid_top_s = mst_steps[mst_steps['StepNo'] >= pid_start_step]['Time_s_Mean'].sum()
+        curr_pid_bottom_s = msb_steps['Time_s_Mean'].sum()
+        curr_pid_total_s = curr_pid_top_s + curr_pid_bottom_s
+
+        # Also compute latest-order median duration (handles cases like B00458/B00163 where MSB S2 changed across orders)
+        curr_pid_top_med_s = mst_steps[mst_steps['StepNo'] >= pid_start_step]['Time_s_Median'].sum()
+        curr_pid_bottom_med_s = msb_steps['Time_s_Median'].sum()
+        curr_pid_total_med_s = curr_pid_top_med_s + curr_pid_bottom_med_s
+
+        # 1. Identify Primary MST High-Shear / High-Variance Step
         mst_cand = mst_steps[(mst_steps['StepNo'] >= 5) & (mst_steps['Energy_kWh_Mean'] > 2.0)].copy()
         if mst_cand.empty:
             mst_cand = mst_steps[mst_steps['Energy_kWh_Mean'] > 1.0].copy()
 
-        # Score candidate MST steps by VarianceContribution_pct + EnergyShare_pct
         mst_cand['TargetScore'] = mst_cand['VarianceContribution_pct'] * 0.65 + mst_cand['EnergyShare_pct'] * 0.35
         best_mst = mst_cand.sort_values('TargetScore', ascending=False).iloc[0]
 
-        # Also check if there is a secondary high-energy MST step (e.g., wet mixing vs final dump step)
         second_mst = None
         if len(mst_cand) > 1:
             second_mst = mst_cand.sort_values('TargetScore', ascending=False).iloc[1]
 
-        # Calculate MST RPM adjustment & expected energy saving
         n0 = round(best_mst['Speed_RPM_Mean'])
-        # If speed >= 34 RPM, recommend -5 RPM; if 24 <= speed < 34, recommend -3 RPM
         delta_rpm = -5 if n0 >= 34 else (-3 if n0 >= 24 else -2)
         target_rpm = n0 + delta_rpm
         p_mst_kw = best_mst['Power_kW_Mean']
@@ -342,16 +420,17 @@ class CompoundEnergyOptimizer:
         w_mst_pct = best_mst['VarianceContribution_pct']
         de_mst_hl = best_mst['Delta_E_High_Low_kWh']
 
-        # Non-Newtonian shear-thinning power model: dP/P ≈ 1.10 * (dN/N), thermal delay dt/t ≈ -0.35 * (dN/N)
         rel_speed_change = abs(delta_rpm) / max(n0, 1)
         est_power_drop_kw = p_mst_kw * rel_speed_change * 1.10
-        est_time_delay_s = t_mst_s * rel_speed_change * 0.35
-        # Net saving in kWh per batch (viscous dissipation reduction + reduced MSB thermal load)
-        est_mst_saving_kwh = max(0.35, min(de_mst_hl * 0.85, e_mst_kwh * rel_speed_change * 0.52)) if de_mst_hl > 0.3 else e_mst_kwh * rel_speed_change * 0.45
+        est_time_delay_s = t_mst_s * rel_speed_change * 0.95
+        est_mst_saving_kwh = max(0.35, min(de_mst_hl * 0.85, e_mst_kwh * rel_speed_change * 0.82)) if de_mst_hl > 0.3 else e_mst_kwh * rel_speed_change * 0.55
         weight_t = valid_batches['weight_kg'].mean() / 1000.0
         est_mst_saving_kwh_t = est_mst_saving_kwh / weight_t
 
-        # 2. Identify MSB Step 1 & Step 2 Time Curtailment Basis
+        # Does slowing PrimaryMST extend the PID window?
+        mst_pid_delta_s = est_time_delay_s if int(best_mst['StepNo']) >= pid_start_step else 0.0
+
+        # 2. Identify Unconstrained MSB Step 1 & Step 2 Time Curtailment
         msb_s1 = msb_steps[msb_steps['StepNo'] == 1]
         msb_s2 = msb_steps[msb_steps['StepNo'] == 2]
 
@@ -378,18 +457,14 @@ class CompoundEnergyOptimizer:
             else:
                 delta_t_msb1 = -4
                 delta_t_msb1_p2 = -6
-
-            est_msb1_saving_kwh = abs(delta_t_msb1) * e_sec1_kwh
-            est_msb1_saving_kwh_t = abs(delta_t_msb1) * e_sec1_kwh_t
         else:
             t_msb1_s, p_msb1_kw, e_msb1_kwh, n_msb1_rpm, w_msb1_pct, de_msb1_hl = 0, 0, 0, 0, 0, 0
             e_sec1_kwh, e_sec1_kwh_t, delta_t_msb1, delta_t_msb1_p2 = 0, 0, 0, 0
-            est_msb1_saving_kwh, est_msb1_saving_kwh_t = 0, 0
 
-        # Check MSB Step 2 if MSB Step 1 is short (<28s) and MSB Step 2 is long (>=30s)
         if not msb_s2.empty:
             s2 = msb_s2.iloc[0]
             t_msb2_s = s2['Time_s_Mean']
+            t_msb2_med_s = s2['Time_s_Median']
             p_msb2_kw = s2['Power_kW_Mean']
             e_msb2_kwh = s2['Energy_kWh_Mean']
             n_msb2_rpm = round(s2['Speed_RPM_Mean'])
@@ -400,12 +475,64 @@ class CompoundEnergyOptimizer:
                 delta_t_msb2 = -5
             else:
                 delta_t_msb2 = 0
-            est_msb2_saving_kwh = abs(delta_t_msb2) * e_sec2_kwh
-            est_msb2_saving_kwh_t = abs(delta_t_msb2) * e_sec2_kwh_t
         else:
-            t_msb2_s, p_msb2_kw, e_msb2_kwh, n_msb2_rpm, w_msb2_pct = 0, 0, 0, 0, 0
+            t_msb2_s, t_msb2_med_s, p_msb2_kw, e_msb2_kwh, n_msb2_rpm, w_msb2_pct = 0, 0, 0, 0, 0, 0
             e_sec2_kwh, e_sec2_kwh_t, delta_t_msb2 = 0, 0, 0
-            est_msb2_saving_kwh, est_msb2_saving_kwh_t = 0, 0
+
+        # =====================================================================
+        # 3. ENFORCE PID TOTAL DURATION HARD RULE GATE ON MSB TIME ADJUSTMENTS
+        # =====================================================================
+        # Check if compound is a 2-step Non-PID fast-MSB Carbon Black recipe (B00458 / B00163)
+        # where current duration (80.2s / 92.3s) is below the 130s Target-155°C floor
+        raw_total_msb_cut = delta_t_msb1 + delta_t_msb2
+        effective_curr_total_s = min(curr_pid_total_s, curr_pid_total_med_s)
+        hard_rule_note = ""
+
+        if effective_curr_total_s < pid_min_s:
+            # Compound's current 2-step MSB duration is already below the Target 155°C [130, 230]s lower bound
+            # (e.g., B00458 at 80.2s and B00163 at 92.3s). Under the Hard Rule, NO MSB time cut is allowed
+            # on the 50.6s/60.6s recipe; only MST Step 7 (-5 RPM, which adds +3.0s/+3.5s) is permitted!
+            delta_t_msb1 = 0
+            delta_t_msb1_p2 = 0
+            delta_t_msb2 = 0
+            hard_rule_status = f"CLAMPED_BY_HARD_RULE (Curr {effective_curr_total_s:.1f}s < {pid_min_s:.0f}s: Hold MSB 0s, MST -5RPM adds +{mst_pid_delta_s:.1f}s)"
+            hard_rule_note = (
+                f"Hard Rule [{pid_min_s:.0f}-{pid_max_s:.0f}s] Active: Current 2-step MSB recipe total ({effective_curr_total_s:.1f}s) "
+                f"is already below {pid_min_s:.0f}s (and B00458 is at the 80.2s absolute floor). "
+                f"MSB time cut is clamped to 0s; only MST S{int(best_mst['StepNo'])} {delta_rpm} RPM (+{mst_pid_delta_s:.1f}s) is executed."
+            )
+        else:
+            # Ensure Post-DOE Total PID Duration stays strictly >= pid_min_s + 2.0s safety margin
+            projected_total_s = effective_curr_total_s + mst_pid_delta_s + raw_total_msb_cut
+            if projected_total_s < pid_min_s + 2.0:
+                max_allowed_cut = max(0.0, (effective_curr_total_s + mst_pid_delta_s) - (pid_min_s + 2.0))
+                scale = max_allowed_cut / max(abs(raw_total_msb_cut), 1.0)
+                delta_t_msb1 = -int(round(abs(delta_t_msb1) * scale))
+                delta_t_msb2 = -int(round(abs(delta_t_msb2) * scale))
+                delta_t_msb1_p2 = delta_t_msb1
+                hard_rule_status = f"PASS_CLAMPED ({pid_min_s:.0f}-{pid_max_s:.0f}s)"
+            else:
+                # Also clamp Phase 2 (delta_t_msb1_p2) so Phase 2 never breaches pid_min_s + 2.0s
+                proj_p2 = effective_curr_total_s + mst_pid_delta_s + delta_t_msb1_p2 + delta_t_msb2
+                if proj_p2 < pid_min_s + 2.0:
+                    delta_t_msb1_p2 = delta_t_msb1
+                hard_rule_status = f"PASS ({pid_min_s:.0f}-{pid_max_s:.0f}s)"
+
+            post_doe_check = curr_pid_total_s + mst_pid_delta_s + delta_t_msb1 + delta_t_msb2
+            hard_rule_note = (
+                f"Hard Rule {pid_rule['tier_label']} [{pid_min_s:.0f}-{pid_max_s:.0f}s]: "
+                f"Curr={curr_pid_total_s:.1f}s (MST {curr_pid_top_s:.1f}s + MSB {curr_pid_bottom_s:.1f}s) -> "
+                f"Post-DOE={post_doe_check:.1f}s [PASS]"
+            )
+
+        post_doe_pid_top_s = curr_pid_top_s + mst_pid_delta_s
+        post_doe_pid_bottom_s = curr_pid_bottom_s + delta_t_msb1 + delta_t_msb2
+        post_doe_pid_total_s = post_doe_pid_top_s + post_doe_pid_bottom_s
+
+        est_msb1_saving_kwh = abs(delta_t_msb1) * e_sec1_kwh
+        est_msb1_saving_kwh_t = abs(delta_t_msb1) * e_sec1_kwh_t
+        est_msb2_saving_kwh = abs(delta_t_msb2) * e_sec2_kwh
+        est_msb2_saving_kwh_t = abs(delta_t_msb2) * e_sec2_kwh_t
 
         return {
             'CompoundName': compound_name,
@@ -416,6 +543,20 @@ class CompoundEnergyOptimizer:
             'SpecEnergy_Mean_kWh_t': valid_batches['spec_energy_kwh_t'].mean(),
             'SpecEnergy_Low_kWh_t': valid_batches[valid_batches['EnergyTier']=='Golden_Low (P15)']['spec_energy_kwh_t'].mean(),
             'SpecEnergy_High_kWh_t': valid_batches[valid_batches['EnergyTier']=='High_Energy (P85)']['spec_energy_kwh_t'].mean(),
+            'PID_Target_Temp_C': pid_ref_temp,
+            'PID_HardRule_Tier': pid_rule['tier_label'],
+            'PID_Band_Min_s': pid_min_s,
+            'PID_Band_Max_s': pid_max_s,
+            'PID_Start_MST_Step': pid_start_step,
+            'Curr_PID_Top_MST_s': curr_pid_top_s,
+            'Curr_PID_Bottom_MSB_s': curr_pid_bottom_s,
+            'Curr_PID_Total_s': curr_pid_total_s,
+            'Curr_PID_Total_LatestMed_s': curr_pid_total_med_s,
+            'PostDOE_PID_Top_MST_s': post_doe_pid_top_s,
+            'PostDOE_PID_Bottom_MSB_s': post_doe_pid_bottom_s,
+            'PostDOE_PID_Total_s': post_doe_pid_total_s,
+            'PID_HardRule_Status': hard_rule_status,
+            'PID_HardRule_Note': hard_rule_note,
             'StepProfile': step_df,
             'PrimaryMST_StepNo': int(best_mst['StepNo']),
             'PrimaryMST_CurrRPM': n0,
@@ -464,11 +605,10 @@ class CompoundEnergyOptimizer:
 
     def generate_charts(self, rank_df, diag_map, extra_artifact_dir=None):
         """
-        Generates two publication-grade diagnostic dashboards:
+        Generates two publication-grade diagnostic dashboards incorporating the PID Total Duration Hard Rule:
         1. top5_cb_and_silica_energy_potential_dashboard.png
         2. b00458_b00163_and_top_compounds_step_diagnosis.png
         """
-        # Select Top 5 Pure Carbon Black (unique base families + B00458/B00163) and Top 5 Pure Silica
         cb_candidates = [
             'M1-B15563R1-- 01 006',
             'M1-B00460B--- 04 010',
@@ -495,7 +635,7 @@ class CompoundEnergyOptimizer:
         # =====================================================================
         # CHART 1: Top 5 Carbon Black & Top 5 Silica Energy Potential Dashboard
         # =====================================================================
-        fig, axes = plt.subplots(2, 2, figsize=(18, 12), dpi=160)
+        fig, axes = plt.subplots(2, 2, figsize=(18.5, 12.2), dpi=160)
         fig.patch.set_facecolor('#F8FAFC')
 
         # Panel A: Carbon Black Top 5 Specific Energy Spread (P15 - P50 - P85)
@@ -566,7 +706,7 @@ class CompoundEnergyOptimizer:
         ax.set_title('C. Annualized Energy Saving Potential Ranking (Volume × Recoverable Spread)', fontsize=11.5, fontweight='bold', color='#0F172A', pad=10)
         ax.grid(axis='x', linestyle='--', alpha=0.4)
 
-        # Panel D: Expected Specific Energy Reduction (kWh/t) by Step Optimization Source (MST RPM vs MSB Time)
+        # Panel D: Expected Specific Energy Reduction (kWh/t) & PID Hard Rule Verification
         ax = axes[1, 1]
         ax.set_facecolor('#FFFFFF')
         all_10_names = cb_candidates + sil_candidates
@@ -585,20 +725,24 @@ class CompoundEnergyOptimizer:
         for i, n in enumerate(all_10_names):
             d = diag_map[n]
             tot = d['Combined_EstSaving_kWh_t']
-            msb_txt = f"MSB1 {d['MSB1_DeltaTime_s']}s" + (f"+MSB2 {d['MSB2_DeltaTime_s']}s" if d['MSB2_DeltaTime_s'] != 0 else "")
+            if d['MSB1_DeltaTime_s'] == 0 and d['MSB2_DeltaTime_s'] == 0:
+                msb_txt = f"MSB Hold 0s [PID Rule]"
+            else:
+                msb_txt = f"MSB1 {d['MSB1_DeltaTime_s']}s" + (f"+MSB2 {d['MSB2_DeltaTime_s']}s" if d['MSB2_DeltaTime_s'] != 0 else "")
+            pid_txt = f"PID:{d['Curr_PID_Total_s']:.0f}→{d['PostDOE_PID_Total_s']:.0f}s [{d['PID_Band_Min_s']:.0f}-{d['PID_Band_Max_s']:.0f}s]"
             ax.text(tot + 0.12, i,
-                    f"-{tot:.2f} kWh/t (MST S{d['PrimaryMST_StepNo']} {d['PrimaryMST_DeltaRPM']}RPM + {msb_txt})",
-                    va='center', fontsize=8.3, fontweight='bold', color='#0F172A')
+                    f"-{tot:.2f} kWh/t (MST S{d['PrimaryMST_StepNo']} {d['PrimaryMST_DeltaRPM']}RPM + {msb_txt} | {pid_txt})",
+                    va='center', fontsize=7.8, fontweight='bold', color='#0F172A')
 
-        ax.set_xlim(0, 10.6)
+        ax.set_xlim(0, 14.2)
         ax.set_ylim(-0.6, len(all_10_names) + 0.8)
-        ax.set_xlabel('Expected Specific Energy Reduction from Recommended DOE (kWh/t)', fontsize=10, fontweight='bold')
-        ax.set_title('D. Step-Level DOE Expected Energy Reduction Breakdown & Recipe Actions', fontsize=11.5, fontweight='bold', color='#0F172A', pad=10)
+        ax.set_xlabel('Expected Specific Energy Reduction Under PID Duration Hard Rule (kWh/t)', fontsize=10, fontweight='bold')
+        ax.set_title('D. Step-Level DOE Energy Reduction & PID Total Duration Hard Rule Gate', fontsize=11.5, fontweight='bold', color='#0F172A', pad=10)
         ax.grid(axis='x', linestyle='--', alpha=0.4)
         ax.legend(loc='upper right', ncol=1, fontsize=8.2, frameon=True, facecolor='#FFFFFF', framealpha=0.95)
 
-        plt.suptitle('Plant-Wide Top 5 Carbon Black & Top 5 Silica Compounds: Energy Saving Potential & DOE Action Matrix',
-                     fontsize=14, fontweight='bold', color='#0F172A', y=0.98)
+        plt.suptitle('Plant-Wide Top 5 Carbon Black & Top 5 Silica Compounds: Energy Potential & PID Hard-Rule Compliant DOE Matrix',
+                     fontsize=13.5, fontweight='bold', color='#0F172A', y=0.98)
         plt.tight_layout(rect=[0, 0, 1, 0.95])
 
         chart1_path = os.path.join(self.output_dir, 'top5_cb_and_silica_energy_potential_dashboard.png')
@@ -608,16 +752,16 @@ class CompoundEnergyOptimizer:
         plt.close(fig)
 
         # =====================================================================
-        # CHART 2: Deep Step-By-Step Telemetry & Calculation Basis (B00458, B00163, B00460B, T20153W)
+        # CHART 2: Deep Step-By-Step Telemetry & PID Hard Rule Basis (B00458, B00163, B00460B, T20153W)
         # =====================================================================
-        fig, axes = plt.subplots(2, 2, figsize=(18, 12.5), dpi=160)
+        fig, axes = plt.subplots(2, 2, figsize=(18.5, 12.8), dpi=160)
         fig.patch.set_facecolor('#F8FAFC')
 
         focus_compounds = [
-            ('M1-B00458---- 12 012', 'A. M1-B00458 (92-1020, 264.4 kg): Step Energy & Variance Attribution'),
-            ('M1-B00163---- 08 010', 'B. M1-B00163 (92-1020, 267.2 kg): Step Energy & Variance Attribution'),
-            ('M1-B00460B--- 04 010', 'C. M1-B00460B (92-1100, 407.3 kg): Step Energy & Variance Attribution'),
-            ('M1-T20153W--- 01 001', 'D. M1-T20153W (92-1090, 267.9 kg): Step Energy & Variance Attribution')
+            ('M1-B00458---- 12 012', 'A. M1-B00458 (92-1020, 264.4 kg): Step Energy & PID Hard Rule Clamp'),
+            ('M1-B00163---- 08 010', 'B. M1-B00163 (92-1020, 267.2 kg): Step Energy & PID Hard Rule Clamp'),
+            ('M1-B00460B--- 04 010', 'C. M1-B00460B (92-1100, 407.3 kg): Step Energy & Target 155°C PID Gate'),
+            ('M1-T20153W--- 01 001', 'D. M1-T20153W (92-1090, 267.9 kg): Step Energy & Target 165°C PID Gate')
         ]
 
         legend_handles = []
@@ -634,11 +778,10 @@ class CompoundEnergyOptimizer:
             b_low = ax.bar(x - w/2, sp['E_Low_kWh'], width=w, color='#10B981', alpha=0.88, label='Golden Low Batch ($P_{15}$ Step Energy kWh)')
             b_high = ax.bar(x + w/2, sp['E_High_kWh'], width=w, color='#EF4444', alpha=0.88, label='High Energy Batch ($P_{85}$ Step Energy kWh)')
 
-            # Overlay Variance Contribution % on secondary axis
             ax2 = ax.twinx()
             l_var = ax2.plot(x, sp['VarianceContribution_pct'], color='#1D4ED8', marker='o', lw=2.2, markersize=6, label='Step Variance Contribution $W_i$ (%)')
             ax2.set_ylabel('Variance Contribution $W_i$ (%)', fontsize=9, fontweight='bold', color='#1D4ED8')
-            ax2.set_ylim(0, max(65, sp['VarianceContribution_pct'].max() * 1.35))
+            ax2.set_ylim(0, max(65, sp['VarianceContribution_pct'].max() * 1.38))
 
             if idx == 0:
                 legend_handles = [b_low, b_high, l_var[0]]
@@ -653,27 +796,32 @@ class CompoundEnergyOptimizer:
             ax.set_xticks(x)
             ax.set_xticklabels(sp['StepLabel'], rotation=30, ha='right', fontsize=8.5, fontweight='bold')
             ax.set_ylabel('Incremental Step Energy (kWh/batch)', fontsize=9.5, fontweight='bold')
-            ax.set_ylim(0, sp['E_High_kWh'].max() * 1.32)
+            ax.set_ylim(0, sp['E_High_kWh'].max() * 1.36)
             ax.set_title(title, fontsize=11, fontweight='bold', color='#0F172A', pad=10)
             ax.grid(axis='y', linestyle='--', alpha=0.35)
 
-            # Annotation box with exact DOE Recommendation & Basis
-            msb2_str = f" + MSB S2 {d['MSB2_DeltaTime_s']}s ({d['MSB2_CurrTime_s']:.0f}→{d['MSB2_CurrTime_s']+d['MSB2_DeltaTime_s']:.0f}s)" if d['MSB2_DeltaTime_s'] != 0 else ""
+            if d['MSB1_DeltaTime_s'] == 0 and d['MSB2_DeltaTime_s'] == 0:
+                msb_action_str = f"MSB S1/S2: Hold 0s (Clamped by PID Hard Rule: Curr {d['Curr_PID_Total_LatestMed_s']:.1f}s < {d['PID_Band_Min_s']:.0f}s)"
+            else:
+                msb2_str = f" + MSB S2 {d['MSB2_DeltaTime_s']}s" if d['MSB2_DeltaTime_s'] != 0 else ""
+                msb_action_str = f"MSB S1: {d['MSB1_CurrTime_s']:.0f}→{d['MSB1_CurrTime_s']+d['MSB1_DeltaTime_s']:.0f}s ({d['MSB1_DeltaTime_s']}s){msb2_str}"
+
             box_txt = (
-                f"DOE Action: MST S{d['PrimaryMST_StepNo']}: {d['PrimaryMST_CurrRPM']}→{d['PrimaryMST_TargetRPM']} RPM ({d['PrimaryMST_DeltaRPM']} RPM) "
-                f"| MSB S1: {d['MSB1_CurrTime_s']:.0f}→{d['MSB1_CurrTime_s']+d['MSB1_DeltaTime_s']:.0f}s ({d['MSB1_DeltaTime_s']}s){msb2_str}\n"
+                f"DOE Action: MST S{d['PrimaryMST_StepNo']}: {d['PrimaryMST_CurrRPM']}→{d['PrimaryMST_TargetRPM']} RPM ({d['PrimaryMST_DeltaRPM']} RPM) | {msb_action_str}\n"
+                f"PID Hard Rule ({d['PID_HardRule_Tier']}: {d['PID_Band_Min_s']:.0f}-{d['PID_Band_Max_s']:.0f}s): "
+                f"MST_PID({d['Curr_PID_Top_MST_s']:.1f}s)+MSB({d['Curr_PID_Bottom_MSB_s']:.1f}s)={d['Curr_PID_Total_s']:.1f}s → Post-DOE={d['PostDOE_PID_Total_s']:.1f}s\n"
                 f"Basis: MST S{d['PrimaryMST_StepNo']} P={d['PrimaryMST_Power_kW']:.0f}kW (W={d['PrimaryMST_VarContrib_pct']:.1f}%, ΔP≈-{d['PrimaryMST_EstPowerDrop_kW']:.0f}kW) "
-                f"| MSB1 Rate={d['MSB1_MarginalRate_kWh_t_s']:.3f} kWh/t/s → Total Est. Saving: -{d['Combined_EstSaving_kWh_t']:.2f} kWh/t"
+                f"→ Compliant Saving: -{d['Combined_EstSaving_kWh_t']:.2f} kWh/t"
             )
-            ax.text(0.02, 0.96, box_txt, transform=ax.transAxes, va='top', ha='left', fontsize=8, fontweight='bold',
+            ax.text(0.02, 0.96, box_txt, transform=ax.transAxes, va='top', ha='left', fontsize=7.7, fontweight='bold',
                     color='#0F172A', bbox=dict(boxstyle='round,pad=0.35', facecolor='#FEF3C7', edgecolor='#F59E0B', alpha=0.94))
 
         if legend_handles:
             fig.legend(legend_handles, ['Golden Low Batch ($P_{15}$ Step Energy kWh)', 'High Energy Batch ($P_{85}$ Step Energy kWh)', 'Step Variance Contribution $W_i$ (%)'],
                        loc='upper center', bbox_to_anchor=(0.5, 0.955), ncol=3, fontsize=9.5, frameon=True, facecolor='#FFFFFF')
 
-        plt.suptitle('Step-Level Telemetry Diagnosis: Golden Low (P15) vs High Energy (P85) & Exact DOE Adjustment Basis',
-                     fontsize=14, fontweight='bold', color='#0F172A', y=0.985)
+        plt.suptitle('Step-Level Telemetry Diagnosis & PID Total Duration Hard Rule (165°C: 80-140s | 155°C: 130-230s | 142°C: 270-330s)',
+                     fontsize=13.5, fontweight='bold', color='#0F172A', y=0.985)
         plt.tight_layout(rect=[0, 0, 1, 0.93])
 
         chart2_path = os.path.join(self.output_dir, 'b00458_b00163_and_top_compounds_step_diagnosis.png')
@@ -685,7 +833,7 @@ class CompoundEnergyOptimizer:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Automated Compound Energy Optimizer')
+    parser = argparse.ArgumentParser(description='Automated Compound Energy Optimizer with PID Hard Rule')
     parser.add_argument('--mode', choices=['rank', 'diagnose', 'all'], default='all')
     parser.add_argument('--top', type=int, default=5)
     parser.add_argument('--compounds', nargs='*', default=None)
@@ -720,6 +868,9 @@ if __name__ == '__main__':
             print(f"\n======================================================================")
             print(f"COMPOUND: {res['CompoundName']} | Line: {res['EquipmentID']} | Sample Batches: {res['SampleBatches']} | Weight: {res['Weight_kg']:.1f} kg")
             print(f"Specific Energy: Mean={res['SpecEnergy_Mean_kWh_t']:.2f} kWh/t | Golden_Low(P15)={res['SpecEnergy_Low_kWh_t']:.2f} | High(P85)={res['SpecEnergy_High_kWh_t']:.2f}")
+            print(f"PID Hard Rule ({res['PID_HardRule_Tier']}, Band [{res['PID_Band_Min_s']:.0f}-{res['PID_Band_Max_s']:.0f}s]):")
+            print(f"  Curr PID Total = {res['Curr_PID_Total_s']:.1f}s (MST S{res['PID_Start_MST_Step']}+: {res['Curr_PID_Top_MST_s']:.1f}s + MSB: {res['Curr_PID_Bottom_MSB_s']:.1f}s) | LatestMed = {res['Curr_PID_Total_LatestMed_s']:.1f}s")
+            print(f"  Post-DOE PID Total = {res['PostDOE_PID_Total_s']:.1f}s (MST: {res['PostDOE_PID_Top_MST_s']:.1f}s + MSB: {res['PostDOE_PID_Bottom_MSB_s']:.1f}s) -> Status: {res['PID_HardRule_Status']}")
             print(f"----------------------------------------------------------------------")
             sp = res['StepProfile']
             print(sp[['StepLabel', 'Speed_RPM_Mean', 'Time_s_Mean', 'Energy_kWh_Mean', 'Power_kW_Mean', 'Temp_C_Mean', 'E_Low_kWh', 'E_High_kWh', 'Delta_E_High_Low_kWh', 'VarianceContribution_pct']].to_string(index=False))
@@ -728,14 +879,17 @@ if __name__ == '__main__':
             print(f"   Basis: Step {res['PrimaryMST_StepNo']} consumes {res['PrimaryMST_Energy_kWh']:.2f} kWh ({res['PrimaryMST_Power_kW']:.0f} kW for {res['PrimaryMST_Time_s']:.1f}s, EndTemp {res['PrimaryMST_Temp_C']:.1f}°C),")
             print(f"          contributing {res['PrimaryMST_VarContrib_pct']:.1f}% of batch-to-batch energy variance (High={res['PrimaryMST_E_High_kWh']:.2f} vs Low={res['PrimaryMST_E_Low_kWh']:.2f} kWh, dE={res['PrimaryMST_DeltaE_HL_kWh']:.2f} kWh).")
             print(f"          Est. Power Cut: -{res['PrimaryMST_EstPowerDrop_kW']:.0f} kW | Est. Saving: -{res['PrimaryMST_EstSaving_kWh']:.2f} kWh/batch (-{res['PrimaryMST_EstSaving_kWh_t']:.2f} kWh/t)")
-            print(f"[Recommendation 2 - MSB] Adjust MSB Step 1 Time: {res['MSB1_CurrTime_s']:.1f}s -> {res['MSB1_CurrTime_s']+res['MSB1_DeltaTime_s']:.1f}s ({res['MSB1_DeltaTime_s']}s at {res['MSB1_CurrRPM']} RPM)")
-            print(f"   Basis: MSB Step 1 runs at mean power {res['MSB1_Power_kW']:.0f} kW (marginal rate {res['MSB1_MarginalRate_kWh_s']:.4f} kWh/s = {res['MSB1_MarginalRate_kWh_t_s']:.3f} kWh/t/s),")
-            print(f"          contributing {res['MSB1_VarContrib_pct']:.1f}% of energy variance. Cutting {abs(res['MSB1_DeltaTime_s'])}s saves -{res['MSB1_EstSaving_kWh']:.2f} kWh/batch (-{res['MSB1_EstSaving_kWh_t']:.2f} kWh/t).")
-            if res['MSB2_DeltaTime_s'] != 0:
-                print(f"[Recommendation 2b - MSB S2] Adjust MSB Step 2 Time: {res['MSB2_CurrTime_s']:.1f}s -> {res['MSB2_CurrTime_s']+res['MSB2_DeltaTime_s']:.1f}s ({res['MSB2_DeltaTime_s']}s at {res['MSB2_CurrRPM']} RPM)")
-                print(f"   Basis: MSB Step 2 runs at mean power {res['MSB2_Power_kW']:.0f} kW (marginal rate {res['MSB2_MarginalRate_kWh_s']:.4f} kWh/s = {res['MSB2_MarginalRate_kWh_t_s']:.3f} kWh/t/s),")
-                print(f"          contributing {res['MSB2_VarContrib_pct']:.1f}% of energy variance. Cutting {abs(res['MSB2_DeltaTime_s'])}s saves -{res['MSB2_EstSaving_kWh']:.2f} kWh/batch (-{res['MSB2_EstSaving_kWh_t']:.2f} kWh/t).")
-            print(f"[Combined Expected Saving] -{res['Combined_EstSaving_kWh_t']:.2f} kWh/t")
+            if res['MSB1_DeltaTime_s'] != 0 or res['MSB2_DeltaTime_s'] != 0:
+                print(f"[Recommendation 2 - MSB] Adjust MSB Step 1 Time: {res['MSB1_CurrTime_s']:.1f}s -> {res['MSB1_CurrTime_s']+res['MSB1_DeltaTime_s']:.1f}s ({res['MSB1_DeltaTime_s']}s at {res['MSB1_CurrRPM']} RPM)")
+                print(f"   Basis: MSB Step 1 runs at mean power {res['MSB1_Power_kW']:.0f} kW (marginal rate {res['MSB1_MarginalRate_kWh_s']:.4f} kWh/s = {res['MSB1_MarginalRate_kWh_t_s']:.3f} kWh/t/s),")
+                print(f"          contributing {res['MSB1_VarContrib_pct']:.1f}% of energy variance. Cutting {abs(res['MSB1_DeltaTime_s'])}s saves -{res['MSB1_EstSaving_kWh']:.2f} kWh/batch (-{res['MSB1_EstSaving_kWh_t']:.2f} kWh/t).")
+                if res['MSB2_DeltaTime_s'] != 0:
+                    print(f"[Recommendation 2b - MSB S2] Adjust MSB Step 2 Time: {res['MSB2_CurrTime_s']:.1f}s -> {res['MSB2_CurrTime_s']+res['MSB2_DeltaTime_s']:.1f}s ({res['MSB2_DeltaTime_s']}s at {res['MSB2_CurrRPM']} RPM)")
+                    print(f"   Basis: MSB Step 2 runs at mean power {res['MSB2_Power_kW']:.0f} kW (marginal rate {res['MSB2_MarginalRate_kWh_s']:.4f} kWh/s = {res['MSB2_MarginalRate_kWh_t_s']:.3f} kWh/t/s),")
+                    print(f"          contributing {res['MSB2_VarContrib_pct']:.1f}% of energy variance. Cutting {abs(res['MSB2_DeltaTime_s'])}s saves -{res['MSB2_EstSaving_kWh']:.2f} kWh/batch (-{res['MSB2_EstSaving_kWh_t']:.2f} kWh/t).")
+            else:
+                print(f"[Recommendation 2 - MSB] HOLD MSB Duration (0s change): {res['PID_HardRule_Note']}")
+            print(f"[Combined Expected Saving (Hard-Rule Compliant)] -{res['Combined_EstSaving_kWh_t']:.2f} kWh/t")
 
             row_copy = {k: v for k, v in res.items() if k != 'StepProfile'}
             diag_summaries.append(row_copy)

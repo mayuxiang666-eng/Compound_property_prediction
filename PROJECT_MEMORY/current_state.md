@@ -120,11 +120,15 @@
   - 提取 47.1 万行分步遥测（`scratch/top_compounds_steps_raw.csv`），覆盖 55 个纯密炼机订单与 11 个标杆胶料。
 - **核心成果**：
   - 评出纯炭黑 Top 5（B15563R1、B00460B、B00163、R00218W2、B00458）与白炭黑 Top 5（T15760、T20153W、T09170、T33025W3、T17771），年化节电空间达 250 MWh/年（全族 295 MWh/年）；
-  - 明确“调整第几步、调多少 RPM/秒”三大数学依据：
-    1. 分步能耗方差贡献度 $W_i$ 准则；
+  - 明确“调整第几步、调多少 RPM/秒”四大数学与硬门禁依据：
+    1. 同订单内分步能耗方差贡献度 $W_i$ 准则（消除跨订单配方版本混杂）；
     2. 非牛顿流体剪切稀化幂律公式 $\Delta P / P \approx 1.10 (\Delta N / N)$；
-    3. MSB 边际功率积分速率 $e_{\text{ton,sec}} = \bar{P}_{\text{MSB}} / (3.6 W_{\text{batch}})$。
-  - 重点明确 `M1-B00458` 与 `M1-B00163` 在 `92-1020` 产线上的分步方案（MST S7 -5 RPM + MSB S1 -4s + MSB S2 -5s，预期节电 $-5.15\text{ kWh/t}$ 与 $-5.33\text{ kWh/t}$）。
+    3. MSB 边际功率积分速率 $e_{\text{ton,sec}} = \bar{P}_{\text{MSB}} / (3.6 W_{\text{batch}})$；
+    4. **总体 PID 时长（`MST + MSB`）Hard Rule 刚性门禁**：**Target 165°C: `80–140 s`**，**Target 155°C: `130–230 s`**，**Target 142°C: `270–330 s`**。
+  - **合规性审计与 `B00458`/`B00163` 刚性截断**：
+    - 白炭黑 Top 5（165°C 档）调整后总体 PID 时长落在 **`100.9s ~ 123.1s`**，100% 满足 `[80, 140] s`，且消除了 `T17771` 高能耗车次（`141.3s > 140s`）的超时风险；
+    - 炭黑 `B15563R1`、`B00460B`、`R00218W2`（155°C 档）调整后总体时长落在 **`142.0s ~ 170.3s`**（严格 post-S5 最低 `132.0s`），100% 满足 `[130, 230] s`；
+    - `M1-B00458` 与 `M1-B00163` 在 `92-1020` 当前 2 步 MSB 配方下总体时长仅 `83.2s`（最新订单 `80.4s`）与 `99.8s`（最新订单 `92.3s`），触发 Hard Rule 刚性截断保护：**强制锁定 `MSB Δt = 0 s`（禁止缩减 MSB 时间）**，100% 节电来自 **`MST Step 7 降速 -5 RPM`**（分别节电 **`-1.55 kWh/t`** 与 **`-2.41 kWh/t`**，并自然延长 MST 高温段 `+2.8s` / `+3.2s`）。
 - **工程产物**：
   - 引擎代码：`compound_energy_optimizer.py`（支持 `--mode rank/diagnose/all`）；
   - 报告：`reports/compound_energy_optimization_auto/Top5_CarbonBlack_and_Silica_Energy_Optimization_Report.md` 与 `docs/Top5_CarbonBlack_and_Silica_Energy_Optimization_Report.md`；
