@@ -656,8 +656,8 @@
                               :x2="doeBatchChartModel.chartWidth - doeBatchChartModel.padRight" :y2="t.y" 
                               stroke="#f1f5f9" stroke-width="1" />
                         <text :x="doeBatchChartModel.padLeft - 8" :y="t.y + 4" 
-                              text-anchor="end" font-size="10" fill="#94a3b8" font-family="monospace">
-                            {{ t.val }}
+                              text-anchor="end" font-size="10" fill="#64748b" font-family="monospace" font-weight="600">
+                            {{ t.val }} kWh/t
                         </text>
                     </g>
 
@@ -687,7 +687,7 @@
                           stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="5,4" />
                     <text :x="doeBatchChartModel.chartWidth - doeBatchChartModel.padRight + 6" :y="doeBatchChartModel.yP85 + 3" 
                           font-size="10" font-weight="700" fill="#e11d48">
-                        P85: {{ doeBatchChartModel.p85 }}
+                        P85: {{ doeBatchChartModel.p85 }} kWh/t
                     </text>
 
                     <!-- P50 Horizontal Median Line -->
@@ -696,7 +696,7 @@
                           stroke="#0284c7" stroke-width="1.5" stroke-dasharray="4,4" />
                     <text :x="doeBatchChartModel.chartWidth - doeBatchChartModel.padRight + 6" :y="doeBatchChartModel.yP50 + 3" 
                           font-size="10" font-weight="700" fill="#0284c7">
-                        P50: {{ doeBatchChartModel.p50 }}
+                        P50: {{ doeBatchChartModel.p50 }} kWh/t
                     </text>
 
                     <!-- P15 Horizontal Golden Benchmark Line -->
@@ -705,7 +705,7 @@
                           stroke="#10b981" stroke-width="1.5" stroke-dasharray="5,4" />
                     <text :x="doeBatchChartModel.chartWidth - doeBatchChartModel.padRight + 6" :y="doeBatchChartModel.yP15 + 3" 
                           font-size="10" font-weight="700" fill="#15803d">
-                        P15: {{ doeBatchChartModel.p15 }}
+                        P15: {{ doeBatchChartModel.p15 }} kWh/t
                     </text>
 
                     <!-- Bars for Each Batch -->
@@ -1128,66 +1128,213 @@
 
             </div>
 
-            <!-- BATCH-BY-BATCH ENERGY DYNAMICS VISUALIZATION CHART -->
-            <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; background: #f8fafc;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+            <!-- BATCH-BY-BATCH MULTI-STAGE DYNAMIC POLYLINE VISUALIZATION -->
+            <div style="border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.35rem; background: #f8fafc;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.75rem;">
                     <div>
-                        <div style="font-size: 0.92rem; font-weight: 800; color: #0f172a;">
-                            📈 车次单车能耗逐车阶跃动态追踪 (Batch-by-Batch Energy Transition)
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 1.15rem;">📈</span>
+                            <span style="font-size: 0.98rem; font-weight: 800; color: #0f172a;">
+                                车次单车多阶段折线走势图与阶跃降耗追踪 (Batch Multi-Stage Dynamic Polyline)
+                            </span>
                         </div>
-                        <div style="font-size: 0.75rem; color: #64748b;">
-                            清晰对比对照基准车次 (灰蓝) 与实验调整车次 (绿)，直观观察工艺修改后的阶跃性节能跌落与车次稳定性。
+                        <div style="font-size: 0.76rem; color: #64748b; margin-top: 0.25rem;">
+                            按工序阶段查看逐车能耗/时长/温度走势折线图，自适应 Y 轴动态高精度缩放，彻底消除平铺效应，清晰展现阶跃降耗与车次稳定性。
                         </div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 1rem; font-size: 0.78rem; font-weight: 700;">
-                        <span style="display: flex; align-items: center; gap: 0.35rem;">
-                            <span style="width: 12px; height: 12px; background: #64748b; border-radius: 3px; display: inline-block;"></span>
-                            <span>基准车次 (均值 {{ doeCalculatedResults.base_kwh_batch }} kWh)</span>
+
+                    <!-- Stage Summary KPI Badges with Explicit Units -->
+                    <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;" v-if="doeStageLineChartModel">
+                        <span style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem; border-radius: 8px; background: #f1f5f9; border: 1px solid #cbd5e1; font-size: 0.75rem; color: #334155;">
+                            <span style="width: 10px; height: 10px; background: #0284c7; border-radius: 50%; display: inline-block;"></span>
+                            <span>基准阶段 (第 {{ doeBaselineStart }}~{{ doeBaselineEnd }} 车): <strong>{{ doeStageLineChartModel.baseAvg }} {{ doeStageLineChartModel.unit }}</strong></span>
                         </span>
-                        <span style="display: flex; align-items: center; gap: 0.35rem;">
-                            <span style="width: 12px; height: 12px; background: #10b981; border-radius: 3px; display: inline-block;"></span>
-                            <span>实验调优车次 (均值 {{ doeCalculatedResults.trial_kwh_batch }} kWh)</span>
+                        <span style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem; border-radius: 8px; background: #ecfdf5; border: 1px solid #a7f3d0; font-size: 0.75rem; color: #065f46;">
+                            <span style="width: 10px; height: 10px; background: #10b981; border-radius: 50%; display: inline-block;"></span>
+                            <span>DOE 实验阶段 (第 {{ doeTrialStart }}~{{ doeTrialEnd }} 车): <strong>{{ doeStageLineChartModel.trialAvg }} {{ doeStageLineChartModel.unit }}</strong></span>
                         </span>
-                        <span style="display: flex; align-items: center; gap: 0.35rem;">
-                            <span style="width: 12px; height: 12px; background: #cbd5e1; border-radius: 3px; display: inline-block;"></span>
-                            <span>其他车次</span>
+                        <span style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 0.75rem; color: #1d4ed8; font-weight: 800;">
+                            <span>阶跃降幅: {{ doeStageLineChartModel.deltaAvg < 0 ? '↓ ' : (doeStageLineChartModel.deltaAvg > 0 ? '↑ ' : '') }}{{ Math.abs(doeStageLineChartModel.deltaAvg) }} {{ doeStageLineChartModel.unit }} ({{ doeStageLineChartModel.pctChange }}%)</span>
                         </span>
                     </div>
                 </div>
 
-                <!-- Custom SVG Bar Chart -->
-                <div style="overflow-x: auto; padding-bottom: 0.5rem;">
-                    <div style="min-width: 700px; height: 160px; display: flex; align-items: flex-end; gap: 4px; padding-top: 15px; position: relative;">
-                        <!-- Baseline Average Guideline -->
-                        <div style="position: absolute; left: 0; right: 0; border-top: 2px dashed #94a3b8; pointer-events: none;"
-                             :style="{ bottom: Math.min(130, Math.max(30, (doeCalculatedResults.base_kwh_batch / 45) * 120)) + 'px' }">
-                            <span style="position: absolute; right: 8px; top: -16px; font-size: 0.68rem; font-weight: 700; color: #64748b; background: white; padding: 0.1rem 0.3rem; border-radius: 4px; border: 1px solid #cbd5e1;">
-                                基准均线 {{ doeCalculatedResults.base_kwh_batch }} kWh
-                            </span>
-                        </div>
+                <!-- STAGE & METRIC SWITCHER BUTTONS (按阶段/维度切换查看) -->
+                <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.75rem; padding: 0.5rem 0.65rem; background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <span style="font-size: 0.74rem; font-weight: 800; color: #475569; margin-right: 0.25rem;">📊 切换观察维度:</span>
+                    <button v-for="m in DOE_METRICS" :key="m.key"
+                            @click="setDoeChartMetric(m.key)"
+                            :style="{
+                                background: doeChartMetric === m.key ? '#0f172a' : '#f8fafc',
+                                color: doeChartMetric === m.key ? '#38bdf8' : '#475569',
+                                borderColor: doeChartMetric === m.key ? '#0f172a' : '#e2e8f0',
+                                boxShadow: doeChartMetric === m.key ? '0 2px 6px rgba(15,23,42,0.15)' : 'none'
+                            }"
+                            style="padding: 0.32rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.35rem;">
+                        <span>{{ m.label }}</span>
+                        <span style="font-size: 0.68rem; opacity: 0.85; font-family: monospace;">({{ m.unit }})</span>
+                    </button>
+                </div>
 
-                        <!-- Trial Average Guideline -->
-                        <div style="position: absolute; left: 0; right: 0; border-top: 2px dashed #10b981; pointer-events: none;"
-                             :style="{ bottom: Math.min(130, Math.max(30, (doeCalculatedResults.trial_kwh_batch / 45) * 120)) + 'px' }">
-                            <span style="position: absolute; left: 8px; top: -16px; font-size: 0.68rem; font-weight: 800; color: #15803d; background: #f0fdf4; padding: 0.1rem 0.3rem; border-radius: 4px; border: 1px solid #86efac;">
-                                实验均线 {{ doeCalculatedResults.trial_kwh_batch }} kWh (↓ {{ Math.abs(doeCalculatedResults.delta_kwh_batch) }} kWh)
-                            </span>
-                        </div>
+                <!-- SVG POLYLINE CHART CONTAINER -->
+                <div v-if="doeStageLineChartModel" style="position: relative; width: 100%; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.75rem 0.5rem 0.4rem 0.5rem; overflow-x: auto;">
+                    <svg :viewBox="'0 0 ' + doeStageLineChartModel.chartWidth + ' ' + doeStageLineChartModel.chartHeight"
+                         style="width: 100%; min-width: 780px; height: 290px; display: block;">
+                        
+                        <defs>
+                            <!-- Baseline Zone Gradient -->
+                            <linearGradient id="baseZoneGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#0284c7" stop-opacity="0.08" />
+                                <stop offset="100%" stop-color="#0284c7" stop-opacity="0.01" />
+                            </linearGradient>
+                            <!-- Trial Zone Gradient -->
+                            <linearGradient id="trialZoneGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#10b981" stop-opacity="0.14" />
+                                <stop offset="100%" stop-color="#10b981" stop-opacity="0.02" />
+                            </linearGradient>
+                        </defs>
 
-                        <!-- Individual Batch Bars -->
-                        <div v-for="b in doeCalculatedResults.chart_batches" :key="b.batch_no"
-                             :title="'车次 B-' + b.batch_no + ': ' + b.kwh + ' kWh (' + (b.category === 'baseline' ? '基准' : (b.category === 'trial' ? '实验' : '标准')) + ')'"
-                             :style="{ 
-                                 height: Math.min(130, Math.max(25, (b.kwh / 45) * 120)) + 'px',
-                                 background: b.category === 'baseline' ? '#64748b' : (b.category === 'trial' ? '#10b981' : '#cbd5e1'),
-                                 boxShadow: b.category === 'trial' ? '0 0 6px rgba(16,185,129,0.3)' : 'none'
-                             }"
-                             style="flex: 1; border-radius: 3px 3px 0 0; cursor: pointer; transition: all 0.2s; position: relative;">
+                        <!-- Background Baseline Stage Zone -->
+                        <g v-if="doeStageLineChartModel.baseZone">
+                            <rect :x="doeStageLineChartModel.baseZone.x" :y="doeStageLineChartModel.baseZone.y"
+                                  :width="doeStageLineChartModel.baseZone.width" :height="doeStageLineChartModel.baseZone.height"
+                                  fill="url(#baseZoneGrad)" stroke="#bae6fd" stroke-width="1" stroke-dasharray="3,3" rx="4" />
+                            <text :x="doeStageLineChartModel.baseZone.x + 8" :y="doeStageLineChartModel.padTop + 14"
+                                  font-size="10" font-weight="700" fill="#0369a1">
+                                📍 基准对照阶段 (第 {{ doeBaselineStart }} ~ {{ doeBaselineEnd }} 车)
+                            </text>
+                        </g>
+
+                        <!-- Background Trial Stage Zone -->
+                        <g v-if="doeStageLineChartModel.trialZone">
+                            <rect :x="doeStageLineChartModel.trialZone.x" :y="doeStageLineChartModel.trialZone.y"
+                                  :width="doeStageLineChartModel.trialZone.width" :height="doeStageLineChartModel.trialZone.height"
+                                  fill="url(#trialZoneGrad)" stroke="#6ee7b7" stroke-width="1.2" stroke-dasharray="4,3" rx="4" />
+                            <text :x="doeStageLineChartModel.trialZone.x + 8" :y="doeStageLineChartModel.padTop + 14"
+                                  font-size="10" font-weight="800" fill="#047857">
+                                ⚗️ DOE 实验优化阶段 (第 {{ doeTrialStart }} ~ {{ doeTrialEnd }} 车)
+                            </text>
+                        </g>
+
+                        <!-- Y-Axis Grid Lines & Explicit Unit Tick Labels -->
+                        <g v-for="(t, idx) in doeStageLineChartModel.ticks" :key="'tick-' + idx">
+                            <line :x1="doeStageLineChartModel.padLeft" :y1="t.y"
+                                  :x2="doeStageLineChartModel.chartWidth - doeStageLineChartModel.padRight" :y2="t.y"
+                                  stroke="#f1f5f9" stroke-width="1" />
+                            <text :x="doeStageLineChartModel.padLeft - 8" :y="t.y + 4"
+                                  text-anchor="end" font-size="10" fill="#64748b" font-family="monospace" font-weight="600">
+                                {{ t.label }}
+                            </text>
+                        </g>
+
+                        <!-- Stage Boundary Vertical Divider Line -->
+                        <g v-if="doeStageLineChartModel.dividerX">
+                            <line :x1="doeStageLineChartModel.dividerX" :y1="doeStageLineChartModel.padTop"
+                                  :x2="doeStageLineChartModel.dividerX" :y2="doeStageLineChartModel.chartHeight - doeStageLineChartModel.padBottom"
+                                  stroke="#10b981" stroke-width="1.8" stroke-dasharray="4,3" />
+                            <rect :x="doeStageLineChartModel.dividerX - 45" :y="doeStageLineChartModel.padTop - 18"
+                                  width="90" height="18" rx="4" fill="#047857" />
+                            <text :x="doeStageLineChartModel.dividerX" :y="doeStageLineChartModel.padTop - 6"
+                                  text-anchor="middle" font-size="9" font-weight="800" fill="#ffffff">
+                                ⚡ 工艺生效点 (车次 #{{ doeTrialStart }})
+                            </text>
+                        </g>
+
+                        <!-- Baseline Stage Average Reference Line -->
+                        <line :x1="doeStageLineChartModel.padLeft" :y1="doeStageLineChartModel.yBaseAvg"
+                              :x2="doeStageLineChartModel.dividerX || (doeStageLineChartModel.chartWidth - doeStageLineChartModel.padRight)" :y2="doeStageLineChartModel.yBaseAvg"
+                              stroke="#0284c7" stroke-width="1.8" stroke-dasharray="5,4" />
+                        <rect :x="doeStageLineChartModel.padLeft + 8" :y="doeStageLineChartModel.yBaseAvg - 18"
+                              width="120" height="16" rx="3" fill="rgba(255,255,255,0.95)" stroke="#38bdf8" stroke-width="1" />
+                        <text :x="doeStageLineChartModel.padLeft + 12" :y="doeStageLineChartModel.yBaseAvg - 6"
+                              font-size="9.5" font-weight="700" fill="#0369a1" font-family="monospace">
+                            基准均值: {{ doeStageLineChartModel.baseAvg }} {{ doeStageLineChartModel.unit }}
+                        </text>
+
+                        <!-- Trial Stage Average Reference Line -->
+                        <line :x1="doeStageLineChartModel.dividerX || doeStageLineChartModel.padLeft" :y1="doeStageLineChartModel.yTrialAvg"
+                              :x2="doeStageLineChartModel.chartWidth - doeStageLineChartModel.padRight" :y2="doeStageLineChartModel.yTrialAvg"
+                              stroke="#10b981" stroke-width="2" stroke-dasharray="5,4" />
+                        <rect :x="doeStageLineChartModel.chartWidth - doeStageLineChartModel.padRight - 175" :y="doeStageLineChartModel.yTrialAvg - 18"
+                              width="170" height="16" rx="3" fill="#f0fdf4" stroke="#86efac" stroke-width="1" />
+                        <text :x="doeStageLineChartModel.chartWidth - doeStageLineChartModel.padRight - 170" :y="doeStageLineChartModel.yTrialAvg - 6"
+                              font-size="9.5" font-weight="800" fill="#15803d" font-family="monospace">
+                            实验均值: {{ doeStageLineChartModel.trialAvg }} {{ doeStageLineChartModel.unit }} ({{ doeStageLineChartModel.deltaAvg < 0 ? '↓' : '↑' }}{{ Math.abs(doeStageLineChartModel.deltaAvg) }})
+                        </text>
+
+                        <!-- Transition Connection Segment (Dashed) -->
+                        <path v-if="doeStageLineChartModel.transitionPath"
+                              :d="doeStageLineChartModel.transitionPath"
+                              fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,3" />
+
+                        <!-- Baseline Polyline Curve -->
+                        <path v-if="doeStageLineChartModel.basePath"
+                              :d="doeStageLineChartModel.basePath"
+                              fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+
+                        <!-- Trial Polyline Curve -->
+                        <path v-if="doeStageLineChartModel.trialPath"
+                              :d="doeStageLineChartModel.trialPath"
+                              fill="none" stroke="#10b981" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+
+                        <!-- Points for Baseline Batches -->
+                        <g v-for="pt in doeStageLineChartModel.baseCoords" :key="'base-pt-' + pt.batch_no"
+                           @mouseenter="doeStageHoveredBatch = pt"
+                           @mouseleave="doeStageHoveredBatch = null"
+                           style="cursor: pointer;">
+                            <circle :cx="pt.x" :cy="pt.y" r="3.5" fill="#0284c7" stroke="#ffffff" stroke-width="1.2" />
+                            <!-- Hover Halo -->
+                            <circle v-if="doeStageHoveredBatch && doeStageHoveredBatch.batch_no === pt.batch_no"
+                                    :cx="pt.x" :cy="pt.y" r="7" fill="none" stroke="#0284c7" stroke-width="2" />
+                        </g>
+
+                        <!-- Points for Trial Batches -->
+                        <g v-for="pt in doeStageLineChartModel.trialCoords" :key="'trial-pt-' + pt.batch_no"
+                           @mouseenter="doeStageHoveredBatch = pt"
+                           @mouseleave="doeStageHoveredBatch = null"
+                           style="cursor: pointer;">
+                            <circle :cx="pt.x" :cy="pt.y" r="4.2" fill="#10b981" stroke="#ffffff" stroke-width="1.5" />
+                            <!-- Hover Halo -->
+                            <circle v-if="doeStageHoveredBatch && doeStageHoveredBatch.batch_no === pt.batch_no"
+                                    :cx="pt.x" :cy="pt.y" r="8" fill="none" stroke="#10b981" stroke-width="2.2" />
+                        </g>
+
+                        <!-- Points for Other Batches (if any) -->
+                        <g v-for="pt in doeStageLineChartModel.otherCoords" :key="'other-pt-' + pt.batch_no"
+                           @mouseenter="doeStageHoveredBatch = pt"
+                           @mouseleave="doeStageHoveredBatch = null"
+                           style="cursor: pointer;">
+                            <circle :cx="pt.x" :cy="pt.y" r="2.8" fill="#94a3b8" stroke="#ffffff" stroke-width="1" />
+                        </g>
+
+                        <!-- X-Axis Batch Number Ticks -->
+                        <g v-for="pt in doeStageLineChartModel.coords" :key="'lbl-' + pt.batch_no">
+                            <text v-if="pt.batch_no === 1 || pt.batch_no % (doeStageLineChartModel.coords.length > 80 ? 10 : 5) === 0 || pt.batch_no === doeStageLineChartModel.coords.length"
+                                  :x="pt.x" :y="doeStageLineChartModel.chartHeight - 12"
+                                  text-anchor="middle" font-size="9" fill="#64748b" font-family="monospace" font-weight="600">
+                                #{{ pt.batch_no }}
+                            </text>
+                        </g>
+                    </svg>
+
+                    <!-- Interactive Tooltip Callout Bar -->
+                    <div v-if="doeStageHoveredBatch"
+                         style="margin-top: 0.65rem; padding: 0.55rem 0.9rem; border-radius: 8px; background: #0f172a; color: white; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; font-size: 0.8rem;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                            <span style="font-weight: 800; color: #38bdf8;">车次 #{{ doeStageHoveredBatch.batch_no }}</span>
+                            <span :style="{ background: doeStageHoveredBatch.stage === 'baseline' ? '#0369a1' : (doeStageHoveredBatch.stage === 'trial' ? '#059669' : '#475569') }"
+                                  style="padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.72rem; font-weight: 700;">
+                                {{ doeStageHoveredBatch.stage === 'baseline' ? '基准对照阶段' : (doeStageHoveredBatch.stage === 'trial' ? 'DOE 实验阶段' : '常规车次') }}
+                            </span>
+                            <span style="color: #94a3b8; font-family: monospace;">真实托盘: <strong>{{ doeStageHoveredBatch.pallet_id }}</strong></span>
+                            <span>实测/核算 [{{ doeStageLineChartModel.metricLabel }}]: <strong style="color: #4ade80; font-size: 0.92rem;">{{ doeStageHoveredBatch.val }} {{ doeStageLineChartModel.unit }}</strong></span>
+                            <span style="color: #cbd5e1; font-size: 0.75rem;">(整车电耗: {{ doeStageHoveredBatch.raw_batch.total_kwh }} kWh | 上密炼: {{ doeStageHoveredBatch.raw_batch.mst_kwh }} kWh | 下密炼: {{ doeStageHoveredBatch.raw_batch.msb_kwh }} kWh | 时长: {{ doeStageHoveredBatch.raw_batch.mst_dur_s }}s)</span>
                         </div>
                     </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #94a3b8; margin-top: 0.4rem; padding: 0 4px;">
-                        <span>车次 1</span>
-                        <span>车次 {{ doeCalculatedResults.chart_batches.length > 0 ? doeCalculatedResults.chart_batches.length : 50 }}</span>
+                    <div v-else
+                         style="margin-top: 0.5rem; padding: 0.4rem 0.75rem; border-radius: 6px; background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; font-size: 0.74rem; display: flex; align-items: center; justify-content: space-between;">
+                        <span>💡 提示: 鼠标悬浮在任意折线车次圆点上，可实时查看该车次真实 SFE 托盘号、分阶段能耗与详细工艺指标。</span>
+                        <span style="font-family: monospace; font-weight: 700;">当前图表单位: {{ doeStageLineChartModel.unit }}</span>
                     </div>
                 </div>
             </div>

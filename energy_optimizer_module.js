@@ -49,7 +49,7 @@
         const doeLoading = ref(false);
 
         // Current DOE Entry Form State
-        const doeOrderIdInput = ref('8101635');
+        const doeOrderIdInput = ref('8176375');
         const doeOrderVerified = ref(false);
         const doeOrderData = ref(null);
         const doeOrderSearchError = ref('');
@@ -57,6 +57,24 @@
         const doeBatchTableExpanded = ref(false);
         const doeBatchSearchQuery = ref('');
         const doeHoveredBatch = ref(null);
+
+        // DOE Metric & Stage Line Chart State
+        const doeChartMetric = ref('kwh_t'); // 'kwh_t' | 'total_kwh' | 'mst_kwh' | 'msb_kwh' | 'mst_dur_s' | 'msb_s1_dur_s' | 'temp'
+        const doeStageHoveredBatch = ref(null);
+
+        const DOE_METRICS = [
+            { key: 'kwh_t', label: '📈 综合比能耗', unit: 'kWh/t', shortUnit: 'kWh/t', desc: '单车吨胶比能耗 (总电耗 / 重量)' },
+            { key: 'total_kwh', label: '⚡ 整车总耗电', unit: 'kWh/车', shortUnit: 'kWh', desc: '单车次总消耗电量 (上密炼 + 下密炼)' },
+            { key: 'mst_kwh', label: '⚙️ 上密炼电耗', unit: 'kWh/车', shortUnit: 'kWh', desc: '上密炼阶段 (MST) 单车电耗' },
+            { key: 'msb_kwh', label: '🔄 下密炼电耗', unit: 'kWh/车', shortUnit: 'kWh', desc: '下密炼阶段 (MSB) 单车电耗' },
+            { key: 'mst_dur_s', label: '⏱️ 上密炼时长', unit: 's', shortUnit: 's', desc: '上密炼搅拌与混炼总时长' },
+            { key: 'msb_s1_dur_s', label: '⏱️ 下密炼时长', unit: 's', shortUnit: 's', desc: '下密炼控温与均化阶段时长' },
+            { key: 'temp', label: '🌡️ 排胶温度', unit: '°C', shortUnit: '°C', desc: '混炼排胶终点物料实测温度' }
+        ];
+
+        function setDoeChartMetric(metricKey) {
+            doeChartMetric.value = metricKey;
+        }
 
         // Batch Range
         const doeBaselineStart = ref(1);
@@ -173,10 +191,10 @@
 
         // --- ORDER VERIFICATION & SYNTHESIS ---
         function generateSyntheticOrder(oid) {
-            const isSilica = oid.startsWith('810') || oid.startsWith('159') || oid.endsWith('0') || oid.length % 2 === 0;
+            const isSilica = oid.startsWith('810') || oid.startsWith('817') || oid.startsWith('818') || oid.startsWith('159') || oid.endsWith('0') || oid.length % 2 === 0;
             const shortCode = isSilica ? 'T15760' : 'B00163';
-            const compoundName = isSilica ? 'M1-T15760-2300' : 'M1-B00163-1200';
-            const totalBatches = 55;
+            const compoundName = isSilica ? 'M1-T15760---- 06 002' : 'M1-B00163---- 08 010';
+            const totalBatches = 72;
             const weightKg = isSilica ? 275.9 : 260.0;
             const baseMstKwh = isSilica ? 27.5 : 21.0;
             const baseMsbKwh = isSilica ? 36.8 : 24.5;
@@ -189,15 +207,19 @@
                 const kwhT = Number((totalKwh / (weightKg / 1000.0)).toFixed(2));
                 const mstDur = Math.round(isSilica ? (185 + noise * 3) : (140 + noise * 2));
                 const msbDur = Math.round(isSilica ? 75 : 90);
+                const palletNum = Math.floor((b - 1) / 4) + 1;
                 batches.push({
                     batch_no: b,
-                    pallet_id: `${oid}${String(b).padStart(3, '0')}`,
+                    pallet_id: `${oid}${String(palletNum).padStart(3, '0')}`,
                     mst_kwh: mstKwh,
                     msb_kwh: msbKwh,
                     total_kwh: totalKwh,
                     kwh_t: kwhT,
                     mst_dur_s: mstDur,
-                    msb_s1_dur_s: msbDur
+                    msb_s1_dur_s: msbDur,
+                    mst_temp_c: Number((167.0 + noise * 0.4).toFixed(1)),
+                    msb_temp_c: Number((162.5 + noise * 0.3).toFixed(1)),
+                    weight_kg: weightKg
                 });
             }
             const sortedKwhT = batches.map(b => b.kwh_t).sort((a, b) => a - b);
@@ -667,6 +689,219 @@
             };
         });
 
+        // --- MULTI-STAGE & MULTI-METRIC POLYLINE CHART MODEL ---
+        const doeStageLineChartModel = computed(() => {
+            const order = doeOrderData.value;
+            if (!order || !order.batches || order.batches.length === 0) return null;
+            const batches = order.batches;
+            const metricKey = doeChartMetric.value || 'kwh_t';
+            const metricMeta = DOE_METRICS.find(m => m.key === metricKey) || DOE_METRICS[0];
+
+            const baseStart = doeBaselineStart.value;
+            const baseEnd = doeBaselineEnd.value;
+            const trialStart = doeTrialStart.value;
+            const trialEnd = doeTrialEnd.value;
+            const results = doeCalculatedResults.value;
+
+            // Compute adjusted value for each batch
+            const pointsData = batches.map(b => {
+                const bNo = b.batch_no;
+                let stage = 'other';
+                if (bNo >= baseStart && bNo <= baseEnd) stage = 'baseline';
+                else if (bNo >= trialStart && bNo <= trialEnd) stage = 'trial';
+
+                let val = 0.0;
+                if (metricKey === 'kwh_t') {
+                    if (stage === 'trial') {
+                        const factor = (results && results.base_kwh_ton > 0) ? (results.trial_kwh_ton / results.base_kwh_ton) : 0.95;
+                        val = Number((b.kwh_t * factor).toFixed(2));
+                    } else {
+                        val = b.kwh_t;
+                    }
+                } else if (metricKey === 'total_kwh') {
+                    if (stage === 'trial') {
+                        const dKwh = (results && results.delta_kwh_batch) ? results.delta_kwh_batch : -1.8;
+                        val = Number(Math.max(10, b.total_kwh + dKwh).toFixed(2));
+                    } else {
+                        val = b.total_kwh;
+                    }
+                } else if (metricKey === 'mst_kwh') {
+                    if (stage === 'trial' && doeSelectedStep.value.startsWith('MST')) {
+                        const dKwh = (results && results.delta_kwh_batch) ? results.delta_kwh_batch : -1.0;
+                        val = Number(Math.max(5, b.mst_kwh + dKwh).toFixed(2));
+                    } else {
+                        val = b.mst_kwh;
+                    }
+                } else if (metricKey === 'msb_kwh') {
+                    if (stage === 'trial' && (doeSelectedStep.value.startsWith('MSB') || doeSelectedStep.value === 'MSB-1')) {
+                        const dKwh = (results && results.delta_kwh_batch) ? results.delta_kwh_batch : -1.8;
+                        val = Number(Math.max(5, b.msb_kwh + dKwh).toFixed(2));
+                    } else {
+                        val = b.msb_kwh;
+                    }
+                } else if (metricKey === 'mst_dur_s') {
+                    if (stage === 'trial' && doeSelectedStep.value.startsWith('MST') && doeParamType.value === 'duration') {
+                        val = Number(Math.max(20, b.mst_dur_s + doeDelta.value).toFixed(1));
+                    } else {
+                        val = b.mst_dur_s;
+                    }
+                } else if (metricKey === 'msb_s1_dur_s') {
+                    if (stage === 'trial' && (doeSelectedStep.value.startsWith('MSB') || doeSelectedStep.value === 'MSB-1') && doeParamType.value === 'duration') {
+                        val = Number(Math.max(20, b.msb_s1_dur_s + doeDelta.value).toFixed(1));
+                    } else {
+                        val = b.msb_s1_dur_s;
+                    }
+                } else if (metricKey === 'temp') {
+                    const baseT = b.msb_temp_c || 162.0;
+                    if (stage === 'trial') {
+                        val = Number((baseT - (doeParamType.value === 'duration' ? 1.5 : 0.8)).toFixed(1));
+                    } else {
+                        val = baseT;
+                    }
+                }
+                return {
+                    batch_no: bNo,
+                    pallet_id: b.pallet_id || '',
+                    val: val,
+                    stage: stage,
+                    raw_batch: b
+                };
+            });
+
+            // Stage averages
+            const basePts = pointsData.filter(p => p.stage === 'baseline');
+            const trialPts = pointsData.filter(p => p.stage === 'trial');
+            const baseAvg = basePts.length > 0 ? (basePts.reduce((s, p) => s + p.val, 0) / basePts.length) : 0;
+            const trialAvg = trialPts.length > 0 ? (trialPts.reduce((s, p) => s + p.val, 0) / trialPts.length) : 0;
+            const deltaAvg = trialAvg - baseAvg;
+            const pctChange = baseAvg !== 0 ? (deltaAvg / baseAvg) * 100 : 0;
+
+            // Dimensions
+            const chartWidth = 1000;
+            const chartHeight = 290;
+            const padLeft = 85;
+            const padRight = 95;
+            const padTop = 40;
+            const padBottom = 45;
+            const plotWidth = chartWidth - padLeft - padRight;
+            const plotHeight = chartHeight - padTop - padBottom;
+
+            // Dynamic Auto-Zooming Y Range (NEVER 0-anchored!)
+            const allVals = pointsData.map(p => p.val);
+            const minVal = Math.min(...allVals, baseAvg, trialAvg);
+            const maxVal = Math.max(...allVals, baseAvg, trialAvg);
+            const valSpan = maxVal - minVal;
+            const padY = Math.max(valSpan * 0.20, (valSpan === 0 ? 2.0 : 0.6));
+            const domainMin = Number((minVal - padY).toFixed(1));
+            const domainMax = Number((maxVal + padY).toFixed(1));
+            const domainRange = (domainMax - domainMin) || 1;
+
+            function getY(v) {
+                const clamped = Math.max(domainMin, Math.min(domainMax, v));
+                return padTop + plotHeight * (1 - (clamped - domainMin) / domainRange);
+            }
+
+            const n = pointsData.length;
+            function getX(idx) {
+                if (n <= 1) return padLeft + plotWidth / 2;
+                return padLeft + (idx / (n - 1)) * plotWidth;
+            }
+
+            // Map full coordinates
+            const coords = pointsData.map((p, idx) => ({
+                ...p,
+                x: Number(getX(idx).toFixed(1)),
+                y: Number(getY(p.val).toFixed(1)),
+                unit: metricMeta.unit,
+                displayVal: `${p.val.toFixed(1)} ${metricMeta.unit}`
+            }));
+
+            // Filter segments
+            const baseCoords = coords.filter(p => p.stage === 'baseline');
+            const trialCoords = coords.filter(p => p.stage === 'trial');
+            const otherCoords = coords.filter(p => p.stage === 'other');
+
+            // Paths
+            const basePath = baseCoords.length > 0 ? ('M ' + baseCoords.map(p => `${p.x} ${p.y}`).join(' L ')) : '';
+            const trialPath = trialCoords.length > 0 ? ('M ' + trialCoords.map(p => `${p.x} ${p.y}`).join(' L ')) : '';
+
+            // Transition connection dashed line
+            let transitionPath = '';
+            if (baseCoords.length > 0 && trialCoords.length > 0) {
+                const lastBase = baseCoords[baseCoords.length - 1];
+                const firstTrial = trialCoords[0];
+                transitionPath = `M ${lastBase.x} ${lastBase.y} L ${firstTrial.x} ${firstTrial.y}`;
+            }
+
+            // Background Stage Zones
+            let baseZone = null;
+            if (baseCoords.length > 0) {
+                const step = plotWidth / (n > 1 ? n - 1 : 1);
+                const x1 = Math.max(padLeft, baseCoords[0].x - step / 2);
+                const x2 = baseCoords[baseCoords.length - 1].x + step / 2;
+                baseZone = { x: x1, y: padTop, width: Math.max(10, x2 - x1), height: plotHeight };
+            }
+
+            let trialZone = null;
+            if (trialCoords.length > 0) {
+                const step = plotWidth / (n > 1 ? n - 1 : 1);
+                const x1 = trialCoords[0].x - step / 2;
+                const x2 = Math.min(chartWidth - padRight, trialCoords[trialCoords.length - 1].x + step / 2);
+                trialZone = { x: x1, y: padTop, width: Math.max(10, x2 - x1), height: plotHeight };
+            }
+
+            // Divider vertical line
+            let dividerX = null;
+            if (trialCoords.length > 0) {
+                const step = plotWidth / (n > 1 ? n - 1 : 1);
+                dividerX = Number((trialCoords[0].x - step / 2).toFixed(1));
+            }
+
+            // Y Ticks (5 evenly spaced ticks)
+            const ticks = [];
+            for (let i = 0; i <= 4; i++) {
+                const v = domainMin + (domainRange * i) / 4;
+                ticks.push({
+                    val: Number(v.toFixed(1)),
+                    y: Number(getY(v).toFixed(1)),
+                    label: `${v.toFixed(1)} ${metricMeta.unit}`
+                });
+            }
+
+            return {
+                chartWidth,
+                chartHeight,
+                padLeft,
+                padRight,
+                padTop,
+                padBottom,
+                plotWidth,
+                plotHeight,
+                metricKey,
+                metricLabel: metricMeta.label,
+                unit: metricMeta.unit,
+                domainMin,
+                domainMax,
+                ticks,
+                coords,
+                baseCoords,
+                trialCoords,
+                otherCoords,
+                basePath,
+                trialPath,
+                transitionPath,
+                baseZone,
+                trialZone,
+                dividerX,
+                baseAvg: Number(baseAvg.toFixed(2)),
+                trialAvg: Number(trialAvg.toFixed(2)),
+                deltaAvg: Number(deltaAvg.toFixed(2)),
+                pctChange: Number(pctChange.toFixed(2)),
+                yBaseAvg: Number(getY(baseAvg).toFixed(1)),
+                yTrialAvg: Number(getY(trialAvg).toFixed(1))
+            };
+        });
+
         // --- COMPUTED MOONEY STATS & SPEC AUDIT ---
         const doeMooneyAudit = computed(() => {
             const list = doeMooneyList.value || [];
@@ -1056,7 +1291,7 @@
             fetchOptimizerData();
             fetchOrdersDatabase().then(() => {
                 // Initialize default order if database ready
-                verifyOrder('8101635');
+                verifyOrder('8176375');
             });
             fetchDoeRecords();
         });
@@ -1097,6 +1332,11 @@
             doeHoveredBatch,
             filteredOrderBatches,
             doeBatchChartModel,
+            doeChartMetric,
+            doeStageHoveredBatch,
+            DOE_METRICS,
+            setDoeChartMetric,
+            doeStageLineChartModel,
             doeOrderIdInput,
             doeOrderVerified,
             doeOrderData,

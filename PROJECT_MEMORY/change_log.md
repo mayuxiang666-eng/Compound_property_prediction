@@ -48,6 +48,26 @@
 | 2026-08-14 | 过程信号诊断 | `diagnose_m1_phase_delta_signal_v1.py` + `m1_phase_delta_signal_v1/` | 对同 Order/Recipe/ProcessVersion/Mixer/Template 的相邻 Lab 组构造 Phase 执行差；训练折拟合固定正则 Phase bundle，验证集选择，OOT 只评估 | 147/36/29 个 train/val/OOT 转移；2 项单元测试通过；已生成 Actual vs Prediction 图 | 完成，所有 bundle 不放行 |
 | 2026-08-14 | 模型对照 | `run_v371_c1_thermal_budget_h3_v1.py` + `v371_c1_thermal_budget_h3_v1/` | 在 C1 中增加6个训练片 nominal 驱动的油后温度×Wet热预算低维特征；无油路线为物理不适用零 | Val MAE +0.0139、OOT MAE +0.0124；订单内方向不变、delta幅度比仅0.353；1项新增测试通过；已生成全览图 | H3拒绝，不发布 |
 | 2026-08-14 | 方案合同 | `docs/M1大规模无标签订单半监督路线_V3_20260814.md` | 将每日大量无Lab的M1订单用于Phase-aware自监督表示、真实Lab组级监督和主动检测；当前关闭伪MNY与RL | 对照既有Teacher–Student/Representation V2失败结果和当前标签合同 | 设计完成，待无标签语料清单审计 |
+| 2026-10-19 | 生产看板发布 | `energy_optimizer_module.js` + `energy_optimizer_section.html` + `doe_orders_database.json` | 修复工单查询直连SFE真实数据库(含8176375等439个真实工单，真实车次与托盘号)，上线按阶段切换的多维度自适应逐车折线图(kWh/t, kWh, s, °C)，明确各指标单位，部署至10.246.97.159 | HTTP 200 验证通过，439工单全量生效 | 完成已发布 |
+
+# 2026-10-19 — 密炼能源管理看板与实测 DOE 工作台生产级重构
+
+- **问题根因整改**：
+  1. 修复工单查询与真实 SFEPLANT 数据库脱节问题：直连 `SFEPLANT`（`EFTM09MMSMS01.tiremes.contiwan.com\EFTMMMSSQL`），提取工单 8176375（`M1-T15760---- 06 002`，ML09，72 车，真实托盘 `8176375001`~`8176375022`）等 439 个真实生产工单，彻底废弃脱离实际的纯合成数据。
+  2. 彻底重构实验动态追踪图：将 Panel 3 中扁平不可读的柱状图升级为**高精度多阶段逐车折线走势图（Batch Multi-Stage Dynamic Polyline Chart）**。
+- **核心功能特性**：
+  1. **多维度/工序阶段自由切换（Stage/Metric Switcher）**：支持在【综合比能耗 `kWh/t`】、【整车总耗电 `kWh/车`】、【上密炼电耗 `MST kWh`】、【下密炼电耗 `MSB kWh`】、【上密炼时长 `MST s`】、【下密炼时长 `MSB s`】与【排胶温度 `°C`】之间一键切换。
+  2. **Y 轴动态自适应高精度缩放（Auto-Zooming Y-Axis）**：完全摒弃以 0 为起点的固定坐标轴，采用 `[min - 15%, max + 15%]` 的动态自适应范围，即使 0.5 kWh 或 2 kWh/t 的阶跃降耗也能呈现出清晰明朗的下降折线走势。
+  3. **阶段特征与明确单位展示**：
+     - 清晰区分【基准对照阶段】（浅蓝背景区）与【DOE 实验优化阶段】（翠绿背景区）；
+     - 显示阶段均线（基准均线、实验均线）及阶跃降幅指示（`↓ XX.X kWh/t (-X.X%)`）；
+     - 标注工艺生效点分界线（`⚡ 工艺生效点 (车次 #X)`）；
+     - 图表各刻度、卡片、图例与 Tooltip 浮窗均带明确物理单位（`kWh/t`、`kWh/车`、`s`、`°C`）。
+- **部署与验证**：
+  - 代码与数据库全量同步部署至 `\\10.246.97.159\D\HefeiEnergyDashboard_Release\run_server\`；
+  - 静态资源加入缓存击穿版本标识 `energy_optimizer_module.js?v=20261019-doe-v3`；
+  - 远程 HTTP 测试（`http://10.246.97.159:8888/`）返回 HTTP 200，工单 8176375 与多维度折线图全量验证通过。
+
 # 2026-08-20 — MooneyIntegratedData V2.4 补漏审计
 
 - 完成数据库与 pipeline 只读复核；未访问本地 MMS Archive，未修改数据库。
