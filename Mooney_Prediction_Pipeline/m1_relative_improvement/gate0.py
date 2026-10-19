@@ -28,6 +28,7 @@ class ActionSupportThresholds:
     minimum_groups_per_major_level: int = 8
     minimum_effective_sample: int = 25
     maximum_transition_gap_days: float = 30.0
+    minimum_actual_response_fraction: float = 0.80
 
 
 def _first_consistent(series: pd.Series):
@@ -147,8 +148,15 @@ def audit_action_support(
         major_month_support = bool(len(major) and represented_months.reindex(major.index).fillna(0).ge(2).all())
         bidirectional = bool(not trans.empty and trans["target_delta"].gt(0).any() and trans["target_delta"].lt(0).any())
         actual_response_fraction = float(trans["actual_delta"].notna().mean()) if not trans.empty else 0.0
+        response_quantum = {"duration": 1.0, "rotor": 0.5, "temperature": 0.5}.get(kind, 1.0)
+        actual_detected_fraction = (
+            float(trans["actual_delta"].abs().ge(response_quantum).mean()) if not trans.empty else 0.0
+        )
+        mapped_phase = _first_consistent(part["phase"])
         if not action_allowed:
             status = "LOCKED_EXPERT_RULE"
+        elif pd.isna(mapped_phase) or str(mapped_phase).startswith("UNMAPPED"):
+            status = "BLOCKED_UNMAPPED_PHASE"
         elif part["label_group_id"].nunique() < thresholds.minimum_groups_per_major_level:
             status = "INSUFFICIENT_LAB_SUPPORT"
         elif len(level_counts) <= 1:
@@ -159,12 +167,19 @@ def audit_action_support(
             status = "CONFOUNDED_ACTION_SUPPORT"
         elif independent < thresholds.minimum_independent_transitions or effective < thresholds.minimum_effective_sample:
             status = "ASSOCIATION_ONLY"
+        elif not bidirectional:
+            status = "ASSOCIATION_ONLY"
+        elif (
+            actual_response_fraction < thresholds.minimum_actual_response_fraction
+            or actual_detected_fraction < thresholds.minimum_actual_response_fraction
+        ):
+            status = "CONTROL_TRANSFER_UNAVAILABLE"
         else:
             status = "CAUSAL_ACTION_SUPPORTED"
         rows.append({
             **identity,
             "kind": kind,
-            "phase": _first_consistent(part["phase"]),
+            "phase": mapped_phase,
             "action_allowed": action_allowed,
             "lab_groups": int(part["label_group_id"].nunique()),
             "orders": int(part["order_id"].nunique()),
@@ -175,6 +190,7 @@ def audit_action_support(
             "effective_sample": effective,
             "bidirectional_history": bidirectional,
             "actual_response_observed_fraction": actual_response_fraction,
+            "actual_response_detected_fraction": actual_detected_fraction,
             "major_levels_span_multiple_months": major_month_support,
             "causal_support_status": status,
             "thresholds_json": str(asdict(thresholds)),

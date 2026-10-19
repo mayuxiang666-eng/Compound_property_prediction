@@ -68,7 +68,13 @@ def extract_step_aligned_curve_features(
         batchdata,
         curve_length,
         phase_mapping,
+        # Use the same-batch temperature curve for the governed B1/MSB
+        # transition.  Do not force a fixed MST tail step: recipes may have
+        # different MSB step counts, and the boundary is the first real
+        # temperature drop (>= 10 C) after the current batch MST endpoint.
+        tail_step=None,
         long_tail_threshold_s=long_tail_threshold_s,
+        temperature_curve=decoded["temp"][:curve_length],
     )
     aligned = {}
     for name, values in decoded.items():

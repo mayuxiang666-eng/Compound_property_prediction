@@ -16,6 +16,11 @@ def test_decode_marks_ffff_missing_without_cross_batch_fill():
     assert missing_rate == 0.25
 
 
+def test_decode_preserves_signed_16bit_negative_curve_observation():
+    values = decode_hex_curve("FFFA0006")
+    assert values.tolist() == [-6.0, 6.0]
+
+
 def test_resample_preserves_endpoints():
     result = resample(np.array([10.0, 20.0, 30.0]), 5)
     assert result[0] == 10.0

@@ -12,6 +12,9 @@ from Mooney_Prediction_Pipeline.m1_relative_improvement.gate0 import (
     audit_action_support,
     build_group_action_frame,
 )
+from Mooney_Prediction_Pipeline.m1_relative_improvement.integrated_data import (
+    attach_authentic_trailing_weather,
+)
 from Mooney_Prediction_Pipeline.m1_relative_improvement.reduction_optimizer import (
     RelativeModelReadiness,
     optimize_reduction_candidates,
@@ -71,6 +74,22 @@ def test_action_support_requires_three_major_levels_and_transitions():
     assert support.iloc[0]["causal_support_status"] == "CAUSAL_ACTION_SUPPORTED"
 
 
+def test_target_variation_without_detectable_actual_response_is_not_causal():
+    rows = _step_rows(np.tile([10.0, 20.0, 30.0], 20))
+    rows["actual"] = 15.0
+    grouped = build_group_action_frame(rows)
+    support, _ = audit_action_support(grouped)
+    assert support.iloc[0]["causal_support_status"] == "CONTROL_TRANSFER_UNAVAILABLE"
+
+
+def test_unmapped_phase_blocks_action_support():
+    rows = _step_rows(np.tile([10.0, 20.0, 30.0], 20))
+    rows["phase"] = "UNMAPPED_REQUIRES_EXPERT_CONFIRMATION"
+    grouped = build_group_action_frame(rows)
+    support, _ = audit_action_support(grouped)
+    assert support.iloc[0]["causal_support_status"] == "BLOCKED_UNMAPPED_PHASE"
+
+
 def test_b3_failure_blocks_all_reduction_candidates():
     candidate = pd.DataFrame([{
         "candidate_id": "C1", "reduction_p10": 1.0, "reduction_p50": 2.0,
@@ -93,3 +112,23 @@ def test_b3_failure_blocks_all_reduction_candidates():
     result = optimize_reduction_candidates(candidate, ReductionTargetRequest("R", 2.0), readiness)
     assert result.recommendation.status == "BLOCKED_MODEL_READINESS"
     assert "CONTROL_TRANSFER_UNAVAILABLE" in result.recommendation.rejection_codes
+
+
+def test_weather_uses_only_trailing_window_and_never_future_observation():
+    hourly = pd.DataFrame({
+        "ObservationTime": pd.date_range("2026-01-01", periods=26, freq="h"),
+        "Temperature": np.r_[np.arange(24, dtype=float), 999.0, 1000.0],
+        "Humidity": np.arange(26, dtype=float) + 40.0,
+    })
+    steps = pd.DataFrame({
+        "BatchKey": ["B", "B"],
+        "BatchStartTime": [pd.Timestamp("2026-01-02"), pd.Timestamp("2026-01-02")],
+        "env_temp_mean": [0.0, 0.0],
+        "env_humidity_mean": [0.0, 0.0],
+        "WeatherStatus": ["LEGACY", "LEGACY"],
+    })
+    result = attach_authentic_trailing_weather(steps, hourly)
+    assert result["WeatherStatus"].eq("AUTHENTIC_LOCAL_24H").all()
+    assert result["authentic_weather_points"].eq(24).all()
+    assert result["env_temp_mean"].eq(np.mean(np.arange(24, dtype=float))).all()
+    assert not result["env_temp_mean"].isin([999.0, 1000.0]).any()

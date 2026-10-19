@@ -76,12 +76,16 @@ def build_batch_step_boundaries(
     tail_step: tuple[str, int] | None = ("AVR_MST", 11),
     long_tail_threshold_s: float = 75.0,
     timing_tolerance_s: float = 3.0,
+    temperature_curve: np.ndarray | None = None,
+    discharge_drop_min_c: float = 10.0,
 ) -> BoundaryResult:
     """Return Step and Phase curve spans for one physical batch.
 
-    MSB is anchored backwards from the end of the full temperature/power curve.
-    Any interval between the recorded MST end and MSB start is explicit
-    `Transfer`, not BottomMixing.
+    When the current-batch temperature curve is supplied, MSB starts at the
+    first >= ``discharge_drop_min_c`` instantaneous temperature drop at/after
+    the recorded MST endpoint. This is the governed B1 start. The old
+    end-anchor remains only as an explicit diagnostic fallback when no
+    temperature curve is supplied.
     """
 
     if int(curve_length) <= 0:
@@ -97,10 +101,37 @@ def build_batch_step_boundaries(
     top_total = float(top["ActualCumulativeTime"].max())
     bottom_total = float(bottom["ActualCumulativeTime"].max()) if len(bottom) else np.nan
     bottom_executed = bool(pd.notna(bottom_total) and bottom_total > timing_tolerance_s)
-    bottom_start = float(curve_length) - bottom_total if bottom_executed else float(curve_length)
+    bottom_end_anchor_start = float(curve_length) - bottom_total if bottom_executed else float(curve_length)
+    bottom_start = bottom_end_anchor_start
+    discharge_drop_index = None
+    discharge_drop_magnitude = None
+    msb_start_basis = "CURVE_END_MINUS_MSB_CUMULATIVE_TIME_FALLBACK"
+    if temperature_curve is not None and bottom_executed:
+        temp = np.asarray(temperature_curve, dtype=float)
+        if len(temp) != int(curve_length):
+            raise ValueError("BLOCKED_TEMPERATURE_CURVE_LENGTH_MISMATCH")
+        differences = temp[:-1] - temp[1:]
+        indexes = np.arange(1, len(temp))
+        search_start = max(1, int(np.floor(top_total - timing_tolerance_s)))
+        candidates = indexes[
+            (indexes >= search_start)
+            & np.isfinite(temp[:-1])
+            & np.isfinite(temp[1:])
+            & (differences >= float(discharge_drop_min_c))
+        ]
+        if len(candidates):
+            discharge_drop_index = int(candidates[0])
+            discharge_drop_magnitude = float(differences[discharge_drop_index - 1])
+            bottom_start = float(discharge_drop_index)
+            msb_start_basis = "FIRST_TEMP_DROP_GE_10C_AFTER_MST_ENDPOINT"
     overlap = top_total - bottom_start
-    if overlap > timing_tolerance_s:
+    bottom_curve_end = bottom_start + bottom_total if bottom_executed else bottom_start
+    if temperature_curve is not None and bottom_executed and discharge_drop_index is None:
+        status = "BLOCKED_MSB_DISCHARGE_DROP_NOT_FOUND"
+    elif overlap > timing_tolerance_s:
         status = "BLOCKED_STEP_TIME_EXCEEDS_CURVE_LENGTH"
+    elif bottom_curve_end > float(curve_length) + timing_tolerance_s:
+        status = "BLOCKED_MSB_STEP_TIME_EXCEEDS_CURVE_AFTER_DISCHARGE_DROP"
     elif not bottom_executed:
         status = "PROCESS_UPSET_MSB_NOT_EXECUTED"
     else:
@@ -167,6 +198,12 @@ def build_batch_step_boundaries(
         "MSBActualDuration": bottom_total,
         "MSBExecuted": bottom_executed,
         "MSBCurveStart": bottom_start,
+        "MSBCurveEnd": bottom_curve_end,
+        "MSBEndAnchorStart": bottom_end_anchor_start,
+        "MSBStartBasis": msb_start_basis,
+        "DischargeDropIndex": discharge_drop_index,
+        "DischargeDropMagnitude_C": discharge_drop_magnitude,
+        "DischargeDropMinimum_C": float(discharge_drop_min_c),
         "TransferDuration": max(0.0, transfer_end - transfer_start),
         "PostPIDTailDuration": tail_duration,
         "LongPostPIDTail": long_tail,

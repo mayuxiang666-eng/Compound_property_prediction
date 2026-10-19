@@ -16,7 +16,14 @@ SIGNALS = {
 
 
 def decode_hex_curve(value) -> np.ndarray:
-    """Decode MMS 4-hex-digit samples and mark invalid high words missing."""
+    """Decode MMS signed 16-bit samples with ``FFFF`` as the missing sentinel.
+
+    Curve2/Curve5 can legitimately contain negative values encoded as two's
+    complement (for example ``FFFA`` is -6). Treating every word above 10000
+    as missing silently removed real power/torque observations. ``FFFF`` is
+    retained as the source missing marker; other high words are decoded as
+    signed 16-bit values and remain subject to downstream physical audits.
+    """
 
     if pd.isna(value):
         return np.array([], dtype=float)
@@ -24,14 +31,18 @@ def decode_hex_curve(value) -> np.ndarray:
     if not text or len(text) % 4:
         return np.array([], dtype=float)
     try:
-        values = np.fromiter(
+        unsigned = np.fromiter(
             (int(text[index : index + 4], 16) for index in range(0, len(text), 4)),
             dtype=float,
             count=len(text) // 4,
         )
     except ValueError:
         return np.array([], dtype=float)
-    values[values > 10000] = np.nan
+    missing = unsigned == 0xFFFF
+    values = unsigned.copy()
+    signed = values >= 0x8000
+    values[signed] -= 0x10000
+    values[missing] = np.nan
     return values
 
 

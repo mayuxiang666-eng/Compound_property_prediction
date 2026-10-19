@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from Mooney_Prediction_Pipeline.feature_engineering.batchdata_step_boundary_builder import (
@@ -48,3 +49,26 @@ def test_step11_is_separate_tail_and_missing_msb_is_upset():
     assert result.audit["LongPostPIDTail"] is True
     assert "PostPID_Tail" in set(result.steps["MappedPhase"])
     assert not result.phases["Phase"].str.startswith("Stage6").any()
+
+
+def test_msb_b1_starts_at_first_ten_degree_discharge_drop():
+    temp = np.r_[np.repeat(160.0, 205), 148.0, np.repeat(150.0, 210)]
+    result = build_batch_step_boundaries(
+        _rows(tail=203.0), len(temp), MAPPING,
+        tail_step=None, temperature_curve=temp, discharge_drop_min_c=10.0,
+    )
+    assert result.audit["BoundaryStatus"] == "NORMAL_COMPLETE_ROUTE"
+    assert result.audit["MSBCurveStart"] == 205.0
+    assert result.audit["MSBStartBasis"] == "FIRST_TEMP_DROP_GE_10C_AFTER_MST_ENDPOINT"
+    assert result.audit["DischargeDropMagnitude_C"] == 12.0
+    assert result.steps.loc[
+        result.steps["GroupName"].eq("AVR_MST") & result.steps["StepNo"].eq(11), "MappedPhase"
+    ].iloc[0] == "Stage5_PID_Controlled"
+
+
+def test_missing_discharge_drop_fails_closed_when_temperature_is_supplied():
+    temp = np.repeat(160.0, 416)
+    result = build_batch_step_boundaries(
+        _rows(), len(temp), MAPPING, tail_step=None, temperature_curve=temp,
+    )
+    assert result.audit["BoundaryStatus"] == "BLOCKED_MSB_DISCHARGE_DROP_NOT_FOUND"
