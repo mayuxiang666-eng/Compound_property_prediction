@@ -1,0 +1,30 @@
+{
+  "selected": [
+    {
+      "name": "停留时间",
+      "order": 1,
+      "cond_dep": 0.6059737826343745,
+      "pycatch22_version": "1.0.2"
+    },
+    {
+      "name": "功率__std",
+      "order": 2,
+      "cond_dep": 0.4270650263620387,
+      "pycatch22_version": "1.0.2"
+    },
+    {
+      "name": "转速__median_freq",
+      "order": 3,
+      "cond_dep": 0.1263803680981595,
+      "pycatch22_version": "1.0.2"
+    },
+    {
+      "name": "功率__trev",
+      "order": 4,
+      "cond_dep": 0.08497191011235955,
+      "pycatch22_version": "1.0.2"
+    }
+  ],
+  "pycatch22_version": "1.0.2",
+  "total_candidates_evaluated": 94
+}

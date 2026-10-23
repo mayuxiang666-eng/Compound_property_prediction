@@ -1,0 +1,23 @@
+{
+  "SFEAPAC": {
+    "user": "uif35346_ro",
+    "password": "NBZkSTxbu1xZ",
+    "host": "mustang-apac-rds-01-dbinstance-01.ch6kpnfcmztf.eu-central-1.rds.amazonaws.com",
+    "port": 1433,
+    "database": "master",
+    "driver": "SQL Server"
+  },
+  "MixingCurveSystem": {
+    "base_url": "http://10.246.97.155:9000",
+    "description": "Mixing Curve Analysis System (Web API & Anomaly Detection)"
+  },
+  "RedshiftDatamart": {
+    "type": "redshift",
+    "auth_type": "username",
+    "user": "ppm_technique_user_ro",
+    "password": "Woaizhongguo123",
+    "host": "mustang-global-redshift-datamart-01.cs0z5y6iuviq.eu-central-1.redshift.amazonaws.com",
+    "port": 5439,
+    "database": "mustangmaster"
+  }
+}

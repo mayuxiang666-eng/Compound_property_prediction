@@ -1,0 +1,35 @@
+{
+  "mse_full": 6.6418568970072025,
+  "channels": [
+    {
+      "channel": "温度",
+      "mse_full": 6.6418568970072025,
+      "mse_without": 6.642712305158151,
+      "diff": 0.0008554081509482003,
+      "retained": true
+    },
+    {
+      "channel": "功率",
+      "mse_full": 6.6418568970072025,
+      "mse_without": 6.651980732855329,
+      "diff": 0.010123835848126816,
+      "retained": true
+    },
+    {
+      "channel": "压栓",
+      "mse_full": 6.6418568970072025,
+      "mse_without": 6.636657796449271,
+      "diff": -0.005199100557931935,
+      "retained": false
+    },
+    {
+      "channel": "转速",
+      "mse_full": 6.6418568970072025,
+      "mse_without": 6.6422875069129175,
+      "diff": 0.0004306099057149737,
+      "retained": true
+    }
+  ],
+  "n_train": 158,
+  "n_holdout": 56
+}

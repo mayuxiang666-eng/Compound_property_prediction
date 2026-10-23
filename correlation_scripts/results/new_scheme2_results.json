@@ -1,0 +1,38 @@
+[
+  {
+    "name": "多元曲线",
+    "hsic": 0.0007365322631368289,
+    "pvalue": 0.091,
+    "stat_type": "HSIC"
+  },
+  {
+    "name": "温度",
+    "hsic": 0.0009251632355026059,
+    "pvalue": 0.01,
+    "stat_type": "HSIC"
+  },
+  {
+    "name": "功率",
+    "hsic": 0.0009173653895673182,
+    "pvalue": 0.036,
+    "stat_type": "HSIC"
+  },
+  {
+    "name": "压栓",
+    "hsic": 0.0008570217195483116,
+    "pvalue": 0.001,
+    "stat_type": "HSIC"
+  },
+  {
+    "name": "转速",
+    "hsic": 0.00046263594418597873,
+    "pvalue": 0.319,
+    "stat_type": "HSIC"
+  },
+  {
+    "name": "停留时间",
+    "hsic": 0.6121128212717378,
+    "pvalue": null,
+    "stat_type": "Conditional Dependence"
+  }
+]

@@ -1,0 +1,411 @@
+{
+  "all_kept_hsic": [
+    {
+      "name": "停留时间",
+      "hsic_order": 1,
+      "cond_dep": -0.1297640653357532
+    },
+    {
+      "name": "功率_t160",
+      "hsic_order": 2,
+      "cond_dep": -0.011372867587327376
+    },
+    {
+      "name": "功率_t151",
+      "hsic_order": 3,
+      "cond_dep": 0.011316259678379988
+    },
+    {
+      "name": "功率_t162",
+      "hsic_order": 4,
+      "cond_dep": -0.011372867587327376
+    },
+    {
+      "name": "功率_t387",
+      "hsic_order": 5,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "功率_t199",
+      "hsic_order": 6,
+      "cond_dep": -0.023217587836449557
+    },
+    {
+      "name": "功率_t095",
+      "hsic_order": 7,
+      "cond_dep": 0.022187315923817005
+    },
+    {
+      "name": "功率_t183",
+      "hsic_order": 8,
+      "cond_dep": -0.023217587836449557
+    },
+    {
+      "name": "压栓_t071",
+      "hsic_order": 9,
+      "cond_dep": 0.04597701149425287
+    },
+    {
+      "name": "压栓_t062",
+      "hsic_order": 10,
+      "cond_dep": 0.022187315923817005
+    },
+    {
+      "name": "功率_t152",
+      "hsic_order": 11,
+      "cond_dep": -0.03879849812265332
+    },
+    {
+      "name": "功率_t054",
+      "hsic_order": 12,
+      "cond_dep": 0.019492025989367986
+    },
+    {
+      "name": "温度_t199",
+      "hsic_order": 13,
+      "cond_dep": -0.011372867587327376
+    },
+    {
+      "name": "转速_t251",
+      "hsic_order": 14,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "功率_t237",
+      "hsic_order": 15,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "温度_t170",
+      "hsic_order": 16,
+      "cond_dep": -0.023217587836449557
+    },
+    {
+      "name": "温度_t134",
+      "hsic_order": 17,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "功率_t161",
+      "hsic_order": 18,
+      "cond_dep": -0.011372867587327376
+    },
+    {
+      "name": "功率_t030",
+      "hsic_order": 19,
+      "cond_dep": 0.0051937674790251695
+    },
+    {
+      "name": "功率_t190",
+      "hsic_order": 20,
+      "cond_dep": -0.023217587836449557
+    },
+    {
+      "name": "功率_t099",
+      "hsic_order": 21,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "功率_t034",
+      "hsic_order": 22,
+      "cond_dep": 0.0757238307349666
+    },
+    {
+      "name": "功率_t249",
+      "hsic_order": 23,
+      "cond_dep": -0.03879849812265332
+    },
+    {
+      "name": "功率_t159",
+      "hsic_order": 24,
+      "cond_dep": -0.011372867587327376
+    },
+    {
+      "name": "温度_t132",
+      "hsic_order": 25,
+      "cond_dep": -0.0030211480362537764
+    },
+    {
+      "name": "功率_t388",
+      "hsic_order": 26,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "功率_t002",
+      "hsic_order": 27,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "功率_t168",
+      "hsic_order": 28,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "功率_t059",
+      "hsic_order": 29,
+      "cond_dep": -0.011372867587327376
+    },
+    {
+      "name": "压栓_t239",
+      "hsic_order": 30,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "功率_t008",
+      "hsic_order": 31,
+      "cond_dep": -0.011372867587327376
+    },
+    {
+      "name": "功率_t223",
+      "hsic_order": 32,
+      "cond_dep": -0.009732360097323601
+    },
+    {
+      "name": "转速_t319",
+      "hsic_order": 33,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "温度_t148",
+      "hsic_order": 34,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "功率_t215",
+      "hsic_order": 35,
+      "cond_dep": -0.023217587836449557
+    },
+    {
+      "name": "温度_t319",
+      "hsic_order": 36,
+      "cond_dep": 0.01619913077834848
+    },
+    {
+      "name": "压栓_t011",
+      "hsic_order": 37,
+      "cond_dep": -0.011372867587327376
+    },
+    {
+      "name": "功率_t007",
+      "hsic_order": 38,
+      "cond_dep": -0.023217587836449557
+    },
+    {
+      "name": "功率_t062",
+      "hsic_order": 39,
+      "cond_dep": -0.023217587836449557
+    },
+    {
+      "name": "功率_t091",
+      "hsic_order": 40,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "功率_t385",
+      "hsic_order": 41,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "转速_t258",
+      "hsic_order": 42,
+      "cond_dep": -0.023217587836449557
+    },
+    {
+      "name": "功率_t253",
+      "hsic_order": 43,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "功率_t155",
+      "hsic_order": 44,
+      "cond_dep": 0.030373831775700934
+    },
+    {
+      "name": "功率_t128",
+      "hsic_order": 45,
+      "cond_dep": -0.005451241671714113
+    },
+    {
+      "name": "功率_t382",
+      "hsic_order": 46,
+      "cond_dep": -0.023217587836449557
+    },
+    {
+      "name": "温度_t309",
+      "hsic_order": 47,
+      "cond_dep": 0.0311284046692607
+    },
+    {
+      "name": "功率_t056",
+      "hsic_order": 48,
+      "cond_dep": -0.018196687793907176
+    },
+    {
+      "name": "功率_t026",
+      "hsic_order": 49,
+      "cond_dep": -0.03041589075108628
+    },
+    {
+      "name": "功率_t005",
+      "hsic_order": 50,
+      "cond_dep": 0.024867828470726452
+    },
+    {
+      "name": "功率_t245",
+      "hsic_order": 51,
+      "cond_dep": -0.002819170358437374
+    },
+    {
+      "name": "功率_t217",
+      "hsic_order": 52,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "功率_t227",
+      "hsic_order": 53,
+      "cond_dep": -0.023217587836449557
+    },
+    {
+      "name": "温度_t172",
+      "hsic_order": 54,
+      "cond_dep": -0.023217587836449557
+    },
+    {
+      "name": "功率_t221",
+      "hsic_order": 55,
+      "cond_dep": 0.022187315923817005
+    },
+    {
+      "name": "功率_t103",
+      "hsic_order": 56,
+      "cond_dep": -0.023217587836449557
+    },
+    {
+      "name": "功率_t298",
+      "hsic_order": 57,
+      "cond_dep": 0.022187315923817005
+    },
+    {
+      "name": "功率_t066",
+      "hsic_order": 58,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "功率_t117",
+      "hsic_order": 59,
+      "cond_dep": 0.011316259678379988
+    },
+    {
+      "name": "功率_t251",
+      "hsic_order": 60,
+      "cond_dep": -0.023217587836449557
+    },
+    {
+      "name": "功率_t222",
+      "hsic_order": 61,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "功率_t242",
+      "hsic_order": 62,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "功率_t300",
+      "hsic_order": 63,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "功率_t055",
+      "hsic_order": 64,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "温度_t147",
+      "hsic_order": 65,
+      "cond_dep": 0.0
+    },
+    {
+      "name": "温度_t306",
+      "hsic_order": 66,
+      "cond_dep": -0.023217587836449557
+    },
+    {
+      "name": "转速_t320",
+      "hsic_order": 67,
+      "cond_dep": 0.0
+    }
+  ],
+  "final_retained": [
+    {
+      "name": "功率_t151",
+      "hsic_order": 3,
+      "cond_dep": 0.011316259678379988
+    },
+    {
+      "name": "功率_t095",
+      "hsic_order": 7,
+      "cond_dep": 0.022187315923817005
+    },
+    {
+      "name": "压栓_t071",
+      "hsic_order": 9,
+      "cond_dep": 0.04597701149425287
+    },
+    {
+      "name": "压栓_t062",
+      "hsic_order": 10,
+      "cond_dep": 0.022187315923817005
+    },
+    {
+      "name": "功率_t054",
+      "hsic_order": 12,
+      "cond_dep": 0.019492025989367986
+    },
+    {
+      "name": "功率_t030",
+      "hsic_order": 19,
+      "cond_dep": 0.0051937674790251695
+    },
+    {
+      "name": "功率_t034",
+      "hsic_order": 22,
+      "cond_dep": 0.0757238307349666
+    },
+    {
+      "name": "温度_t319",
+      "hsic_order": 36,
+      "cond_dep": 0.01619913077834848
+    },
+    {
+      "name": "功率_t155",
+      "hsic_order": 44,
+      "cond_dep": 0.030373831775700934
+    },
+    {
+      "name": "温度_t309",
+      "hsic_order": 47,
+      "cond_dep": 0.0311284046692607
+    },
+    {
+      "name": "功率_t005",
+      "hsic_order": 50,
+      "cond_dep": 0.024867828470726452
+    },
+    {
+      "name": "功率_t221",
+      "hsic_order": 55,
+      "cond_dep": 0.022187315923817005
+    },
+    {
+      "name": "功率_t298",
+      "hsic_order": 57,
+      "cond_dep": 0.022187315923817005
+    },
+    {
+      "name": "功率_t117",
+      "hsic_order": 59,
+      "cond_dep": 0.011316259678379988
+    }
+  ]
+}
