@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Continental 终胶密炼过程曲线与门尼全车次智能预测平台</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Plotly.js (Offline priority with fallback) -->
+  <script src="/static/plotly.min.js"></script>
+  <script>
+    if (typeof Plotly === 'undefined') {
+      document.write('<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"><\/script>');
+    }
+  </script>
+  <style>
+    /* Continental Brand Accent & Custom Scrollbar */
+    :root {
+      --conti-orange: #FFA500;
+      --conti-dark: #0f172a;
+      --conti-gold: #f59e0b;
+    }
+    body {
+      background-color: #0b0f19;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .conti-gradient {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    }
+    .conti-border {
+      border-color: rgba(255, 165, 0, 0.25);
+    }
+    .conti-border-glow:focus {
+      border-color: #FFA500;
+      box-shadow: 0 0 12px rgba(255, 165, 0, 0.4);
+    }
+    .badge-orange {
+      background-color: rgba(255, 165, 0, 0.15);
+      color: #FFA500;
+      border: 1px solid rgba(255, 165, 0, 0.3);
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #FFA500;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Header Navigation -->
+  <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-50 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-lg bg-amber-500 flex items-center justify-center font-bold text-slate-950 text-xl shadow-md">
+          C
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-white tracking-wide flex items-center gap-2">
+            终胶密炼过程曲线与门尼全车次智能预测平台
+            <span class="text-xs font-normal px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">v2.0 生产级</span>
+          </h1>
+          <p class="text-xs text-slate-400">Continental Final Mix Mooney Intelligence Platform | SFE & Redshift 直连</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-4 text-xs">
+        <span class="flex items-center text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-1.5"></span> SFE 数据库直连就绪
+        </span>
+        <span class="flex items-center text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-full border border-blue-500/20">
+          <span class="w-2 h-2 rounded-full bg-blue-400 mr-1.5"></span> Redshift 质检就绪
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Search & Quick Selection Card -->
+    <section class="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-xl">
+      <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        
+        <!-- Search Input -->
+        <div class="flex-1 flex items-center gap-2">
+          <div class="relative flex-1">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </span>
+            <input 
+              id="orderInput" 
+              type="text" 
+              value="7045560" 
+              placeholder="输入终胶工单号 (如 7045560, 8176639)..." 
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-11 pr-4 py-2.5 text-white font-mono text-base conti-border-glow outline-none transition"
+              onkeydown="if(event.key==='Enter') executeAnalysis()"
+            />
+          </div>
+          <button 
+            id="analyzeBtn"
+            onclick="executeAnalysis()" 
+            class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold px-6 py-2.5 rounded-lg transition duration-150 flex items-center space-x-2 shadow-md cursor-pointer disabled:opacity-50"
+          >
+            <span id="btnSpinner" class="hidden animate-spin rounded-full h-4 w-4 border-2 border-slate-950 border-t-transparent"></span>
+            <span id="btnText">🚀 实时分析</span>
+          </button>
+        </div>
+
+        <!-- Options: Baseline batch & Refresh -->
+        <div class="flex items-center space-x-4 text-xs text-slate-300">
+          <div class="flex items-center space-x-1.5">
+            <label for="baselineBatchSelect" class="text-slate-400">对比基准车:</label>
+            <select id="baselineBatchSelect" class="bg-slate-950 border border-slate-700 text-amber-400 rounded px-2.5 py-1.5 outline-none font-mono">
+              <option value="1">第 1 车 (首车基准)</option>
+            </select>
+          </div>
+          <label class="flex items-center space-x-1 cursor-pointer">
+            <input id="forceRefreshCheck" type="checkbox" class="accent-amber-500 rounded">
+            <span class="text-slate-400">穿透缓存重新查询</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Quick Preset Tags -->
+      <div class="mt-3.5 pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
+        <span class="text-xs text-slate-400 font-medium mr-1">快捷测试工单:</span>
+        <button onclick="quickSelect('2258239')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs text-amber-300 border border-amber-500/30 transition">
+          🔥 2258239 (76车 FMF-T15760B9)
+        </button>
+        <button onclick="quickSelect('7045560')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700 transition">
+          🎯 7045560 (77车 最新未测盲测)
+        </button>
+        <button onclick="quickSelect('8176639')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700 transition">
+          📊 8176639 (80车实测对验基准)
+        </button>
+        <button onclick="quickSelect('8149782')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700 transition">
+          ⚡ 8149782 (高门尼偏差实测)
+        </button>
+        <button onclick="quickSelect('7894359')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700 transition">
+          🔄 7894359 (83车全生命周期)
+        </button>
+        <button onclick="quickSelect('8197867')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700 transition">
+          🛡️ 8197867 (双样本托盘防错)
+        </button>
+      </div>
+    </section>
+
+    <!-- Loading & Error States -->
+    <div id="loadingBox" class="hidden bg-slate-900/90 border border-slate-800 rounded-xl p-8 text-center space-y-4">
+      <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-amber-500 border-t-transparent"></div>
+      <h3 class="text-base font-semibold text-white">正在实时拉取数据并计算全车次分析...</h3>
+      <div id="loadingSteps" class="text-xs text-slate-400 space-y-1">
+        <p>1. 正在检索 SFE `BatchHeader` 与工单履历...</p>
+        <p>2. 正在批量解密 `BatchCurve` 6 维高频曲线与排料点识别...</p>
+        <p>3. 正在比对 Redshift `compound_excellence_datamart` 质检真值...</p>
+        <p>4. 正在运行多车次有效剪切物理模型与 11 阶段特征归因...</p>
+      </div>
+    </div>
+
+    <div id="errorBox" class="hidden bg-red-950/40 border border-red-500/50 rounded-xl p-5 text-red-300 space-y-2">
+      <div class="flex items-center space-x-2">
+        <svg class="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+        <h4 class="font-bold text-red-200">数据拉取或分析出错</h4>
+      </div>
+      <p id="errorMsg" class="text-sm font-mono text-red-300"></p>
+    </div>
+
+    <!-- Main Results Dashboard (Populated dynamically) -->
+    <div id="dashboardBox" class="space-y-6">
+
+      <!-- Order Metadata Bar -->
+      <section class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+          <div>
+            <span class="text-xs text-slate-400">工单号:</span>
+            <span id="metaOrderId" class="ml-1 text-base font-bold font-mono text-amber-400">7045560</span>
+          </div>
+          <div>
+            <span class="text-xs text-slate-400">胶料代码:</span>
+            <span id="metaCompoundCode" class="ml-1 text-sm font-semibold font-mono text-white">992251576000</span>
+          </div>
+          <div>
+            <span class="text-xs text-slate-400">机台设备:</span>
+            <span id="metaEquipment" class="ml-1 text-sm font-semibold text-slate-200">92-1080 (ML08)</span>
+          </div>
+          <div>
+            <span class="text-xs text-slate-400">总车数:</span>
+            <span id="metaBatches" class="ml-1 text-sm font-bold text-white">77 车</span>
+          </div>
+          <div>
+            <span class="text-xs text-slate-400">生产时间跨度:</span>
+            <span id="metaTimeSpan" class="ml-1 text-xs font-mono text-slate-300">2026-10-27 17:57 ~ 22:10</span>
+          </div>
+        </div>
+        <div id="metaLabBadge" class="flex items-center space-x-2">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+      <!-- KPI Metrics Row -->
+      <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
+          <div class="text-xs text-slate-400">综合首尾预测差</div>
+          <div id="kpiFirstLastDelta" class="text-2xl font-bold font-mono text-amber-400 mt-1">-2.16 MU</div>
+          <div class="text-[11px] text-slate-500 mt-0.5">尾车较首车共识预测</div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
+          <div class="text-xs text-slate-400">全工单门尼波动跨度</div>
+          <div id="kpiMooneyRange" class="text-2xl font-bold font-mono text-blue-400 mt-1">[-4.87, +3.58]</div>
+          <div class="text-[11px] text-slate-500 mt-0.5">全工单各车次波动极差</div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
+          <div class="text-xs text-slate-400">机台蓄热初温升幅</div>
+          <div id="kpiDeltaT0" class="text-2xl font-bold font-mono text-rose-400 mt-1">+37.4 °C</div>
+          <div class="text-[11px] text-slate-500 mt-0.5">57.0°C (冷) → 94.4°C (热)</div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
+          <div class="text-xs text-slate-400">有效混炼均值功率差</div>
+          <div id="kpiDeltaP" class="text-2xl font-bold font-mono text-cyan-400 mt-1">-31.9 kW</div>
+          <div class="text-[11px] text-slate-500 mt-0.5">胶料软化剪切抗力降低</div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
+          <div class="text-xs text-slate-400">净混炼机械做功差</div>
+          <div id="kpiDeltaE" class="text-2xl font-bold font-mono text-purple-400 mt-1">-2.00 kWh</div>
+          <div class="text-[11px] text-slate-500 mt-0.5">20.0 kWh → 18.0 kWh</div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
+          <div class="text-xs text-slate-400">计算耗时</div>
+          <div id="kpiElapsed" class="text-2xl font-bold font-mono text-emerald-400 mt-1">7.2 s</div>
+          <div class="text-[11px] text-slate-500 mt-0.5">全车次解密与物理推断</div>
+        </div>
+      </section>
+
+      <!-- Multi-Model Comparison Panel -->
+      <section class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-lg space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+            <span>⚖️ 各模型预测全景比对 (尾车 vs 首车预测值与化验真值)</span>
+          </span>
+          <span id="modelDiscrepancyBadge" class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400"></span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 text-center">
+          <div class="bg-slate-950 p-2.5 rounded-lg border border-amber-500/30">
+            <div class="text-[11px] text-amber-400 font-medium">综合共识模型</div>
+            <div id="mConsensusVal" class="text-lg font-bold font-mono text-white mt-0.5">--</div>
+            <div class="text-[10px] text-slate-500">主推荐共识基准</div>
+          </div>
+          <div class="bg-slate-950 p-2.5 rounded-lg border border-cyan-500/30">
+            <div class="text-[11px] text-cyan-400 font-medium">Model 1: 有效剪切Huber</div>
+            <div id="mActiveVal" class="text-lg font-bold font-mono text-white mt-0.5">--</div>
+            <div class="text-[10px] text-slate-500">修正空转有效剪切</div>
+          </div>
+          <div class="bg-slate-950 p-2.5 rounded-lg border border-purple-500/30">
+            <div class="text-[11px] text-purple-400 font-medium">Model 2: 4阶段物理Huber</div>
+            <div id="mPhase4Val" class="text-lg font-bold font-mono text-white mt-0.5">--</div>
+            <div class="text-[10px] text-slate-500">非共线工艺切片</div>
+          </div>
+          <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-700/60">
+            <div class="text-[11px] text-slate-300 font-medium">Model 3: 原始全窗Huber</div>
+            <div id="mRawVal" class="text-lg font-bold font-mono text-white mt-0.5">--</div>
+            <div class="text-[10px] text-slate-500">全记录窗口统计</div>
+          </div>
+          <div class="bg-slate-950 p-2.5 rounded-lg border border-blue-500/30">
+            <div class="text-[11px] text-blue-400 font-medium">Model 4: 时长敏感Huber</div>
+            <div id="mM4Val" class="text-lg font-bold font-mono text-white mt-0.5">--</div>
+            <div class="text-[10px] text-slate-500">上密/时长敏感</div>
+          </div>
+          <div class="bg-slate-950 p-2.5 rounded-lg border border-emerald-500/30">
+            <div class="text-[11px] text-emerald-400 font-medium">实验室实测首尾真值差</div>
+            <div id="mLabActualVal" class="text-lg font-bold font-mono text-emerald-400 mt-0.5">--</div>
+            <div id="mLabStatusSub" class="text-[10px] text-slate-500">质检化验对验</div>
+          </div>
+        </div>
+
+        <!-- Warning diagnostic banner if failed / discrepancy -->
+        <div id="anomalyWarningBanner" class="hidden p-3.5 rounded-lg bg-rose-950/40 border border-rose-500/40 text-xs text-rose-200 space-y-1">
+          <div class="font-bold flex items-center gap-1.5 text-rose-300">
+            <svg class="w-4 h-4 text-rose-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+            <span>⚠️ 现场工艺异常与原料批次切换诊断提示</span>
+          </div>
+          <div id="anomalyWarningText" class="text-rose-200/90 leading-relaxed font-sans">
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab Navigation -->
+      <section class="border-b border-slate-800">
+        <nav class="flex space-x-6 text-sm font-medium">
+          <button id="tabBtn1" onclick="switchTab(1)" class="pb-3 border-b-2 border-amber-500 text-amber-400 flex items-center space-x-2">
+            <span>📈 全工单车次门尼走势与宏观演化</span>
+          </button>
+          <button id="tabBtn2" onclick="switchTab(2)" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2">
+            <span>🔬 任意双车次深度对比与 11 阶段归因</span>
+          </button>
+          <button id="tabBtn3" onclick="switchTab(3)" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2">
+            <span>📋 全车次明细数据表与导出</span>
+          </button>
+        </nav>
+      </section>
+
+      <!-- TAB 1: ALL BATCHES TRENDS -->
+      <div id="tabContent1" class="space-y-6">
+
+        <!-- Chart 1: Mooney Delta across batches -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+          <div class="flex flex-wrap items-center justify-between gap-4 mb-3">
+            <div>
+              <h3 class="text-base font-bold text-white flex items-center gap-2">
+                全工单全车次门尼偏差演变曲线与化验真值比对 (All Batches Mooney Delta & Lab Test Points)
+              </h3>
+              <p class="text-xs text-slate-400">以所选基准车（默认第 1 车）为 0 点，预测全生命周期各车次门尼偏移量，并与实验室化验点精准对齐</p>
+            </div>
+            <div class="flex items-center space-x-4 text-xs">
+              <span class="flex items-center text-amber-400"><span class="w-3 h-0.5 bg-amber-400 mr-1.5 inline-block"></span> 综合门尼预测 ΔMooney</span>
+              <span class="flex items-center text-cyan-400"><span class="w-3 h-0.5 bg-cyan-400 mr-1.5 inline-block"></span> 有效剪切 Huber</span>
+              <span class="flex items-center text-emerald-400"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 mr-1.5 inline-block"></span> 实验室化验真值点</span>
+            </div>
+          </div>
+          <div id="chartMooneyTrend" class="w-full h-96"></div>
+        </div>
+
+        <!-- Chart 2 & 3: Process Parameters Trend -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Process Trend: Initial Temp vs Active Power -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+            <h4 class="text-sm font-bold text-white mb-1">机台蓄热与有效混炼剪切功率宏观演化趋势</h4>
+            <p class="text-xs text-slate-400 mb-3">呈现随着连续生产机温升高，胶料粘度下降导致电机剪切均值功率持续塌缩的物理滞后机制</p>
+            <div id="chartThermalPowerTrend" class="w-full h-80"></div>
+          </div>
+
+          <!-- Energy & Time Trend -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+            <h4 class="text-sm font-bold text-white mb-1">各车次净混炼时长与累计电耗演化</h4>
+            <p class="text-xs text-slate-400 mb-3">排除了停机空转后的真实有效混炼时长 (T_active) 与净机械功消耗 (kWh)</p>
+            <div id="chartEnergyTimeTrend" class="w-full h-80"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- TAB 2: DUAL-BATCH COMPARISON & DEEP DIVE -->
+      <div id="tabContent2" class="hidden space-y-6">
+
+        <!-- Selector Controls for Batch A vs Batch B -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-4 text-sm">
+            <div class="flex items-center space-x-2">
+              <span class="text-slate-400">对比基准车 (Batch A):</span>
+              <select id="selectBatchA" onchange="loadComparison()" class="bg-slate-950 border border-slate-700 text-amber-400 font-mono rounded px-3 py-1.5 outline-none font-bold">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="text-slate-400">目标分析车 (Batch B):</span>
+              <select id="selectBatchB" onchange="loadComparison()" class="bg-slate-950 border border-slate-700 text-cyan-400 font-mono rounded px-3 py-1.5 outline-none font-bold">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="setComparisonPreset('first_last')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-slate-300 border border-slate-700">
+                ⚡ 快捷: 首车 vs 尾车
+              </button>
+            </div>
+          </div>
+          <div id="compPredictedDelta" class="text-sm font-bold text-amber-400 font-mono">
+            预测差值: Loading...
+          </div>
+        </div>
+
+        <!-- Waterfall Attribution Chart -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h3 class="text-base font-bold text-white">门尼偏差多阶段物理量瀑布分解归因 (Waterfall Attribution)</h3>
+              <p class="text-xs text-slate-400">量化各混炼工艺阶段偏差对最终预测门尼偏差的独立贡献数值 (MU)</p>
+            </div>
+          </div>
+          <div id="chartWaterfall" class="w-full h-72"></div>
+        </div>
+
+        <!-- Synchronized 5D Curves -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-base font-bold text-white">五维过程曲线逐秒同步对比 (Synchronized Mixing Curves)</h3>
+              <p class="text-xs text-slate-400">包含功率、温度、累计电能、顶栓位移、转速及逐秒偏差曲线 ΔP(t) 与 ΔT(t)</p>
+            </div>
+          </div>
+          <!-- Curve 1: Power & Delta Power -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div id="chartCurvePower" class="w-full h-80 bg-slate-950/50 rounded-lg p-2 border border-slate-800/80"></div>
+            <div id="chartCurveDeltaP" class="w-full h-80 bg-slate-950/50 rounded-lg p-2 border border-slate-800/80"></div>
+          </div>
+          <!-- Curve 2: Temperature & Energy -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div id="chartCurveTemp" class="w-full h-80 bg-slate-950/50 rounded-lg p-2 border border-slate-800/80"></div>
+            <div id="chartCurveEnergy" class="w-full h-80 bg-slate-950/50 rounded-lg p-2 border border-slate-800/80"></div>
+          </div>
+          <!-- Curve 3: Ram Position & Speed -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div id="chartCurveRam" class="w-full h-72 bg-slate-950/50 rounded-lg p-2 border border-slate-800/80"></div>
+            <div id="chartCurveSpeed" class="w-full h-72 bg-slate-950/50 rounded-lg p-2 border border-slate-800/80"></div>
+          </div>
+        </div>
+
+        <!-- 11-Stage Physical Breakdown Table -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-base font-bold text-white">11 阶段工艺窗口逐段物理量对照表 (11-Stage Physical Comparison)</h3>
+              <p class="text-xs text-slate-400">按 22 秒时间窗口切分混炼全程，逐阶段拆解两车温度、功率、转速、顶栓位移与门尼贡献</p>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left text-slate-300">
+              <thead class="text-[11px] text-slate-400 uppercase bg-slate-950/80 border-b border-slate-800">
+                <tr>
+                  <th class="px-3 py-2.5">步骤</th>
+                  <th class="px-3 py-2.5">工艺阶段名称</th>
+                  <th class="px-3 py-2.5">时间窗口</th>
+                  <th class="px-3 py-2.5">温度 T_A → T_B (ΔT)</th>
+                  <th class="px-3 py-2.5">功率 P_A → P_B (ΔP)</th>
+                  <th class="px-3 py-2.5">转速 (rpm)</th>
+                  <th class="px-3 py-2.5">顶栓 (mm)</th>
+                  <th class="px-3 py-2.5">阶段门尼贡献</th>
+                  <th class="px-3 py-2.5">关键物理机理解析</th>
+                </tr>
+              </thead>
+              <tbody id="comparisonTableBody" class="divide-y divide-slate-800/60 font-mono">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- TAB 3: FULL DATA TABLE & EXPORT -->
+      <div id="tabContent3" class="hidden space-y-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+          <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div>
+              <h3 class="text-base font-bold text-white">全工单车次分析明细数据 (All Batches Metrics Table)</h3>
+              <p class="text-xs text-slate-400">包含全车次有效功率、净做功、各模型门尼偏差预测及实测真值</p>
+            </div>
+            <div class="flex items-center space-x-3">
+              <button onclick="downloadCSV()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold rounded-lg text-xs transition flex items-center space-x-1.5 shadow">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                <span>⬇️ 导出全车次 CSV 报表</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
+            <table class="w-full text-xs text-left text-slate-300">
+              <thead class="text-[11px] text-slate-400 uppercase bg-slate-950 sticky top-0 border-b border-slate-800 z-10">
+                <tr>
+                  <th class="px-3 py-2.5">车次</th>
+                  <th class="px-3 py-2.5">托盘号</th>
+                  <th class="px-3 py-2.5">综合共识 ΔMooney</th>
+                  <th class="px-3 py-2.5">有效剪切 Model 1</th>
+                  <th class="px-3 py-2.5">4阶段 Model 2</th>
+                  <th class="px-3 py-2.5">时长敏感 Model 4</th>
+                  <th class="px-3 py-2.5">原始全窗 Model 3</th>
+                  <th class="px-3 py-2.5">实验室实测门尼</th>
+                  <th class="px-3 py-2.5">初温 T0 (°C)</th>
+                  <th class="px-3 py-2.5">排胶温 (°C)</th>
+                  <th class="px-3 py-2.5">有效功率 (kW)</th>
+                  <th class="px-3 py-2.5">上密功率 (kW)</th>
+                  <th class="px-3 py-2.5">下密功率 (kW)</th>
+                  <th class="px-3 py-2.5">做功 (kWh)</th>
+                  <th class="px-3 py-2.5">有效时长 (s)</th>
+                </tr>
+              </thead>
+                  <th class="px-3 py-2.5">有效时长 (s)</th>
+                </tr>
+              </thead>
+              <tbody id="fullBatchTableBody" class="divide-y divide-slate-800/60 font-mono">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-slate-900 border-t border-slate-800 py-4 text-center text-xs text-slate-500">
+    <p>Continental Tires Manufacturing Technology • Final Mix Mooney Intelligence System</p>
+  </footer>
+
+  <!-- Core Dashboard Logic -->
+  <script>
+    // State Store
+    let currentOrderData = null;
+    let currentComparisonData = null;
+    let activeTab = 1;
+
+    // Common Plotly Layout Theme
+    const plotlyDarkTheme = {
+      paper_bgcolor: 'transparent',
+      plot_bgcolor: 'transparent',
+      font: { color: '#94a3b8', size: 11 },
+      margin: { l: 50, r: 40, t: 30, b: 40 },
+      xaxis: {
+        gridcolor: '#1e293b',
+        zerolinecolor: '#334155'
+      },
+      yaxis: {
+        gridcolor: '#1e293b',
+        zerolinecolor: '#334155'
+      },
+      legend: { orientation: 'h', y: 1.15, x: 0 }
+    };
+
+    function switchTab(tabIndex) {
+      activeTab = tabIndex;
+      [1, 2, 3].forEach(i => {
+        const btn = document.getElementById(`tabBtn${i}`);
+        const content = document.getElementById(`tabContent${i}`);
+        if (i === tabIndex) {
+          btn.className = 'pb-3 border-b-2 border-amber-500 text-amber-400 flex items-center space-x-2 font-bold';
+          content.classList.remove('hidden');
+        } else {
+          btn.className = 'pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2';
+          content.classList.add('hidden');
+        }
+      });
+
+      // Resize Plotly charts when switching tabs
+      if (tabIndex === 1) {
+        Plotly.Plots.resize('chartMooneyTrend');
+        Plotly.Plots.resize('chartThermalPowerTrend');
+        Plotly.Plots.resize('chartEnergyTimeTrend');
+      } else if (tabIndex === 2) {
+        if (!currentComparisonData) {
+          loadComparison();
+        } else {
+          Plotly.Plots.resize('chartWaterfall');
+          Plotly.Plots.resize('chartCurvePower');
+          Plotly.Plots.resize('chartCurveDeltaP');
+          Plotly.Plots.resize('chartCurveTemp');
+          Plotly.Plots.resize('chartCurveEnergy');
+          Plotly.Plots.resize('chartCurveRam');
+          Plotly.Plots.resize('chartCurveSpeed');
+        }
+      }
+    }
+
+    function quickSelect(orderId) {
+      document.getElementById('orderInput').value = orderId;
+      executeAnalysis();
+    }
+
+    async function executeAnalysis() {
+      const orderId = document.getElementById('orderInput').value.trim();
+      if (!orderId) {
+        alert("请输入工单号！");
+        return;
+      }
+
+      const baseline = document.getElementById('baselineBatchSelect').value || 1;
+      const refresh = document.getElementById('forceRefreshCheck').checked;
+
+      // Set Loading UI
+      document.getElementById('analyzeBtn').disabled = true;
+      document.getElementById('btnSpinner').classList.remove('hidden');
+      document.getElementById('btnText').innerText = '分析中...';
+      document.getElementById('loadingBox').classList.remove('hidden');
+      document.getElementById('errorBox').classList.add('hidden');
+      document.getElementById('dashboardBox').classList.add('hidden');
+
+      try {
+        const resp = await fetch(`/api/analyze?order_id=${encodeURIComponent(orderId)}&baseline=${baseline}&refresh=${refresh}`);
+        const data = await resp.json();
+
+        if (!resp.ok || data.error) {
+          throw new Error(data.error || `HTTP ${resp.status}`);
+        }
+
+        currentOrderData = data;
+        renderDashboard(data);
+
+        document.getElementById('dashboardBox').classList.remove('hidden');
+        document.getElementById('loadingBox').classList.add('hidden');
+      } catch (err) {
+        console.error("Analysis Error:", err);
+        document.getElementById('errorMsg').innerText = err.message || err;
+        document.getElementById('errorBox').classList.remove('hidden');
+        document.getElementById('loadingBox').classList.add('hidden');
+      } finally {
+        document.getElementById('analyzeBtn').disabled = false;
+        document.getElementById('btnSpinner').classList.add('hidden');
+        document.getElementById('btnText').innerText = '🚀 实时分析';
+      }
+    }
+
+    function renderDashboard(data) {
+      // 1. Metadata
+      document.getElementById('metaOrderId').innerText = data.order_id;
+      document.getElementById('metaCompoundCode').innerText = data.compound_code || "Unknown";
+      document.getElementById('metaEquipment').innerText = data.equipment_id;
+      document.getElementById('metaBatches').innerText = `${data.total_batches} 车 (${data.total_pallets} 托盘)`;
+      document.getElementById('metaTimeSpan').innerText = `${data.start_time.split('.')[0]} ~ ${data.end_time.split('.')[0]}`;
+
+      // Lab badge
+      const labBadgeContainer = document.getElementById('metaLabBadge');
+      if (data.has_lab_tests && data.lab_tests.length > 0) {
+        labBadgeContainer.innerHTML = `
+          <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span> 实验室门尼已化验 (${data.lab_tests.length} 个样本)
+          </span>
+        `;
+      } else {
+        labBadgeContainer.innerHTML = `
+          <span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center">
+            <span class="w-2 h-2 rounded-full bg-amber-400 mr-1.5"></span> 未化验门尼 (严格前向盲测模式)
+          </span>
+        `;
+      }
+
+      // 2. KPIs & Multi-Model Cards
+      const kpis = data.kpis;
+      document.getElementById('kpiFirstLastDelta').innerText = `${kpis.first_last_delta > 0 ? '+' : ''}${kpis.first_last_delta} MU`;
+      document.getElementById('kpiMooneyRange').innerText = `[${kpis.min_delta}, ${kpis.max_delta}] MU`;
+      document.getElementById('kpiDeltaT0').innerText = `${kpis.delta_T0_first_last > 0 ? '+' : ''}${kpis.delta_T0_first_last} °C`;
+      document.getElementById('kpiDeltaP').innerText = `${kpis.delta_P_active_first_last > 0 ? '+' : ''}${kpis.delta_P_active_first_last} kW`;
+      document.getElementById('kpiDeltaE').innerText = `${kpis.delta_E_first_last > 0 ? '+' : ''}${kpis.delta_E_first_last} kWh`;
+      document.getElementById('kpiElapsed').innerText = `${data.elapsed_seconds} s`;
+
+      // Multi-Model Grid Population
+      document.getElementById('mConsensusVal').innerText = `${kpis.first_last_delta > 0 ? '+' : ''}${kpis.first_last_delta} MU`;
+      document.getElementById('mActiveVal').innerText = `${kpis.first_last_active > 0 ? '+' : ''}${kpis.first_last_active} MU`;
+      document.getElementById('mPhase4Val').innerText = `${kpis.first_last_phase4 > 0 ? '+' : ''}${kpis.first_last_phase4} MU`;
+      document.getElementById('mRawVal').innerText = `${kpis.first_last_raw > 0 ? '+' : ''}${kpis.first_last_raw} MU`;
+      document.getElementById('mM4Val').innerText = `${kpis.first_last_m4 > 0 ? '+' : ''}${kpis.first_last_m4} MU`;
+
+      // Check Lab Actual
+      const labActEl = document.getElementById('mLabActualVal');
+      const labSubEl = document.getElementById('mLabStatusSub');
+      const warnBanner = document.getElementById('anomalyWarningBanner');
+      const warnText = document.getElementById('anomalyWarningText');
+      const discBadge = document.getElementById('modelDiscrepancyBadge');
+
+      let hasFailedSample = false;
+      let lastSample = null;
+      if (data.lab_tests && data.lab_tests.length > 0) {
+        lastSample = data.lab_tests[data.lab_tests.length - 1];
+        hasFailedSample = data.lab_tests.some(lt => lt.status === 'Failed');
+      }
+
+      if (kpis.actual_first_last !== null) {
+        labActEl.innerText = `${kpis.actual_first_last > 0 ? '+' : ''}${kpis.actual_first_last} MU`;
+        if (hasFailedSample) {
+          labActEl.className = 'text-lg font-bold font-mono text-rose-400 mt-0.5 animate-pulse';
+          labSubEl.innerHTML = `<span class="text-rose-400 font-bold">尾车实测 ${lastSample.mooney_value} MU (Failed 不合格)</span>`;
+        } else {
+          labActEl.className = 'text-lg font-bold font-mono text-emerald-400 mt-0.5';
+          labSubEl.innerHTML = `<span class="text-emerald-400">实测全部合格 Passed</span>`;
+        }
+      } else {
+        labActEl.innerText = '未化验';
+        labActEl.className = 'text-lg font-bold font-mono text-slate-500 mt-0.5';
+        labSubEl.innerText = '纯前向盲测';
+      }
+
+      // Check for large discrepancy or Failed status
+      if (hasFailedSample || (kpis.actual_first_last !== null && Math.abs(kpis.actual_first_last - kpis.first_last_delta) > 5.0)) {
+        warnBanner.classList.remove('hidden');
+        discBadge.innerText = '⚠️ 偏差预警';
+        discBadge.className = 'text-xs font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold';
+        warnText.innerHTML = `
+          <strong>核心排查发现：</strong>本工单最后一车（Batch ${data.total_batches}）在化验室检测门尼为 <strong>${lastSample ? lastSample.mooney_value : 73} MU</strong>，判定结果为 <span class="bg-rose-500 text-white px-1.5 py-0.2 rounded font-bold">Failed (不合格超差)</span>！<br>
+          经追溯，该车次在密炼系统已触发 <span class="text-amber-300 font-bold">MW:Module-Warning 预警</span>。现场胶料在尾段严重打滑或架胶，转子未能抓取胶料强剪切破链，电机负荷骤降 52 kW，叠加投料母胶与回炼胶在尾车发生批次切换。所有常规物理模型均假设“功率正常传递破链”，遇到打滑/原料突变异常时会出现方向性偏离！
+        `;
+      } else {
+        warnBanner.classList.add('hidden');
+        discBadge.innerText = '正常受控';
+        discBadge.className = 'text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+      }
+
+      // 3. Populate baseline batch dropdown & Comparison dropdowns
+      const baseSelect = document.getElementById('baselineBatchSelect');
+      const selA = document.getElementById('selectBatchA');
+      const selB = document.getElementById('selectBatchB');
+      baseSelect.innerHTML = '';
+      selA.innerHTML = '';
+      selB.innerHTML = '';
+
+      data.batch_list.forEach(b => {
+        baseSelect.add(new Option(`第 ${b} 车`, b, false, b === data.baseline_batch));
+        selA.add(new Option(`第 ${b} 车`, b, false, b === 1));
+        selB.add(new Option(`第 ${b} 车`, b, false, b === data.batch_list[data.batch_list.length - 1]));
+      });
+
+      // 4. Render Charts for Tab 1
+      renderTab1Charts(data);
+
+      // 5. Render Tab 3 Table
+      renderTab3Table(data);
+
+      // 6. Preload Tab 2 comparison
+      loadComparison();
+    }
+
+    function renderTab1Charts(data) {
+      const batches = data.full_batch_results.map(r => r.batch_number);
+      const deltaPred = data.full_batch_results.map(r => r.delta_mooney_pred);
+      const deltaActive = data.full_batch_results.map(r => r.delta_mooney_active);
+      const deltaPhase4 = data.full_batch_results.map(r => r.delta_mooney_phase4);
+      const deltaRaw = data.full_batch_results.map(r => r.delta_mooney_raw);
+      const deltaM4 = data.full_batch_results.map(r => r.delta_mooney_m4);
+
+      // 1. Mooney Delta Trend Chart
+      const mooneyTraces = [
+        // Upper & Lower Tolerance Band (+- 1.5 MU)
+        {
+          x: batches,
+          y: batches.map(() => 1.5),
+          mode: 'lines',
+          line: { color: 'rgba(234, 179, 8, 0.2)', dash: 'dot', width: 1 },
+          name: '公差上限 (+1.5 MU)',
+          hoverinfo: 'none'
+        },
+        {
+          x: batches,
+          y: batches.map(() => -1.5),
+          mode: 'lines',
+          line: { color: 'rgba(234, 179, 8, 0.2)', dash: 'dot', width: 1 },
+          fill: 'tonexty',
+          fillcolor: 'rgba(234, 179, 8, 0.05)',
+          name: '公差下限 (-1.5 MU)',
+          hoverinfo: 'none'
+        },
+        {
+          x: batches,
+          y: deltaActive,
+          mode: 'lines',
+          line: { color: '#06b6d4', width: 1.5, dash: 'dash' },
+          name: 'Model 1 (有效剪切 Huber)'
+        },
+        {
+          x: batches,
+          y: deltaPhase4,
+          mode: 'lines',
+          line: { color: '#a855f7', width: 1.5, dash: 'dash' },
+          name: 'Model 2 (4阶段物理 Huber)'
+        },
+        {
+          x: batches,
+          y: deltaM4,
+          mode: 'lines',
+          line: { color: '#3b82f6', width: 1.5, dash: 'dot' },
+          name: 'Model 4 (时长敏感 Huber)'
+        },
+        {
+          x: batches,
+          y: deltaRaw,
+          mode: 'lines',
+          line: { color: '#64748b', width: 1.2, dash: 'dot' },
+          name: 'Model 3 (原始全窗 Huber)'
+        },
+        {
+          x: batches,
+          y: deltaPred,
+          mode: 'lines+markers',
+          line: { color: '#f59e0b', width: 2.8 },
+          marker: { size: 5, color: '#f59e0b' },
+          name: '综合共识预测 ΔMooney'
+        }
+      ];
+
+      // Overlay Lab Points if present
+      if (data.has_lab_tests && data.lab_tests.length > 0 && data.base_lab_mooney !== null) {
+        const passedBatches = [];
+        const passedDeltas = [];
+        const passedTexts = [];
+
+        const failedBatches = [];
+        const failedDeltas = [];
+        const failedTexts = [];
+
+        data.lab_tests.forEach(lt => {
+          if (lt.mapped_batch) {
+            const d = lt.mooney_value - data.base_lab_mooney;
+            const txt = `化验样本: ${lt.sample_id}<br>托盘: ${lt.pallet_id}<br>状态: ${lt.status}<br>实测门尼: ${lt.mooney_value} MU<br>相对基准差: ${d > 0 ? '+' : ''}${d.toFixed(2)} MU`;
+            if (lt.status === 'Failed') {
+              failedBatches.push(lt.mapped_batch);
+              failedDeltas.push(d);
+              failedTexts.push(`⚠️ [质检不合格 Failed]<br>${txt}`);
+            } else {
+              passedBatches.push(lt.mapped_batch);
+              passedDeltas.push(d);
+              passedTexts.push(txt);
+            }
+          }
+        });
+
+        if (passedBatches.length > 0) {
+          mooneyTraces.push({
+            x: passedBatches,
+            y: passedDeltas,
+            mode: 'markers',
+            marker: {
+              size: 13,
+              symbol: 'diamond',
+              color: '#10b981',
+              line: { color: '#ffffff', width: 2 }
+            },
+            name: '实测合格点 (Passed)',
+            text: passedTexts,
+            hoverinfo: 'text'
+          });
+        }
+
+        if (failedBatches.length > 0) {
+          mooneyTraces.push({
+            x: failedBatches,
+            y: failedDeltas,
+            mode: 'markers',
+            marker: {
+              size: 16,
+              symbol: 'diamond',
+              color: '#ef4444',
+              line: { color: '#ffffff', width: 2 }
+            },
+            name: '⚠️ 实测不合格超差点 (Failed)',
+            text: failedTexts,
+            hoverinfo: 'text'
+          });
+        }
+      }
+
+      Plotly.newPlot('chartMooneyTrend', mooneyTraces, {
+        ...plotlyDarkTheme,
+        xaxis: { ...plotlyDarkTheme.xaxis, title: '车次编号 (Batch Number)' },
+        yaxis: { ...plotlyDarkTheme.yaxis, title: '门尼预测偏差 ΔMooney (MU)' }
+      }, { responsive: true, displayModeBar: false });
+
+      // 2. Initial Temp vs Active Power
+      const t0List = data.full_batch_results.map(r => r.T0);
+      const pActiveList = data.full_batch_results.map(r => r.P_active);
+
+      const thermalPowerTraces = [
+        {
+          x: batches,
+          y: t0List,
+          mode: 'lines+markers',
+          name: '物料/机身初温 T0 (°C)',
+          line: { color: '#f43f5e', width: 2 },
+          marker: { size: 4 },
+          yaxis: 'y1'
+        },
+        {
+          x: batches,
+          y: pActiveList,
+          mode: 'lines+markers',
+          name: '有效混炼均值功率 (kW)',
+          line: { color: '#06b6d4', width: 2 },
+          marker: { size: 4 },
+          yaxis: 'y2'
+        }
+      ];
+
+      Plotly.newPlot('chartThermalPowerTrend', thermalPowerTraces, {
+        ...plotlyDarkTheme,
+        xaxis: { ...plotlyDarkTheme.xaxis, title: '车次编号 (Batch Number)' },
+        yaxis: { ...plotlyDarkTheme.yaxis, title: '初温 T0 (°C)', titlefont: { color: '#f43f5e' }, tickfont: { color: '#f43f5e' } },
+        yaxis2: {
+          title: '有效功率 (kW)',
+          titlefont: { color: '#06b6d4' },
+          tickfont: { color: '#06b6d4' },
+          overlaying: 'y',
+          side: 'right',
+          gridcolor: 'transparent'
+        }
+      }, { responsive: true, displayModeBar: false });
+
+      // 3. Energy & Mixing Time
+      const energyList = data.full_batch_results.map(r => r.E_discharge);
+      const timeList = data.full_batch_results.map(r => r.T_active);
+
+      const energyTimeTraces = [
+        {
+          x: batches,
+          y: energyList,
+          mode: 'lines+markers',
+          name: '排料净机械能耗 (kWh)',
+          line: { color: '#a855f7', width: 2 },
+          marker: { size: 4 },
+          yaxis: 'y1'
+        },
+        {
+          x: batches,
+          y: timeList,
+          mode: 'lines+markers',
+          name: '有效混炼时长 (s)',
+          line: { color: '#38bdf8', width: 2 },
+          marker: { size: 4 },
+          yaxis: 'y2'
+        }
+      ];
+
+      Plotly.newPlot('chartEnergyTimeTrend', energyTimeTraces, {
+        ...plotlyDarkTheme,
+        xaxis: { ...plotlyDarkTheme.xaxis, title: '车次编号 (Batch Number)' },
+        yaxis: { ...plotlyDarkTheme.yaxis, title: '累计能耗 (kWh)', titlefont: { color: '#a855f7' }, tickfont: { color: '#a855f7' } },
+        yaxis2: {
+          title: '有效时长 (s)',
+          titlefont: { color: '#38bdf8' },
+          tickfont: { color: '#38bdf8' },
+          overlaying: 'y',
+          side: 'right',
+          gridcolor: 'transparent'
+        }
+      }, { responsive: true, displayModeBar: false });
+    }
+
+    async function loadComparison() {
+      if (!currentOrderData) return;
+      const orderId = currentOrderData.order_id;
+      const bA = document.getElementById('selectBatchA').value;
+      const bB = document.getElementById('selectBatchB').value;
+
+      try {
+        const resp = await fetch(`/api/batch_comparison?order_id=${encodeURIComponent(orderId)}&batch_a=${bA}&batch_b=${bB}`);
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error);
+
+        currentComparisonData = data;
+        renderComparison(data);
+      } catch (err) {
+        console.error("Comparison load error:", err);
+      }
+    }
+
+    function setComparisonPreset(type) {
+      if (!currentOrderData) return;
+      if (type === 'first_last') {
+        document.getElementById('selectBatchA').value = currentOrderData.batch_list[0];
+        document.getElementById('selectBatchB').value = currentOrderData.batch_list[currentOrderData.batch_list.length - 1];
+        loadComparison();
+      }
+    }
+
+    function renderComparison(data) {
+      document.getElementById('compPredictedDelta').innerText = `Batch ${data.batch_b} vs Batch ${data.batch_a} 预测差: ${data.pred_total_mu > 0 ? '+' : ''}${data.pred_total_mu} MU`;
+
+      // 1. Waterfall Chart
+      const wfNames = data.waterfall.map(w => w.name);
+      const wfValues = data.waterfall.map(w => w.value);
+      const wfMeasures = data.waterfall.map((w, idx) => {
+        if (idx === data.waterfall.length - 1) return 'total';
+        return 'relative';
+      });
+
+      Plotly.newPlot('chartWaterfall', [{
+        type: 'waterfall',
+        orientation: 'v',
+        measure: wfMeasures,
+        x: wfNames,
+        y: wfValues,
+        connector: { line: { color: '#64748b' } },
+        decreasing: { marker: { color: '#38bdf8' } },
+        increasing: { marker: { color: '#f43f5e' } },
+        totals: { marker: { color: '#f59e0b' } },
+        text: wfValues.map(v => `${v > 0 ? '+' : ''}${v} MU`),
+        textposition: 'outside'
+      }], {
+        ...plotlyDarkTheme,
+        yaxis: { ...plotlyDarkTheme.yaxis, title: '门尼偏差贡献 (MU)' }
+      }, { responsive: true, displayModeBar: false });
+
+      // 2. Synchronized Curves
+      const t = data.curves.time;
+
+      // Power
+      Plotly.newPlot('chartCurvePower', [
+        { x: t, y: data.curves.power_a, mode: 'lines', name: `Batch ${data.batch_a} 功率`, line: { color: '#f59e0b', width: 2 } },
+        { x: t, y: data.curves.power_b, mode: 'lines', name: `Batch ${data.batch_b} 功率`, line: { color: '#06b6d4', width: 2 } }
+      ], { ...plotlyDarkTheme, title: '上下密炼机功率叠加对比 (kW)', yaxis: { ...plotlyDarkTheme.yaxis, title: '功率 (kW)' } }, { responsive: true, displayModeBar: false });
+
+      // Delta Power
+      Plotly.newPlot('chartCurveDeltaP', [
+        { x: t, y: data.curves.delta_p, mode: 'lines', name: 'ΔP(t) (B - A)', line: { color: '#38bdf8', width: 2 } }
+      ], { ...plotlyDarkTheme, title: '逐秒功率差值 ΔP(t) = P_B - P_A (kW)', yaxis: { ...plotlyDarkTheme.yaxis, title: 'ΔP (kW)' } }, { responsive: true, displayModeBar: false });
+
+      // Temperature
+      Plotly.newPlot('chartCurveTemp', [
+        { x: t, y: data.curves.temp_a, mode: 'lines', name: `Batch ${data.batch_a} 胶温`, line: { color: '#f43f5e', width: 2 } },
+        { x: t, y: data.curves.temp_b, mode: 'lines', name: `Batch ${data.batch_b} 胶温`, line: { color: '#a855f7', width: 2 } }
+      ], { ...plotlyDarkTheme, title: '混炼温度演化对比 (°C)', yaxis: { ...plotlyDarkTheme.yaxis, title: '温度 (°C)' } }, { responsive: true, displayModeBar: false });
+
+      // Energy
+      Plotly.newPlot('chartCurveEnergy', [
+        { x: t, y: data.curves.energy_a, mode: 'lines', name: `Batch ${data.batch_a} 累计能耗`, line: { color: '#f59e0b', width: 2 } },
+        { x: t, y: data.curves.energy_b, mode: 'lines', name: `Batch ${data.batch_b} 累计能耗`, line: { color: '#10b981', width: 2 } }
+      ], { ...plotlyDarkTheme, title: '累计机械做功对比 (kWh)', yaxis: { ...plotlyDarkTheme.yaxis, title: '能量 (kWh)' } }, { responsive: true, displayModeBar: false });
+
+      // Ram Position
+      Plotly.newPlot('chartCurveRam', [
+        { x: t, y: data.curves.ram_a, mode: 'lines', name: `Batch ${data.batch_a} 顶栓`, line: { color: '#f59e0b', width: 2 } },
+        { x: t, y: data.curves.ram_b, mode: 'lines', name: `Batch ${data.batch_b} 顶栓`, line: { color: '#6366f1', width: 2 } }
+      ], { ...plotlyDarkTheme, title: '上密炼顶栓位置对比 (mm)', yaxis: { ...plotlyDarkTheme.yaxis, title: '位移 (mm)' } }, { responsive: true, displayModeBar: false });
+
+      // Rotor Speed
+      Plotly.newPlot('chartCurveSpeed', [
+        { x: t, y: data.curves.speed_a, mode: 'lines', name: `Batch ${data.batch_a} 转速`, line: { color: '#f59e0b', width: 2 } },
+        { x: t, y: data.curves.speed_b, mode: 'lines', name: `Batch ${data.batch_b} 转速`, line: { color: '#14b8a6', width: 2 } }
+      ], { ...plotlyDarkTheme, title: '转子转速阶跃对比 (rpm)', yaxis: { ...plotlyDarkTheme.yaxis, title: '转速 (rpm)' } }, { responsive: true, displayModeBar: false });
+
+      // 3. 11-Stage Table
+      const tb = document.getElementById('comparisonTableBody');
+      tb.innerHTML = '';
+      data.table_rows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/40 transition';
+
+        const dtClass = r.dT > 0 ? 'text-rose-400' : (r.dT < 0 ? 'text-cyan-400' : 'text-slate-300');
+        const dpClass = r.dP > 0 ? 'text-rose-400' : (r.dP < 0 ? 'text-cyan-400' : 'text-slate-300');
+        const contribClass = r.mooney_contrib > 0 ? 'text-rose-400 font-bold' : (r.mooney_contrib < 0 ? 'text-cyan-400 font-bold' : 'text-slate-500');
+
+        tr.innerHTML = `
+          <td class="px-3 py-2 text-slate-400">Step ${r.step}</td>
+          <td class="px-3 py-2 font-medium text-white">${r.name}</td>
+          <td class="px-3 py-2 text-slate-400">${r.window}</td>
+          <td class="px-3 py-2">${r.T1} → ${r.T2} <span class="${dtClass}">(${r.dT > 0 ? '+' : ''}${r.dT})</span></td>
+          <td class="px-3 py-2">${r.P1} → ${r.P2} <span class="${dpClass}">(${r.dP > 0 ? '+' : ''}${r.dP})</span></td>
+          <td class="px-3 py-2">${r.S1} → ${r.S2}</td>
+          <td class="px-3 py-2">${r.R1} → ${r.R2}</td>
+          <td class="px-3 py-2 ${contribClass}">${r.mooney_contrib !== 0 ? (r.mooney_contrib > 0 ? '+' : '') + r.mooney_contrib + ' MU' : '-'}</td>
+          <td class="px-3 py-2 text-slate-400 font-sans text-[11px]">${r.desc}</td>
+        `;
+        tb.appendChild(tr);
+      });
+    }
+
+    function renderTab3Table(data) {
+      const tb = document.getElementById('fullBatchTableBody');
+      tb.innerHTML = '';
+      data.full_batch_results.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/40 transition';
+
+        const dPredClass = r.delta_mooney_pred > 0 ? 'text-amber-400 font-bold' : (r.delta_mooney_pred < 0 ? 'text-cyan-400 font-bold' : 'text-slate-400');
+        let labVal = '<span class="text-slate-600">-</span>';
+        if (r.actual_lab_mooney !== null) {
+          // Check if failed
+          let isFailed = false;
+          if (data.lab_tests) {
+            const found = data.lab_tests.find(lt => lt.mapped_batch === r.batch_number);
+            if (found && found.status === 'Failed') isFailed = true;
+          }
+          if (isFailed) {
+            labVal = `<span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold">${r.actual_lab_mooney} MU (Failed)</span>`;
+          } else {
+            labVal = `<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">${r.actual_lab_mooney} MU</span>`;
+          }
+        }
+
+        tr.innerHTML = `
+          <td class="px-3 py-2 font-bold text-white">Batch ${r.batch_number}</td>
+          <td class="px-3 py-2 text-slate-400">${r.pallet_id || '-'}</td>
+          <td class="px-3 py-2 ${dPredClass}">${r.delta_mooney_pred > 0 ? '+' : ''}${r.delta_mooney_pred} MU</td>
+          <td class="px-3 py-2 text-cyan-400">${r.delta_mooney_active > 0 ? '+' : ''}${r.delta_mooney_active}</td>
+          <td class="px-3 py-2 text-purple-400">${r.delta_mooney_phase4 > 0 ? '+' : ''}${r.delta_mooney_phase4}</td>
+          <td class="px-3 py-2 text-blue-400">${r.delta_mooney_m4 > 0 ? '+' : ''}${r.delta_mooney_m4}</td>
+          <td class="px-3 py-2 text-slate-400">${r.delta_mooney_raw > 0 ? '+' : ''}${r.delta_mooney_raw}</td>
+          <td class="px-3 py-2">${labVal}</td>
+          <td class="px-3 py-2 text-rose-400">${r.T0}</td>
+          <td class="px-3 py-2 text-orange-400">${r.T_discharge}</td>
+          <td class="px-3 py-2 text-slate-200">${r.P_active}</td>
+          <td class="px-3 py-2 text-slate-400">${r.P_up}</td>
+          <td class="px-3 py-2 text-slate-400">${r.P_low}</td>
+          <td class="px-3 py-2 text-slate-300">${r.E_discharge}</td>
+          <td class="px-3 py-2 text-slate-400">${r.T_active}s</td>
+        `;
+        tb.appendChild(tr);
+      });
+    }
+
+    function downloadCSV() {
+      if (!currentOrderData) return;
+      window.location.href = `/api/export_csv?order_id=${encodeURIComponent(currentOrderData.order_id)}`;
+    }
+
+    // Auto load on initial page load
+    window.addEventListener('DOMContentLoaded', () => {
+      executeAnalysis();
+    });
+  </script>
+</body>
+</html>
